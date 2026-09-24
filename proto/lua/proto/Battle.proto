@@ -1,0 +1,1534 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum BattleType {
+  BT_SINGLE = 0;
+  BT_TEAM = 1;
+}
+enum BattleEntryType {
+  BET_COMPAIGN = 1;
+  BET_ROUGUE = 2;
+  BET_TOWER = 3;
+  BET_INTERIMER = 4;
+  BET_BATTLE_COMPAIGN = 5;
+}
+enum BattleEnemyLevelPolicyType {
+  BELPT_WORLD_DIFFICULT = 1;
+  BELPT_FIX = 2;
+  BELPT_DUNGEON = 3;
+  BELPT_TASK = 4;
+}
+enum WorldMapActionType {
+  WMAT_JUMP = 1;
+  WMAT_DASH = 2;
+  WMAT_SKILL = 3;
+}
+enum FightObjType {
+  FO_None = 0;
+  FO_Hero = 1;
+  FO_Pet = 2;
+  FO_Monster = 3;
+  FO_Task_Monster = 4;
+  FO_Trial_Hero = 5;
+  FO_Puzzle_Obj = 6;
+  FO_Puzzle_Monster = 7;
+  FO_Tranform = 8;
+  FO_Trial_Pet = 9;
+  FO_Transform_Pet = 14;
+  FO_KiboDuel_Trial_Pet = 15;
+  FO_Bullet = 16;
+  FO_Summoner = 17;
+  FO_Rogue_Hero = 18;
+  FO_Rogue_Pet = 19;
+  FO_KiboDuel_Pet = 20;
+  FO_KiboDuel_Tower = 21;
+  FO_KiboDuel_ThisClam = 22;
+  FO_Bot_Hero = 23;
+  FO_Player = 24;
+  FO_MobMonster = 25;
+  FO_MapItem = 26;
+  FO_Copy_Hero = 27;
+  FO_Party_KiboCard = 28;
+  FO_Dungeon_Item = 29;
+  FO_Abyss_Hero = 30;
+  FO_Abyss_Pet = 31;
+}
+enum FightObjSourceType {
+  FOST_WORLD = 0;
+  FOST_TASK = 1;
+}
+enum SkillResultType {
+  SRT_DAMAGE = 1;
+  SRT_HEAL = 2;
+  SRT_BUFF = 3;
+}
+enum FightObjState {
+  FOS_Normal = 1;
+  FOS_Fight = 2;
+  FOS_Reset = 3;
+}
+enum HeroAttrModuleType {
+  HAMT_HERO_BASIC = 0;
+  HAMT_SOULESSENCE = 1;
+  HAMT_ORNAMENT = 2;
+  HAMT_WORLD_BUFF = 3;
+  HAMT_PET_INHERENT = 4;
+  HAMT_PET_GEN = 5;
+  HAMT_PET_SPEED = 6;
+  HAMT_ELEMENT = 7;
+  HAMT_GLOBAL_BONUS = 8;
+  HAMT_HERO_PLAYBALE = 9;
+  HAMT_HERO_GRADE = 10;
+}
+enum ModuleGamingType {
+  MGT_WORLD_BATTLE = 0;
+  MGT_KIBO_DUEL = 1;
+}
+enum BuffOperator {
+  BuffOpe_Add = 1;
+  BuffOpe_Del = 2;
+  BuffOpe_Chg = 3;
+  BuffOpe_RND = 4;
+  BuffOpe_LOG = 5;
+  BuffOpe_CleanData = 6;
+  BuffOpe_Combine = 7;
+  BuffOpe_DotDoExecute = 8;
+  BuffOpe_DotDoEnd = 9;
+  BuffOpe_RemoteAdd = 10;
+}
+enum SkillVerifyType {
+  SkillVerifyType_None = 0;
+  SkillVerifyType_Skill = 1;
+  SkillVerifyType_Elem = 2;
+  SkillVerifyType_Bullet = 3;
+  SkillVerifyType_Summon = 4;
+  SkillVerifyType_Behavior = 5;
+  SkillVerifyType_System = 6;
+  SkillVerifyType_GM = 7;
+  SkillVerifyType_HeroGrade = 8;
+  SkillVerifyType_Equip = 9;
+  SkillVerifyType_SMonster = 10;
+  SkillVerifyType_MapItem = 11;
+  SkillVerifyType_SAdd = 12;
+}
+enum FightFinishStatus {
+  FFS_Success = 0;
+  FFS_Fail = 1;
+  FFS_Escape = 2;
+  FFS_Timeout = 3;
+}
+enum FightRewardReason {
+  FRR_Kill = 0;
+  FRR_Catch = 1;
+}
+enum HeroBattleInfoSyncReason {
+  HBISR_COMMON = 0;
+  HBISR_TRANS_POINT = 1;
+  HBISR_ACED = 2;
+  HBISR_CHARGE = 3;
+  HBISR_DUNGEON_ENTRUST = 4;
+  HBISR_FSM_FIGHT_TO_NORMAL = 5;
+}
+enum GetCatchPetInfoReason {
+  GCPIR_SCAN = 1;
+  GCPIR_CATCH = 2;
+}
+enum BattleSkillOp {
+  RELEASE = 1;
+  CHANGE_CD = 2;
+  STOP = 3;
+  INTERUPT = 4;
+}
+enum BattleEntityOp {
+  ADD = 1;
+  DEAD = 2;
+  DEL = 3;
+}
+enum DamageTagMask {
+  DamageTagMask_None = 0;
+  DamageTagMask_Heal = 1;
+  DamageTagMask_Critical = 2;
+}
+enum SummonType {
+  monster = 1;
+  item = 2;
+  independent = 3;
+  kibo_pet = 4;
+  kibo_monster = 5;
+}
+enum DungeonItemType {
+  DIT_INVALID = 0;
+  DIT_PARTY_KIBO_CARD = 1;
+}
+enum EEntityScene {
+  None = 0;
+  Battle = 1;
+  World = 2;
+  BattlePerform = 3;
+}
+enum ElementSwapSource {
+  ESS_DEFAULT = 0;
+  ESS_SERVER = 1;
+}
+enum ElementSyncReason {
+  ESR_None = 0;
+  ESR_HeroGrade = 1;
+  ESR_EnterMap = 2;
+  ESR_ChangeGroup = 3;
+}
+enum BlackboardValueType {
+  Int = 0;
+  Float = 1;
+  Bool = 2;
+  Vector3 = 3;
+  Entity = 4;
+}
+enum ElemSourceBehaviorType {
+  ElemSourceBehaviorType_None = 0;
+  ElemSourceBehaviorType_SkillId = 1;
+  ElemSourceBehaviorType_SkillIndex = 2;
+  ElemSourceBehaviorType_ElemConfigId = 3;
+  ElemSourceBehaviorType_BulletUid = 4;
+}
+message BattleContext {
+  optional uint32 conf_id = 1 [json_name = "confId"];
+  optional uint32 type = 2 [json_name = "type"];
+  optional uint32 entry = 3 [json_name = "entry"];
+  optional bool in_battle = 4 [json_name = "inBattle"];
+  optional uint32 battle_id = 5 [json_name = "battleId"];
+  optional uint32 tower_id = 7 [json_name = "towerId"];
+  optional uint32 order = 8 [json_name = "order"];
+  optional uint32 start_time = 9 [json_name = "startTime"];
+  optional bool backstab = 10 [json_name = "backstab"];
+  optional uint32 rogue = 11 [json_name = "rogue"];
+  optional uint32 battle_campaign_obj = 12 [json_name = "battleCampaignObj"];
+}
+message FightSoulEssenceInfo {
+  optional uint32 wid = 1 [json_name = "wid"];
+  optional .cs.FightAttr attrs = 2 [json_name = "attrs"];
+  optional uint32 pos = 3 [json_name = "pos"];
+  optional uint32 wguid = 4 [json_name = "wguid"];
+  optional uint32 level = 5 [json_name = "level"];
+  optional uint32 advance = 6 [json_name = "advance"];
+  optional uint32 rank = 7 [json_name = "rank"];
+  optional .cs.HeroSkillInfos skills = 8 [json_name = "skills"];
+}
+message FightWeaponAppInfo {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message FightOrnamentInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional .cs.FightAttr attrs = 2 [json_name = "attrs"];
+  optional .cs.FightAttr main_attrs = 3 [json_name = "mainAttrs"];
+}
+message FightOrnamentSuitInfo {
+  optional .cs.FightAttr attrs = 1 [json_name = "attrs"];
+  optional .cs.HeroSkillInfos skills = 2 [json_name = "skills"];
+}
+message FightHeroInfo {
+  optional uint32 hero_guid = 1 [json_name = "heroGuid"];
+  optional uint32 hero_conf_id = 2 [json_name = "heroConfId"];
+  optional .cs.FightSoulEssenceInfo winfo = 3 [json_name = "winfo"];
+  optional .cs.FightPetInfo pinfo = 4 [json_name = "pinfo"];
+  optional uint32 strategy = 5 [json_name = "strategy"];
+  optional .cs.FightAttr attrs = 6 [json_name = "attrs"];
+  optional uint32 hp = 7 [json_name = "hp"];
+  optional uint32 sp = 8 [json_name = "sp"];
+  optional uint32 lv = 9 [json_name = "lv"];
+  optional uint32 rank = 10 [json_name = "rank"];
+  optional uint32 star = 11 [json_name = "star"];
+  optional .cs.WardrobeInfo wardrobeinfos = 12 [json_name = "wardrobeinfos"];
+  repeated .cs.FightOrnamentInfo oinfo = 13 [json_name = "oinfo"];
+  optional .cs.FightWeaponAppInfo wainfo = 14 [json_name = "wainfo"];
+  optional .cs.FightOrnamentSuitInfo suitSkills = 15 [json_name = "suitSkills"];
+  repeated uint32 star_gifts = 16 [json_name = "starGifts"];
+  optional uint32 favor_lv = 17 [json_name = "favorLv"];
+  optional .cs.HeroSkillInfos skills = 18 [json_name = "skills"];
+  optional uint32 time = 19 [json_name = "time"];
+  optional .cs.FightAttr buffs = 20 [json_name = "buffs"];
+}
+message FightPetInfo {
+  optional bytes pet_name = 1 [json_name = "petName"];
+  optional uint32 lv = 2 [json_name = "lv"];
+  optional uint32 config_id = 3 [json_name = "configId"];
+  optional uint32 rank = 4 [json_name = "rank"];
+  repeated .cs.PetSkillInfo inherent_skills = 5 [json_name = "inherentSkills"];
+  repeated .cs.HeroSkillInfo gene_skills = 6 [json_name = "geneSkills"];
+  optional .cs.FightAttr attrs = 7 [json_name = "attrs"];
+  optional uint32 guid = 8 [json_name = "guid"];
+}
+message FightEntity {
+  optional uint32 pid = 1 [json_name = "pid"];
+  repeated .cs.FightHeroInfo heros = 2 [json_name = "heros"];
+  optional uint32 control = 3 [json_name = "control"];
+}
+message FightInfo {
+  repeated .cs.FightEntity entities = 1 [json_name = "entities"];
+}
+message CSBattleCreate {
+  optional uint32 conf_id = 1 [json_name = "confId"];
+  optional uint32 debug_arg = 2 [json_name = "debugArg"];
+  optional uint32 type = 4 [json_name = "type"];
+  optional uint32 entry = 5 [json_name = "entry"];
+  optional uint32 tower_id = 7 [json_name = "towerId"];
+  optional uint32 order = 8 [json_name = "order"];
+  optional bool backstab = 9 [json_name = "backstab"];
+  optional uint32 rogue = 10 [json_name = "rogue"];
+  optional uint32 battle_campaign_obj = 11 [json_name = "battleCampaignObj"];
+}
+message SCBattleCreate {
+  optional .cs.FightInfo bt_info = 1 [json_name = "btInfo"];
+  optional uint32 morale = 2 [json_name = "morale"];
+  optional uint32 total_morale = 3 [json_name = "totalMorale"];
+  optional uint32 battle_conf_id = 4 [json_name = "battleConfId"];
+  repeated .cs.BattleFormation battle_fomations = 6 [json_name = "battleFomations"];
+  optional uint32 type = 7 [json_name = "type"];
+  optional uint32 battle_id = 8 [json_name = "battleId"];
+  optional bytes ip = 9 [json_name = "ip"];
+  optional uint32 port = 10 [json_name = "port"];
+  optional uint32 multi_player_conf_id = 11 [json_name = "multiPlayerConfId"];
+  optional uint32 entry = 12 [json_name = "entry"];
+  optional uint32 backstab = 13 [json_name = "backstab"];
+  optional uint32 rogue = 14 [json_name = "rogue"];
+}
+message CSBattleFin {
+  optional uint32 res = 1 [json_name = "res"];
+  repeated .cs.GroupHero heros = 2 [json_name = "heros"];
+  repeated .cs.BattleConditionKill kill_cond = 10 [json_name = "killCond"];
+}
+message BattleConditionKill {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 num = 2 [json_name = "num"];
+}
+message SCBattleFin {
+  optional uint32 res = 1 [json_name = "res"];
+  optional .cs.Rewards items = 2 [json_name = "items"];
+  optional uint32 player_exp = 3 [json_name = "playerExp"];
+  repeated uint32 conds = 4 [json_name = "conds"];
+  optional uint32 mvp_guid = 5 [json_name = "mvpGuid"];
+  optional uint32 star = 6 [json_name = "star"];
+  optional uint32 morale = 7 [json_name = "morale"];
+  optional uint32 total_morale = 8 [json_name = "totalMorale"];
+  optional uint32 item_id = 9 [json_name = "itemId"];
+}
+message ObjKey {
+  optional uint32 obj_id = 1 [json_name = "objId"];
+  optional uint32 obj_index = 2 [json_name = "objIndex"];
+  optional uint32 group_id = 3 [json_name = "groupId"];
+  optional uint32 task_id = 4 [json_name = "taskId"];
+}
+message ObjGroupKey {
+  optional uint32 obj_id = 1 [json_name = "objId"];
+  optional uint32 battle_group_id = 2 [json_name = "battleGroupId"];
+  optional uint32 task_id = 3 [json_name = "taskId"];
+  optional uint32 group_type = 4 [json_name = "groupType"];
+}
+message CatchPetTimes {
+  optional uint32 catch_color = 1 [json_name = "catchColor"];
+  optional uint32 catch_times = 2 [json_name = "catchTimes"];
+  optional uint32 player_id = 3 [json_name = "playerId"];
+}
+message MonsterDungeonAttrInfo {
+  optional uint32 dungeon_id = 1 [json_name = "dungeonId"];
+  optional uint32 dungeon_group_id = 2 [json_name = "dungeonGroupId"];
+}
+message FObjInfo {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional .cs.FightObjType obj_type = 2 [json_name = "objType"];
+  optional uint32 guid = 3 [json_name = "guid"];
+  optional uint32 id = 4 [json_name = "id"];
+  optional uint32 level = 5 [json_name = "level"];
+  optional .cs.ObjKey obj_key = 6 [json_name = "objKey"];
+  optional uint32 enemy_pack = 7 [json_name = "enemyPack"];
+  repeated uint32 randPropSkills = 40 [json_name = "randPropSkills"];
+  optional uint32 time = 8 [json_name = "time"];
+  optional uint32 hp = 9 [json_name = "hp"];
+  optional uint32 sp = 10 [json_name = "sp"];
+  repeated .cs.SkillCD skills = 11 [json_name = "skills"];
+  repeated .cs.BuffInfo buffs = 12 [json_name = "buffs"];
+  optional .cs.MoveInfo move = 13 [json_name = "move"];
+  optional uint32 special = 14 [json_name = "special"];
+  optional .cs.BreakVal breakVal = 15 [json_name = "breakVal"];
+  optional uint32 player_id = 16 [json_name = "playerId"];
+  optional uint32 color = 17 [json_name = "color"];
+  optional uint32 catch_pet_seed = 18 [json_name = "catchPetSeed"];
+  repeated .cs.CatchPetTimes catch_pet_times = 19 [json_name = "catchPetTimes"];
+  optional uint32 difficulty_level = 20 [json_name = "difficultyLevel"];
+  optional uint32 pet_len_id = 21 [json_name = "petLenId"];
+  optional uint32 mob_cfg_id = 22 [json_name = "mobCfgId"];
+  optional uint32 area_id = 23 [json_name = "areaId"];
+  optional uint32 colorful = 24 [json_name = "colorful"];
+  optional .cs.MonsterDungeonAttrInfo dungeon_attr_info = 25 [json_name = "dungeonAttrInfo"];
+  optional uint32 play_id = 26 [json_name = "playId"];
+  repeated uint32 syn_client_elements = 41 [json_name = "synClientElements"];
+}
+message CSFightInfo {
+  repeated .cs.ObjGroupKey objs = 1 [json_name = "objs"];
+  repeated .cs.ObjKey obj_keys = 2 [json_name = "objKeys"];
+}
+message SCFightInfo {
+  optional uint32 battle_id = 1 [json_name = "battleId"];
+  repeated .cs.FObjInfo objs = 2 [json_name = "objs"];
+  repeated .cs.ObjKey obj_keys = 3 [json_name = "objKeys"];
+  optional uint32 fightStart = 4 [json_name = "fightStart"];
+  optional uint32 ai_player_id = 5 [json_name = "aiPlayerId"];
+}
+message FightStateInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 state = 2 [json_name = "state"];
+  optional uint32 ai_player_id = 3 [json_name = "aiPlayerId"];
+}
+message PlayerStateInfo {
+  optional uint32 state = 1 [json_name = "state"];
+}
+message CSFightState {
+  repeated .cs.FightStateInfo objs_state = 1 [json_name = "objsState"];
+  optional .cs.PlayerStateInfo player_state = 2 [json_name = "playerState"];
+}
+message HatredData {
+  optional uint64 id = 1 [json_name = "id"];
+  repeated uint64 target_obj_ids = 2 [json_name = "targetObjIds"];
+  repeated uint32 player_obj_ids = 3 [json_name = "playerObjIds"];
+}
+message CSObjHatredChange {
+  optional bool inc = 1 [json_name = "inc"];
+  optional .cs.HatredData info = 2 [json_name = "info"];
+}
+message SCObjHatredChange {
+  optional bool inc = 1 [json_name = "inc"];
+  optional .cs.HatredData info = 2 [json_name = "info"];
+}
+message CSHatredReset {
+  optional bool is_player = 1 [json_name = "isPlayer"];
+  optional uint64 obj_id = 2 [json_name = "objId"];
+}
+message SCHatredReset {
+  optional bool is_player = 1 [json_name = "isPlayer"];
+  optional uint64 obj_id = 2 [json_name = "objId"];
+}
+message CSHatredResetToHome {
+  optional uint64 obj_id = 1 [json_name = "objId"];
+}
+message SCHatredResetToHome {
+  optional uint64 obj_id = 1 [json_name = "objId"];
+}
+message SCFightState {
+  repeated .cs.FightStateInfo objs_state = 1 [json_name = "objsState"];
+}
+message SCFightBeginTime {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 begin_time = 2 [json_name = "beginTime"];
+}
+message ShieldInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional int32 val = 2 [json_name = "val"];
+}
+message HurtInfo {
+  optional uint64 from_id = 1 [json_name = "fromId"];
+  optional uint64 tar_id = 2 [json_name = "tarId"];
+  optional uint32 skill_id = 3 [json_name = "skillId"];
+  optional sint32 hp_change = 4 [json_name = "hpChange"];
+  optional uint32 cur_hp = 5 [json_name = "curHp"];
+  optional bool hpLocked = 7 [json_name = "hpLocked"];
+  repeated .cs.ShieldInfo shield_chg = 8 [json_name = "shieldChg"];
+  repeated .cs.ShieldInfo shield_cur = 9 [json_name = "shieldCur"];
+  optional uint32 element_tempId = 10 [json_name = "elementTempId"];
+  optional uint32 cur_phase = 11 [json_name = "curPhase"];
+  optional int32 from_sp = 12 [json_name = "fromSp"];
+  optional int32 tar_sp = 13 [json_name = "tarSp"];
+  optional uint64 element_uniqueId = 14 [json_name = "elementUniqueId"];
+  optional int32 from_hp = 15 [json_name = "fromHp"];
+  optional .cs.BattleVerifyInfo verify_info = 16 [json_name = "verifyInfo"];
+  optional int32 delta_sp = 17 [json_name = "deltaSp"];
+  optional uint32 dmg_inc_id = 18 [json_name = "dmgIncId"];
+}
+message SkillInfo {
+  optional uint32 skill_id = 1 [json_name = "skillId"];
+  optional sint32 angle = 2 [json_name = "angle"];
+  optional sint32 posx = 3 [json_name = "posx"];
+  optional sint32 posy = 4 [json_name = "posy"];
+  optional sint32 posz = 5 [json_name = "posz"];
+  optional int32 slot = 8 [json_name = "slot"];
+  optional uint64 begin_time = 9 [json_name = "beginTime"];
+  optional uint64 cd_time_p = 10 [json_name = "cdTimeP"];
+  optional uint64 lock_id = 11 [json_name = "lockId"];
+  optional uint32 segment = 12 [json_name = "segment"];
+  optional uint32 index = 13 [json_name = "index"];
+  optional uint64 self_cd = 14 [json_name = "selfCd"];
+  optional uint64 public_cd = 15 [json_name = "publicCd"];
+  optional uint64 gcd = 16 [json_name = "gcd"];
+}
+message SCFightHeroInfoSync {
+  repeated .cs.FightHeroInfo heros = 1 [json_name = "heros"];
+}
+message HeroAttrSubModuleInfo {
+  optional uint32 sub_module_id = 1 [json_name = "subModuleId"];
+  optional .cs.FightAttr attrs = 2 [json_name = "attrs"];
+  optional .cs.FightSkillInfo skills = 3 [json_name = "skills"];
+}
+message HeroAttrModuleInfo {
+  optional uint32 module_type = 1 [json_name = "moduleType"];
+  repeated .cs.HeroAttrSubModuleInfo sub_modules = 2 [json_name = "subModules"];
+}
+message HeroAttrInfo {
+  optional uint64 hero_guid = 1 [json_name = "heroGuid"];
+  optional uint32 hero_conf_id = 2 [json_name = "heroConfId"];
+  optional uint32 type = 3 [json_name = "type"];
+  repeated .cs.HeroAttrModuleInfo modules = 4 [json_name = "modules"];
+}
+message PetAttrInfo {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint32 conf_id = 2 [json_name = "confId"];
+  optional uint32 type = 3 [json_name = "type"];
+  optional uint32 special = 4 [json_name = "special"];
+  optional uint32 color = 5 [json_name = "color"];
+  optional uint32 level = 6 [json_name = "level"];
+  repeated .cs.HeroAttrModuleInfo modules = 7 [json_name = "modules"];
+}
+message SCHeroAttrInfoSync {
+  repeated .cs.HeroAttrInfo heros = 1 [json_name = "heros"];
+}
+message CSSkillRelease {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional .cs.SkillInfo skill = 2 [json_name = "skill"];
+}
+message SCSkillRelease {
+  optional uint64 uint_id = 1 [json_name = "uintId"];
+  optional .cs.SkillInfo skill = 2 [json_name = "skill"];
+}
+message BufChgInfo {
+  optional .cs.BuffOperator op = 1 [json_name = "op"];
+  optional uint64 tar_id = 2 [json_name = "tarId"];
+  optional .cs.BuffInfo buff = 3 [json_name = "buff"];
+  optional uint32 clientTmpID = 4 [json_name = "clientTmpID"];
+  optional uint64 uniqueId = 5 [json_name = "uniqueId"];
+  optional uint64 parentUniqueId = 6 [json_name = "parentUniqueId"];
+  repeated uint64 op_params = 7 [json_name = "opParams"];
+  optional .cs.BattleVerifyInfo verify_info = 8 [json_name = "verifyInfo"];
+}
+message CSBufChange {
+  repeated .cs.BufChgInfo chgInfo = 1 [json_name = "chgInfo"];
+}
+message SCBufChange {
+  repeated .cs.BufChgInfo chgInfo = 1 [json_name = "chgInfo"];
+}
+message CSCatchPet {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+  optional uint32 day_weather = 3 [json_name = "dayWeather"];
+  optional .cs.EntityPosition position = 4 [json_name = "position"];
+  optional uint32 catch_key = 5 [json_name = "catchKey"];
+}
+message CSCatchPetPlayOver {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+  optional uint32 day_weather = 2 [json_name = "dayWeather"];
+}
+message CSCatchKeyExpireNtf {
+  optional int32 catch_key = 1 [json_name = "catchKey"];
+  optional int32 item_id = 2 [json_name = "itemId"];
+  optional uint32 error = 3 [json_name = "error"];
+}
+message SCCatchPetPlayOver {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+}
+message SCCatchPet {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+  optional bool success = 2 [json_name = "success"];
+  optional uint64 guid = 3 [json_name = "guid"];
+  optional float rand_rate = 4 [json_name = "randRate"];
+  optional .cs.Rewards rewards = 5 [json_name = "rewards"];
+}
+message CSCatchPetCard {
+  optional uint64 client_param = 1 [json_name = "clientParam"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+  optional bool is_create = 3 [json_name = "isCreate"];
+  optional uint32 catch_key = 4 [json_name = "catchKey"];
+}
+message SCCatchPetCard {
+  optional uint32 catch_key = 1 [json_name = "catchKey"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+  optional bool is_create = 3 [json_name = "isCreate"];
+  optional uint64 client_param = 4 [json_name = "clientParam"];
+}
+message SCFightFinish {
+  optional uint32 status = 1 [json_name = "status"];
+  optional .cs.Rewards rewards = 2 [json_name = "rewards"];
+}
+message SCFightReward {
+  optional .cs.Rewards rewards = 1 [json_name = "rewards"];
+  optional uint32 reason = 2 [json_name = "reason"];
+  optional .cs.Rewards element_rewards = 3 [json_name = "elementRewards"];
+  optional uint64 obj_id = 4 [json_name = "objId"];
+}
+message SPChangeInfo {
+  optional uint32 uid = 1 [json_name = "uid"];
+  optional uint32 sp = 2 [json_name = "sp"];
+}
+message CSSpChange {
+  repeated .cs.SPChangeInfo chg_infos = 1 [json_name = "chgInfos"];
+}
+message SCObjDeadNtf {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+}
+message BreakVal {
+  optional int32 val = 1 [json_name = "val"];
+  optional uint64 chg_time_p = 3 [json_name = "chgTimeP"];
+}
+message BreakInfo {
+  optional uint64 tarId = 1 [json_name = "tarId"];
+  optional .cs.BreakVal val = 2 [json_name = "val"];
+}
+message CSFightBreak {
+  repeated .cs.BreakInfo infos = 1 [json_name = "infos"];
+}
+message SCFightBreak {
+  repeated .cs.BreakInfo infos = 1 [json_name = "infos"];
+}
+message SCFightSkillNtf {
+  repeated .cs.SkillCD skills = 1 [json_name = "skills"];
+  repeated .cs.BuffInfo buffs = 2 [json_name = "buffs"];
+}
+message HeroBattleInfo {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint32 conf_id = 2 [json_name = "confId"];
+  optional uint32 hp = 3 [json_name = "hp"];
+  optional uint32 sp = 4 [json_name = "sp"];
+  optional uint32 reason = 5 [json_name = "reason"];
+}
+message SCHeroBattleInfoSync {
+  optional uint32 pid = 1 [json_name = "pid"];
+  repeated .cs.HeroBattleInfo infos = 2 [json_name = "infos"];
+}
+message ObjBattleInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 hp = 3 [json_name = "hp"];
+  optional uint32 sp = 4 [json_name = "sp"];
+  optional uint32 reason = 5 [json_name = "reason"];
+  optional uint32 alive_state = 6 [json_name = "aliveState"];
+  optional uint32 rescue_val = 7 [json_name = "rescueVal"];
+  optional uint64 final_blow_guid = 8 [json_name = "finalBlowGuid"];
+  optional string debug_info = 9 [json_name = "debugInfo"];
+}
+message SCObjBattleInfoSync {
+  repeated .cs.ObjBattleInfo infos = 1 [json_name = "infos"];
+}
+message CSShieldInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.ShieldInfo shield = 2 [json_name = "shield"];
+}
+message SCShieldInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.ShieldInfo shield = 2 [json_name = "shield"];
+}
+message CSShieldInfoDel {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated uint32 shield_id = 2 [json_name = "shieldId"];
+}
+message AIOwnerInfo {
+  message OwnerInfo {
+    optional uint64 uuid = 1 [json_name = "uuid"];
+    optional uint32 owner = 2 [json_name = "owner"];
+  }
+  repeated .cs.AIOwnerInfo.OwnerInfo infos = 1 [json_name = "infos"];
+}
+message AITreeInfo {
+  message AIInfo {
+    optional uint64 uuid = 1 [json_name = "uuid"];
+    repeated uint32 params = 2 [json_name = "params"];
+  }
+  repeated .cs.AITreeInfo.AIInfo infos = 1 [json_name = "infos"];
+}
+message EntityPosition {
+  optional float x = 1 [json_name = "x"];
+  optional float y = 2 [json_name = "y"];
+  optional float z = 3 [json_name = "z"];
+}
+message EntityRotation {
+  optional float angle = 1 [json_name = "angle"];
+}
+message EntityTransform {
+  optional .cs.EntityPosition position = 1 [json_name = "position"];
+  optional .cs.EntityRotation rotation = 2 [json_name = "rotation"];
+}
+message KiboEntityInfo {
+  optional uint64 entity_id = 1 [json_name = "entityId"];
+  optional int32 conf_id = 2 [json_name = "confId"];
+  optional .cs.EntityTransform transform = 3 [json_name = "transform"];
+}
+message StoryKillReq {
+  repeated uint64 guid = 1 [json_name = "guid"];
+}
+message FightAttChange {
+  optional uint32 max_hp = 1 [json_name = "maxHp"];
+  optional uint32 over_time = 2 [json_name = "overTime"];
+  optional uint64 guid = 3 [json_name = "guid"];
+  optional bool is_add_max_hp = 4 [json_name = "isAddMaxHp"];
+}
+message SkillChg {
+  optional uint64 guid = 1 [json_name = "guid"];
+  repeated .cs.SkillCD skill_info = 2 [json_name = "skillInfo"];
+  optional bool force_flush = 3 [json_name = "forceFlush"];
+}
+message CSGetCatchPetInfo {
+  repeated uint64 tar_id = 1 [json_name = "tarId"];
+  optional uint32 day_weather = 2 [json_name = "dayWeather"];
+  optional uint32 reason = 3 [json_name = "reason"];
+  optional uint32 pet_len_id = 4 [json_name = "petLenId"];
+}
+message CatchPetInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 grade = 2 [json_name = "grade"];
+  optional uint32 gene_size = 3 [json_name = "geneSize"];
+  repeated .cs.NewGeneInfo gene_infos = 4 [json_name = "geneInfos"];
+  optional uint32 rank = 5 [json_name = "rank"];
+  repeated .cs.CatchPetTimes catch_pet_times = 6 [json_name = "catchPetTimes"];
+  optional uint32 pet_len_id = 7 [json_name = "petLenId"];
+  repeated .cs.Comprehension comprehension = 8 [json_name = "comprehension"];
+}
+message SCGetCatchPetInfo {
+  repeated .cs.CatchPetInfo pets = 1 [json_name = "pets"];
+  optional uint32 reason = 2 [json_name = "reason"];
+}
+message ObjBattlePhaseInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 phase = 2 [json_name = "phase"];
+  optional uint32 base_hp = 3 [json_name = "baseHp"];
+  optional uint32 extra_hp = 4 [json_name = "extraHp"];
+  optional uint32 max_hp = 5 [json_name = "maxHp"];
+  optional uint64 from_id = 6 [json_name = "fromId"];
+}
+message SCObjBattlePhaseInfoSync {
+  repeated .cs.ObjBattlePhaseInfo infos = 1 [json_name = "infos"];
+}
+message FsmParamChange {
+  optional uint64 targetId = 1 [json_name = "targetId"];
+  optional string paramName = 2 [json_name = "paramName"];
+  optional int32 paramType = 3 [json_name = "paramType"];
+  optional sint32 intValue = 4 [json_name = "intValue"];
+  optional float floatValue = 5 [json_name = "floatValue"];
+  optional bool boolValue = 6 [json_name = "boolValue"];
+  optional bool triggerValue = 7 [json_name = "triggerValue"];
+  optional uint64 customParama = 8 [json_name = "customParama"];
+  optional uint64 elementUniqueId = 9 [json_name = "elementUniqueId"];
+  optional uint32 paramNameIndex = 10 [json_name = "paramNameIndex"];
+}
+message FsmStateChange {
+  optional uint64 targetId = 1 [json_name = "targetId"];
+  optional int32 sourceStateType = 2 [json_name = "sourceStateType"];
+  optional int32 targetStateType = 3 [json_name = "targetStateType"];
+  optional bytes stateArgs = 4 [json_name = "stateArgs"];
+  optional uint64 elementUniqueId = 5 [json_name = "elementUniqueId"];
+}
+message FsmChange {
+  optional uint64 targetId = 1 [json_name = "targetId"];
+  repeated .cs.FsmParamChange paramChanges = 2 [json_name = "paramChanges"];
+  optional .cs.FsmStateChange stateChanges = 3 [json_name = "stateChanges"];
+}
+message CSFsmInfo {
+  repeated .cs.FsmParamChange paramChanges = 1 [json_name = "paramChanges"];
+  repeated .cs.FsmStateChange stateChanges = 2 [json_name = "stateChanges"];
+  repeated string stringMap = 3 [json_name = "stringMap"];
+  repeated .cs.FsmChange changes = 4 [json_name = "changes"];
+}
+message AnimatorInfo {
+  optional uint64 targetId = 1 [json_name = "targetId"];
+  optional float speed = 2 [json_name = "speed"];
+  repeated .cs.AnimatorStateInfo stateInfo = 3 [json_name = "stateInfo"];
+}
+message CSAnimatorSyncInfo {
+  repeated .cs.FsmParamChange paramChanges = 1 [json_name = "paramChanges"];
+  repeated .cs.AnimatorInfo animator_info = 2 [json_name = "animatorInfo"];
+}
+message AnimatorStateInfo {
+  optional int32 layerIndex = 1 [json_name = "layerIndex"];
+  optional int32 stateHash = 2 [json_name = "stateHash"];
+  optional float normalizedTime = 3 [json_name = "normalizedTime"];
+}
+message BattleSkillInfo {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+  optional uint32 op = 2 [json_name = "op"];
+  optional .cs.SkillInfo skill = 3 [json_name = "skill"];
+}
+message BattleEntityInfo {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+  optional uint64 tar_index = 2 [json_name = "tarIndex"];
+  optional uint32 op = 3 [json_name = "op"];
+}
+message CSBattleInfo {
+  optional uint64 op_time = 1 [json_name = "opTime"];
+  optional uint64 op_tick = 2 [json_name = "opTick"];
+  optional .cs.BufChgInfo element_info = 3 [json_name = "elementInfo"];
+  optional .cs.HurtInfo hurt_info = 4 [json_name = "hurtInfo"];
+  optional .cs.BattleSkillInfo skill_info = 5 [json_name = "skillInfo"];
+  optional .cs.BattleEntityInfo entity_info = 6 [json_name = "entityInfo"];
+}
+message BattleInfoData {
+  optional .cs.BufChgInfo element_info = 1 [json_name = "elementInfo"];
+  optional .cs.HurtInfo hurt_info = 2 [json_name = "hurtInfo"];
+  optional .cs.CSBattleAttrbuteChange attr_change = 3 [json_name = "attrChange"];
+}
+message BattleInfoReduce {
+  optional uint64 base_time = 1 [json_name = "baseTime"];
+  repeated uint64 uint64_dic = 2 [json_name = "uint64Dic"];
+  repeated .cs.BattleInfoData battle_info = 3 [json_name = "battleInfo"];
+}
+message CSElementInfo {
+  repeated .cs.BufChgInfo info = 1 [json_name = "info"];
+  optional uint64 op_time = 2 [json_name = "opTime"];
+}
+message SyncElementInfo {
+  repeated .cs.BufChgInfo info = 1 [json_name = "info"];
+  optional uint64 op_time = 2 [json_name = "opTime"];
+}
+message AddBuffInfoData {
+  optional uint32 cfg_id = 1 [json_name = "cfgId"];
+  optional uint64 attacker_id = 2 [json_name = "attackerId"];
+  optional uint64 executor_id = 3 [json_name = "executorId"];
+  optional uint64 source_id = 4 [json_name = "sourceId"];
+  optional uint64 creator_id = 5 [json_name = "creatorId"];
+  optional uint32 from_type = 6 [json_name = "fromType"];
+  optional uint32 from_params = 7 [json_name = "fromParams"];
+  optional uint64 uniqueId = 8 [json_name = "uniqueId"];
+  optional uint32 collisionType = 9 [json_name = "collisionType"];
+}
+message CSAddBuffInfo {
+  repeated .cs.BufChgInfo data = 1 [json_name = "data"];
+}
+message SCAddBuffInfo {
+  repeated .cs.BufChgInfo data = 1 [json_name = "data"];
+}
+message BattleAttrValue {
+  optional uint32 attr_type = 1 [json_name = "attrType"];
+  optional float value = 2 [json_name = "value"];
+  optional uint32 attr_tag = 3 [json_name = "attrTag"];
+}
+message BattleAttrbuteChangeInfo {
+  optional uint32 attrId = 1 [json_name = "attrId"];
+  repeated .cs.BattleAttrValue attr_values = 2 [json_name = "attrValues"];
+}
+message CSBattleAttrbuteChange {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.BattleAttrbuteChangeInfo attrButeInfos = 2 [json_name = "attrButeInfos"];
+}
+message SyncBattleAttrbuteChange {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.BattleAttrbuteChangeInfo attrButeInfos = 2 [json_name = "attrButeInfos"];
+}
+message SCBattleAttrbute {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.BattleAttrbuteChangeInfo attrButeInfos = 2 [json_name = "attrButeInfos"];
+}
+message SCDamageInfo {
+  optional uint64 from_id = 1 [json_name = "fromId"];
+  optional uint64 tar_id = 2 [json_name = "tarId"];
+  optional uint32 val = 3 [json_name = "val"];
+  optional uint32 tar_hp = 5 [json_name = "tarHp"];
+  optional .cs.DamageTagMask mask = 6 [json_name = "mask"];
+  optional uint32 element_conf_id = 7 [json_name = "elementConfId"];
+}
+message ElementBaseDataInfo {
+  optional uint32 element_conf_id = 1 [json_name = "elementConfId"];
+  optional uint32 layer = 2 [json_name = "layer"];
+  optional uint32 run_msec = 3 [json_name = "runMsec"];
+  optional uint32 skill_id = 4 [json_name = "skillId"];
+  optional uint64 attacker_uid = 5 [json_name = "attackerUid"];
+  optional uint64 source_uid = 6 [json_name = "sourceUid"];
+  optional uint64 creator_uid = 7 [json_name = "creatorUid"];
+  optional uint64 pause_start_time = 8 [json_name = "pauseStartTime"];
+}
+message ShieldElementData {
+  option (msg_to_server) = true;
+  optional uint32 shield_val = 1 [json_name = "shieldVal"];
+}
+message ChangePropertyElementConditionArrayObject {
+  option (msg_to_server) = true;
+  optional uint64 change_value = 1 [json_name = "changeValue"];
+  optional uint64 last_out_put = 2 [json_name = "lastOutPut"];
+  optional sint32 change_count = 3 [json_name = "changeCount"];
+  optional uint32 layer = 4 [json_name = "layer"];
+  optional uint32 index = 5 [json_name = "index"];
+}
+message ChangePropertyElementData {
+  option (msg_to_server) = true;
+  repeated .cs.ChangePropertyElementConditionArrayObject arr_objs = 1 [json_name = "arrObjs"];
+  repeated uint32 del_obj_indexs = 2 [json_name = "delObjIndexs"];
+}
+message ElementDataInfo {
+  option (msg_to_server) = true;
+  optional .cs.ShieldElementData shield_data = 1 [json_name = "shieldData"];
+  optional .cs.ChangePropertyElementData change_property_data = 2 [json_name = "changePropertyData"];
+}
+message SCAddElementInfo {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 element_uid = 2 [json_name = "elementUid"];
+  optional .cs.ElementBaseDataInfo base_data = 3 [json_name = "baseData"];
+  optional .cs.ElementDataInfo elem_data = 4 [json_name = "elemData"];
+}
+message SCDelElementInfo {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 element_uid = 2 [json_name = "elementUid"];
+}
+message SCElementDataSync {
+  option (msg_to_server) = true;
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 element_uid = 2 [json_name = "elementUid"];
+  optional .cs.ElementDataInfo elem_data = 3 [json_name = "elemData"];
+}
+message CSSkillStart {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional .cs.SkillInfo skill = 2 [json_name = "skill"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+  optional .cs.BattleVerifyInfo verify_info = 4 [json_name = "verifyInfo"];
+  optional .cs.AceAntiData4 ace_data_4 = 5 [json_name = "aceData4"];
+}
+message SCSkillStart {
+}
+message SyncSSkillStart {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional .cs.SkillInfo skill = 2 [json_name = "skill"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+}
+message CSSkillStop {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint64 skill_id = 2 [json_name = "skillId"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+  optional .cs.BattleVerifyInfo verify_info = 4 [json_name = "verifyInfo"];
+}
+message SyncSkillStop {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 skill_id = 2 [json_name = "skillId"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+}
+message CSSkillGetFailVec {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+}
+message SCSkillGetFailVec {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  repeated bool fail_vec = 2 [json_name = "failVec"];
+  optional bool success = 3 [json_name = "success"];
+}
+message SummonInfo {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 config_id = 2 [json_name = "configId"];
+  optional .cs.SummonType summon_type = 3 [json_name = "summonType"];
+  optional uint32 skill_id = 4 [json_name = "skillId"];
+  optional sint64 skill_track_id = 5 [json_name = "skillTrackId"];
+  optional uint32 element_id = 6 [json_name = "elementId"];
+  optional uint64 op_time = 7 [json_name = "opTime"];
+  optional sint32 pos_x = 8 [json_name = "posX"];
+  optional sint32 pos_y = 9 [json_name = "posY"];
+  optional sint32 pos_z = 10 [json_name = "posZ"];
+  optional sint32 dir_x = 11 [json_name = "dirX"];
+  optional sint32 dir_y = 12 [json_name = "dirY"];
+  optional sint32 dir_z = 13 [json_name = "dirZ"];
+  repeated .cs.BattleAttrbuteChangeInfo attrButeInfos = 14 [json_name = "attrButeInfos"];
+  optional uint32 skill_start_frame = 15 [json_name = "skillStartFrame"];
+  optional uint32 lv = 16 [json_name = "lv"];
+  optional sint32 hp_offset_y = 17 [json_name = "hpOffsetY"];
+  optional bool use_hp_bar = 18 [json_name = "useHpBar"];
+}
+message CliSummonControlData {
+  optional uint32 camp_type = 1 [json_name = "campType"];
+  optional uint32 summonInherit_type = 2 [json_name = "summonInheritType"];
+  optional uint32 status_mask = 3 [json_name = "statusMask"];
+  optional uint32 die_out_time_skill = 4 [json_name = "dieOutTimeSkill"];
+  optional uint32 die_out_max_count_skill = 5 [json_name = "dieOutMaxCountSkill"];
+  optional uint32 die_with_change_hero_skill = 6 [json_name = "dieWithChangeHeroSkill"];
+  optional uint32 die_with_owner_skill = 7 [json_name = "dieWithOwnerSkill"];
+  optional uint32 summon_count_type = 8 [json_name = "summonCountType"];
+  optional sint32 summon_life_time = 9 [json_name = "summonLifeTime"];
+  optional uint32 base_id = 10 [json_name = "baseId"];
+  optional uint32 summon_level = 11 [json_name = "summonLevel"];
+}
+message CSCreateSummon {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional .cs.SummonInfo summon_info = 2 [json_name = "summonInfo"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+  optional uint64 owner_unit_id = 4 [json_name = "ownerUnitId"];
+  optional .cs.BattleVerifyInfo verify_info = 5 [json_name = "verifyInfo"];
+  optional .cs.CliSummonControlData cli_ctr_data = 6 [json_name = "cliCtrData"];
+}
+message SCCreateSummon {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint64 battle_index = 2 [json_name = "battleIndex"];
+}
+message CSRemoveSummon {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 op = 2 [json_name = "op"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+  optional .cs.BattleVerifyInfo verify_info = 4 [json_name = "verifyInfo"];
+}
+message SyncRemoveSummon {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 op = 2 [json_name = "op"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+}
+message SCServerRemoveSummon {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 reason = 2 [json_name = "reason"];
+}
+message BulletInfo {
+  optional uint32 skill_id = 1 [json_name = "skillId"];
+  optional uint64 bullet_id = 2 [json_name = "bulletId"];
+  optional uint32 config_id = 3 [json_name = "configId"];
+  optional sint32 pos_x = 4 [json_name = "posX"];
+  optional sint32 pos_y = 5 [json_name = "posY"];
+  optional sint32 pos_z = 6 [json_name = "posZ"];
+  optional sint32 dir_x = 7 [json_name = "dirX"];
+  optional sint32 dir_y = 8 [json_name = "dirY"];
+  optional sint32 dir_z = 9 [json_name = "dirZ"];
+  optional uint64 target_id = 10 [json_name = "targetId"];
+  optional .cs.Position shoot_pos = 11 [json_name = "shootPos"];
+  optional .cs.Position shoot_dir = 12 [json_name = "shootDir"];
+  optional .cs.Position owner_pos = 13 [json_name = "ownerPos"];
+  optional .cs.Position owner_dir = 14 [json_name = "ownerDir"];
+  optional .cs.Position skill_target_pos = 15 [json_name = "skillTargetPos"];
+  optional .cs.Position skill_target_dir = 16 [json_name = "skillTargetDir"];
+  optional .cs.Position rotation = 17 [json_name = "rotation"];
+  optional uint64 creator_id = 18 [json_name = "creatorId"];
+  optional int32 rebound_bullet_config_id = 19 [json_name = "reboundBulletConfigId"];
+  optional .cs.BattleVerifyInfo verify_info = 20 [json_name = "verifyInfo"];
+  optional uint32 link_target_count = 21 [json_name = "linkTargetCount"];
+}
+message CSBulletCreate {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  repeated .cs.BulletInfo bullet_info = 2 [json_name = "bulletInfo"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+}
+message SCBulletCreate {
+}
+message SyncBulletCreate {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  repeated .cs.BulletInfo bullet_info = 2 [json_name = "bulletInfo"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+}
+message BulletActionInfo {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint64 bullet_id = 2 [json_name = "bulletId"];
+  optional uint32 action_type = 3 [json_name = "actionType"];
+  optional uint32 action_id = 4 [json_name = "actionId"];
+  optional uint64 target_id = 5 [json_name = "targetId"];
+  optional .cs.Position dir = 6 [json_name = "dir"];
+  optional .cs.Position pos = 7 [json_name = "pos"];
+  optional .cs.BattleVerifyInfo verify_info = 8 [json_name = "verifyInfo"];
+}
+message CSBulletActionChange {
+  repeated .cs.BulletActionInfo action_info = 1 [json_name = "actionInfo"];
+  optional uint64 op_time = 2 [json_name = "opTime"];
+}
+message SyncCBulletActionChange {
+  repeated .cs.BulletActionInfo action_info = 1 [json_name = "actionInfo"];
+  optional uint64 op_time = 2 [json_name = "opTime"];
+}
+message HateInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 value = 2 [json_name = "value"];
+  optional uint32 op_time = 3 [json_name = "opTime"];
+}
+message HateListInfo {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.HateInfo info = 2 [json_name = "info"];
+}
+message HateListInfoChange {
+  repeated .cs.HateListInfo info = 1 [json_name = "info"];
+}
+message WorldSyncCommonValue {
+  message Value {
+    optional sint32 intValue = 1 [json_name = "intValue"];
+    optional float floatValue = 2 [json_name = "floatValue"];
+    optional bool boolValue = 3 [json_name = "boolValue"];
+  }
+  optional uint32 key = 1 [json_name = "key"];
+  optional .cs.WorldSyncCommonValue.Value value = 2 [json_name = "value"];
+}
+message PresentationInfoData {
+  optional .cs.DissolveEntityMsg dissolve = 1 [json_name = "dissolve"];
+  repeated .cs.SetPrefabEffectActiveMsg prefab_effect = 2 [json_name = "prefabEffect"];
+}
+message FightObjBaseData {
+  repeated .cs.ShieldInfo shield = 1 [json_name = "shield"];
+  optional uint32 hp = 2 [json_name = "hp"];
+  optional uint32 sp = 3 [json_name = "sp"];
+  optional .cs.MoveInfo move_info = 4 [json_name = "moveInfo"];
+}
+message MonsterCombineAttackState {
+  optional uint32 break_stage = 1 [json_name = "breakStage"];
+  optional uint64 break_stage_end_time = 2 [json_name = "breakStageEndTime"];
+  repeated uint32 triggered_players = 3 [json_name = "triggeredPlayers"];
+  optional uint64 break_stage_begin_trigger_time = 4 [json_name = "breakStageBeginTriggerTime"];
+}
+message MonsterBaseData {
+  optional .cs.ObjBattlePhaseInfo info = 1 [json_name = "info"];
+  optional uint64 break_time = 2 [json_name = "breakTime"];
+  optional uint32 break_val = 3 [json_name = "breakVal"];
+  optional uint32 enemy_pack = 4 [json_name = "enemyPack"];
+  optional uint32 mob_cfg_id = 5 [json_name = "mobCfgId"];
+  optional .cs.MonsterDungeonAttrInfo dungeon_attr_info = 6 [json_name = "dungeonAttrInfo"];
+  repeated uint32 randPropSkills = 7 [json_name = "randPropSkills"];
+  optional .cs.MonsterCombineAttackState combine_attack_state = 8 [json_name = "combineAttackState"];
+  repeated uint32 syn_client_elements = 9 [json_name = "synClientElements"];
+}
+message SummonerBaseData {
+  optional uint64 top_unit_id = 1 [json_name = "topUnitId"];
+  optional uint32 config_id = 2 [json_name = "configId"];
+  optional .cs.SummonType summon_type = 3 [json_name = "summonType"];
+  optional uint32 skill_id = 4 [json_name = "skillId"];
+  optional sint64 skill_track_id = 5 [json_name = "skillTrackId"];
+  optional uint32 element_id = 6 [json_name = "elementId"];
+  optional uint32 base_id = 7 [json_name = "baseId"];
+  optional uint32 summon_count_type = 8 [json_name = "summonCountType"];
+  optional uint32 skill_start_frame = 9 [json_name = "skillStartFrame"];
+  optional uint64 battle_index = 10 [json_name = "battleIndex"];
+  optional uint64 alive_duration_time = 11 [json_name = "aliveDurationTime"];
+}
+message BattleEntitySyncInfo {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  repeated .cs.BufChgInfo element_infos = 2 [json_name = "elementInfos"];
+  optional .cs.CSFsmInfo fsm_info = 3 [json_name = "fsmInfo"];
+  repeated .cs.BattleAttrbuteChangeInfo attr_infos = 4 [json_name = "attrInfos"];
+  repeated .cs.AttributeEntry entry_infos = 5 [json_name = "entryInfos"];
+  optional .cs.SummonerBaseData summon_base_data = 6 [json_name = "summonBaseData"];
+  repeated .cs.WorldSyncCommonValue common_key_values = 7 [json_name = "commonKeyValues"];
+  optional .cs.PresentationInfoData presentation_info = 8 [json_name = "presentationInfo"];
+  optional .cs.FightObjBaseData fobj_base_data = 9 [json_name = "fobjBaseData"];
+  optional .cs.MonsterBaseData mon_base_data = 10 [json_name = "monBaseData"];
+  optional .cs.CSAnimatorSyncInfo animator_sync_info = 11 [json_name = "animatorSyncInfo"];
+  optional .cs.PetBaseData pet_base_data = 12 [json_name = "petBaseData"];
+  optional .cs.DungeonItemData dungeon_item_data = 13 [json_name = "dungeonItemData"];
+}
+message DungeonItemData {
+  optional .cs.DungeonItemType type = 1 [json_name = "type"];
+  optional .cs.PartyKiboCard kibo_card = 2 [json_name = "kiboCard"];
+}
+message DungeonItemInitParam {
+  optional .cs.DungeonItemType type = 1 [json_name = "type"];
+  optional uint32 config_id = 2 [json_name = "configId"];
+}
+message PartyKiboCard {
+  optional uint32 config_id = 1 [json_name = "configId"];
+  optional uint64 cooldown = 2 [json_name = "cooldown"];
+}
+message PetBaseData {
+  optional uint64 source_pet_guid = 1 [json_name = "sourcePetGuid"];
+  optional bool in_fight = 2 [json_name = "inFight"];
+  optional uint32 skin_id = 3 [json_name = "skinId"];
+}
+message SCBattleEntitySyncInfo {
+  repeated .cs.BattleEntitySyncInfo infos = 1 [json_name = "infos"];
+}
+message DamageTextInfo {
+  optional uint64 attack_uid = 1 [json_name = "attackUid"];
+  optional uint64 receive_uid = 2 [json_name = "receiveUid"];
+  optional uint32 value = 3 [json_name = "value"];
+  optional .cs.Position hitPoint = 4 [json_name = "hitPoint"];
+  optional uint32 elementId = 5 [json_name = "elementId"];
+  optional bool isWeak = 6 [json_name = "isWeak"];
+  optional bool isCritical = 7 [json_name = "isCritical"];
+  optional sint32 restraintValue = 8 [json_name = "restraintValue"];
+}
+message CSDamageText {
+  repeated .cs.DamageTextInfo damageTextInfos = 1 [json_name = "damageTextInfos"];
+  optional uint64 attack_uid = 2 [json_name = "attackUid"];
+}
+message SyncDamageText {
+  repeated .cs.DamageTextInfo damageTextInfos = 1 [json_name = "damageTextInfos"];
+}
+message CSDamageDoge {
+  optional uint64 attack_uid = 2 [json_name = "attackUid"];
+  optional uint64 unit_id = 4 [json_name = "unitId"];
+}
+message SyncDamageDoge {
+  optional uint64 unit_id = 3 [json_name = "unitId"];
+  optional uint64 attack_uid = 4 [json_name = "attackUid"];
+}
+message FlashInfo {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 collisionType = 2 [json_name = "collisionType"];
+  optional .cs.Position hitPoint = 3 [json_name = "hitPoint"];
+  optional uint32 burstId = 4 [json_name = "burstId"];
+}
+message CSFlashInfo {
+  repeated .cs.FlashInfo flashInfos = 1 [json_name = "flashInfos"];
+}
+message SyncFlashInfo {
+  repeated .cs.FlashInfo flashInfos = 1 [json_name = "flashInfos"];
+}
+message BoneShake {
+  optional uint32 boneShakeIndex = 1 [json_name = "boneShakeIndex"];
+  optional .cs.Position dir = 2 [json_name = "dir"];
+  optional uint32 ramp = 3 [json_name = "ramp"];
+}
+message CSBoneShake {
+  repeated .cs.BoneShake boneShakes = 1 [json_name = "boneShakes"];
+}
+message SyncBoneShake {
+  repeated .cs.BoneShake boneShakes = 1 [json_name = "boneShakes"];
+}
+message HealTextInfo {
+  optional uint64 source_uid = 1 [json_name = "sourceUid"];
+  optional uint64 receive_uid = 2 [json_name = "receiveUid"];
+  optional uint32 value = 3 [json_name = "value"];
+}
+message CSHealTextInfo {
+  repeated .cs.HealTextInfo healTextInfos = 1 [json_name = "healTextInfos"];
+  optional uint64 receive_uid = 2 [json_name = "receiveUid"];
+}
+message SyncHealTextInfo {
+  repeated .cs.HealTextInfo healTextInfos = 1 [json_name = "healTextInfos"];
+}
+message StackEffect {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 element_id = 2 [json_name = "elementId"];
+}
+message CSStackEffect {
+  optional uint64 source_id = 1 [json_name = "sourceId"];
+  repeated .cs.StackEffect stackEffects = 2 [json_name = "stackEffects"];
+}
+message SyncStackEffect {
+  optional uint64 source_id = 1 [json_name = "sourceId"];
+  repeated .cs.StackEffect stackEffects = 2 [json_name = "stackEffects"];
+}
+message MonsterSceneInfo {
+  optional uint64 tar_id = 1 [json_name = "tarId"];
+  optional .cs.EEntityScene scene = 2 [json_name = "scene"];
+}
+message CSMonsterScene {
+  repeated .cs.MonsterSceneInfo infos = 1 [json_name = "infos"];
+}
+message BTTreeMsg {
+  repeated .cs.DispatchEventMsg dispatch_event_msg = 1 [json_name = "dispatchEventMsg"];
+  repeated .cs.MediaPackPlayMsg media_pack_play_msg = 2 [json_name = "mediaPackPlayMsg"];
+  repeated .cs.CustomMediaPackPlayMsg custom_media_pack_play_msg = 3 [json_name = "customMediaPackPlayMsg"];
+  repeated .cs.DissolveEntityMsg dissolve_entity_msg = 4 [json_name = "dissolveEntityMsg"];
+  repeated .cs.SetPrefabEffectActiveMsg set_prefab_effect_active_msg = 5 [json_name = "setPrefabEffectActiveMsg"];
+  repeated .cs.PlayVoiceMsg play_voice_msg = 6 [json_name = "playVoiceMsg"];
+  repeated .cs.SetPerformActionMsg set_perform_action_msg = 7 [json_name = "setPerformActionMsg"];
+  repeated .cs.StopPerformActionMsg stop_perform_action_msg = 8 [json_name = "stopPerformActionMsg"];
+}
+message DispatchEventMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 eventType = 2 [json_name = "eventType"];
+  optional sint32 intValue1 = 3 [json_name = "intValue1"];
+  optional sint32 intValue2 = 4 [json_name = "intValue2"];
+}
+message MediaPackPlayMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional string effectKey = 2 [json_name = "effectKey"];
+  optional int32 duration = 3 [json_name = "duration"];
+  optional uint32 bindType = 4 [json_name = "bindType"];
+  optional .cs.Position offset = 5 [json_name = "offset"];
+}
+message CustomMediaPackPlayMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 battleEvent = 2 [json_name = "battleEvent"];
+}
+message DissolveEntityMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional int32 time = 2 [json_name = "time"];
+  optional bool isShow = 3 [json_name = "isShow"];
+}
+message SetPrefabEffectActiveMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional bool active = 2 [json_name = "active"];
+  repeated string effectNames = 3 [json_name = "effectNames"];
+  repeated string meshNames = 4 [json_name = "meshNames"];
+}
+message PlayVoiceMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional int32 voiceId = 2 [json_name = "voiceId"];
+}
+message SetPerformActionMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional uint32 actionType = 2 [json_name = "actionType"];
+  optional string animName = 3 [json_name = "animName"];
+  optional int32 crossfadeTime = 4 [json_name = "crossfadeTime"];
+  optional int32 waitTime = 5 [json_name = "waitTime"];
+  optional bool hideHud = 6 [json_name = "hideHud"];
+  optional bool needAutoStop = 7 [json_name = "needAutoStop"];
+  optional int32 performID = 8 [json_name = "performID"];
+}
+message StopPerformActionMsg {
+  optional uint64 unit_id = 1 [json_name = "unitId"];
+  optional int32 performID = 2 [json_name = "performID"];
+}
+message BlackboardValue {
+  optional int32 treeId = 1 [json_name = "treeId"];
+  optional string name = 2 [json_name = "name"];
+  optional int32 type = 3 [json_name = "type"];
+  optional sint32 intValue = 4 [json_name = "intValue"];
+  optional float floatValue = 5 [json_name = "floatValue"];
+  optional bool boolValue = 6 [json_name = "boolValue"];
+  optional .cs.Position vector3Value = 7 [json_name = "vector3Value"];
+  optional uint64 entityValue = 8 [json_name = "entityValue"];
+}
+message BlackboardUpdate {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.BlackboardValue values = 2 [json_name = "values"];
+}
+message CSBlackboardUpdate {
+  repeated .cs.BlackboardUpdate infos = 1 [json_name = "infos"];
+}
+message MonsterGrorpWallActive {
+  optional uint32 enemy_group_id = 1 [json_name = "enemyGroupId"];
+  optional .cs.Position pos = 2 [json_name = "pos"];
+}
+message SCMonsterGroupWallActives {
+  repeated .cs.MonsterGrorpWallActive wall = 1 [json_name = "wall"];
+}
+message SCMonsterGroupWallInactives {
+  repeated uint32 enemy_group_id = 1 [json_name = "enemyGroupId"];
+}
+message CSCombineAttack {
+  optional uint64 attack_id = 1 [json_name = "attackId"];
+  optional uint64 target_id = 2 [json_name = "targetId"];
+}
+message CSRescueObj {
+  message RescueInfo {
+    optional uint64 from_uuid = 1 [json_name = "fromUuid"];
+    optional uint64 tar_uuid = 2 [json_name = "tarUuid"];
+    optional uint32 val = 3 [json_name = "val"];
+  }
+  repeated .cs.CSRescueObj.RescueInfo rescue_infos = 1 [json_name = "rescueInfos"];
+}
+message SCRescueObjNtf {
+  message RescueInfo {
+    optional uint64 from_uuid = 1 [json_name = "fromUuid"];
+    optional uint64 tar_uuid = 2 [json_name = "tarUuid"];
+    optional uint32 final_val = 3 [json_name = "finalVal"];
+  }
+  repeated .cs.SCRescueObjNtf.RescueInfo rescue_infos = 1 [json_name = "rescueInfos"];
+}
+message CSReviveHero {
+  optional uint64 hero_uuid = 1 [json_name = "heroUuid"];
+  optional uint32 revive_val = 2 [json_name = "reviveVal"];
+}
+message ServerElementInfo {
+  optional uint32 element_temp_id = 1 [json_name = "elementTempId"];
+  optional uint32 element_conf_id = 2 [json_name = "elementConfId"];
+  optional uint64 attacker_id = 3 [json_name = "attackerId"];
+  optional uint64 executor_id = 4 [json_name = "executorId"];
+  optional uint64 source_id = 5 [json_name = "sourceId"];
+  optional uint64 creator_id = 6 [json_name = "creatorId"];
+  optional uint32 skill_id = 7 [json_name = "skillId"];
+  optional uint32 number_layers = 8 [json_name = "numberLayers"];
+}
+message SCServerElementSync {
+  repeated .cs.ServerElementInfo elements = 1 [json_name = "elements"];
+  repeated .cs.ServerElementInfo del_elements = 2 [json_name = "delElements"];
+  optional bool force_sync = 3 [json_name = "forceSync"];
+}
+message CSReboundBullet {
+  optional uint64 target_id = 1 [json_name = "targetId"];
+  optional uint64 cast_id = 2 [json_name = "castId"];
+  optional uint32 skill_id = 3 [json_name = "skillId"];
+  optional uint64 op_time = 4 [json_name = "opTime"];
+}
+message SCReboundBulletNtf {
+  optional uint64 target_id = 1 [json_name = "targetId"];
+  optional uint64 cast_id = 2 [json_name = "castId"];
+  optional uint32 skill_id = 3 [json_name = "skillId"];
+  optional uint32 result = 4 [json_name = "result"];
+  optional uint64 op_time = 5 [json_name = "opTime"];
+}
+message BattleVerifyInfo {
+  optional uint64 battle_index = 1 [json_name = "battleIndex"];
+  optional uint64 related_index = 2 [json_name = "relatedIndex"];
+  optional uint64 op_time = 3 [json_name = "opTime"];
+  optional .cs.SkillVerifyType source_type = 4 [json_name = "sourceType"];
+  optional int64 source_id = 5 [json_name = "sourceId"];
+}
+message PresentationMsgs {
+  repeated .cs.DispatchEventMsg dispatch_event_msg = 1 [json_name = "dispatchEventMsg"];
+  repeated .cs.MediaPackPlayMsg media_pack_play_msg = 2 [json_name = "mediaPackPlayMsg"];
+  repeated .cs.CustomMediaPackPlayMsg custom_media_pack_play_msg = 3 [json_name = "customMediaPackPlayMsg"];
+  repeated .cs.DissolveEntityMsg dissolve_entity_msg = 4 [json_name = "dissolveEntityMsg"];
+  repeated .cs.SetPrefabEffectActiveMsg set_prefab_effect_active_msg = 5 [json_name = "setPrefabEffectActiveMsg"];
+  repeated .cs.PlayVoiceMsg play_voice_msg = 6 [json_name = "playVoiceMsg"];
+  repeated .cs.SetPerformActionMsg set_perform_action_msg = 7 [json_name = "setPerformActionMsg"];
+  repeated .cs.StopPerformActionMsg stop_perform_action_ms = 8 [json_name = "stopPerformActionMs"];
+}
+message SCElementInfo {
+  optional uint64 element_guid = 1 [json_name = "elementGuid"];
+  optional uint32 element_conf_id = 2 [json_name = "elementConfId"];
+  optional uint64 attacker_id = 3 [json_name = "attackerId"];
+  optional uint64 executor_id = 4 [json_name = "executorId"];
+  optional uint64 source_id = 5 [json_name = "sourceId"];
+  optional uint64 creator_id = 6 [json_name = "creatorId"];
+  optional uint32 skill_id = 7 [json_name = "skillId"];
+  optional uint32 number_layers = 8 [json_name = "numberLayers"];
+  optional uint32 verify_source_id = 9 [json_name = "verifySourceId"];
+  optional .cs.SkillVerifyType verify_source_type = 10 [json_name = "verifySourceType"];
+}
+message SCElementSync {
+  repeated .cs.SCElementInfo add_elements = 1 [json_name = "addElements"];
+  repeated .cs.SCElementInfo del_elements = 2 [json_name = "delElements"];
+  optional uint64 force_flush_agent = 3 [json_name = "forceFlushAgent"];
+  optional .cs.ElementSyncReason reason = 4 [json_name = "reason"];
+}
+message BTTreeNodeState {
+  optional string uid = 1 [json_name = "uid"];
+  optional uint32 state = 2 [json_name = "state"];
+}
+message ServerBTTreeState {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  repeated .cs.BlackboardValue blackboard = 2 [json_name = "blackboard"];
+  repeated .cs.BTTreeNodeState node_state = 3 [json_name = "nodeState"];
+}
+message ServerBTTreeDebugSync {
+  repeated .cs.ServerBTTreeState state = 1 [json_name = "state"];
+}
+message CSWitchTimeReq {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+}
+message SkillCD {
+  option (msg_to_server) = true;
+  optional uint32 skill_id = 1 [json_name = "skillId"];
+  optional uint64 begin_time = 2 [json_name = "beginTime"];
+  optional uint32 cd = 3 [json_name = "cd"];
+  optional uint64 cd_time_p = 4 [json_name = "cdTimeP"];
+  optional uint32 segment = 5 [json_name = "segment"];
+  optional uint64 self_cd = 6 [json_name = "selfCd"];
+  optional uint64 public_cd = 7 [json_name = "publicCd"];
+  optional uint64 gcd = 8 [json_name = "gcd"];
+}
+message SkillCDList {
+  repeated .cs.SkillCD cds = 1 [json_name = "cds"];
+}
+message GroupHero {
+  option (msg_to_server) = true;
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 hp = 2 [json_name = "hp"];
+  optional uint32 sp = 3 [json_name = "sp"];
+  repeated .cs.SkillCD skills = 4 [json_name = "skills"];
+  repeated .cs.BuffInfo buffs = 5 [json_name = "buffs"];
+  optional uint32 time = 6 [json_name = "time"];
+  optional uint32 alive_state = 7 [json_name = "aliveState"];
+  optional uint32 rescue_val = 8 [json_name = "rescueVal"];
+}
+message BuffInfo {
+  option (msg_to_server) = true;
+  optional uint32 buf_id = 1 [json_name = "bufId"];
+  optional uint32 cfg_id = 4 [json_name = "cfgId"];
+  optional uint32 layer = 5 [json_name = "layer"];
+  optional uint64 begin_time = 6 [json_name = "beginTime"];
+  optional uint64 duration_time_p = 7 [json_name = "durationTimeP"];
+  optional uint64 attacker_id = 8 [json_name = "attackerId"];
+  optional uint64 executor_id = 9 [json_name = "executorId"];
+  optional uint64 source_id = 10 [json_name = "sourceId"];
+  optional uint64 creator_id = 11 [json_name = "creatorId"];
+  optional uint64 source_behavior_id = 12 [json_name = "sourceBehaviorId"];
+  optional uint32 collision_type = 13 [json_name = "collisionType"];
+  repeated .cs.BuffRandomInfo random = 14 [json_name = "random"];
+  optional uint32 from_type = 15 [json_name = "fromType"];
+  optional uint32 from_params = 16 [json_name = "fromParams"];
+  optional uint32 collider_index = 17 [json_name = "colliderIndex"];
+  optional .cs.Position collider_point = 18 [json_name = "colliderPoint"];
+  optional .cs.Position attack_point = 19 [json_name = "attackPoint"];
+  optional .cs.Position attack_dir = 20 [json_name = "attackDir"];
+  repeated .cs.AttributeEntry entrys = 21 [json_name = "entrys"];
+  optional sint32 change_value = 22 [json_name = "changeValue"];
+  optional int32 attribute_id = 23 [json_name = "attributeId"];
+  optional int32 calculate_type = 24 [json_name = "calculateType"];
+  optional bool remove_when_switch_client = 25 [json_name = "removeWhenSwitchClient"];
+  optional uint32 damage_cri_pct = 26 [json_name = "damageCriPct"];
+  optional uint64 total_time = 27 [json_name = "totalTime"];
+  optional uint64 pause_time = 28 [json_name = "pauseTime"];
+  optional uint64 custom_rebound_id = 29 [json_name = "customReboundId"];
+  optional uint32 custom_rebound_type = 30 [json_name = "customReboundType"];
+  optional .cs.SCElementDataSync server_data = 31 [json_name = "serverData"];
+  repeated .cs.BattleLinkNode link_nodes = 32 [json_name = "linkNodes"];
+  optional uint32 current_link_id = 33 [json_name = "currentLinkId"];
+  optional uint32 bullet_config_id = 34 [json_name = "bulletConfigId"];
+}
+message CSSkillEffectDone {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 skill_id = 2 [json_name = "skillId"];
+}
+message BattleLinkNodeData {
+  option (msg_to_server) = true;
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint64 target_uid = 2 [json_name = "targetUid"];
+  optional .cs.Position pos = 3 [json_name = "pos"];
+}
+message BattleLinkNode {
+  option (msg_to_server) = true;
+  optional uint32 node_id = 1 [json_name = "nodeId"];
+  optional .cs.BattleLinkNodeData data = 2 [json_name = "data"];
+}
+message AddElementBattleLinkNode {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 elem_uid = 2 [json_name = "elemUid"];
+  optional .cs.BattleLinkNode node = 3 [json_name = "node"];
+}
+message DelElementBattleLinkNode {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 elem_uid = 2 [json_name = "elemUid"];
+  optional uint32 node_id = 3 [json_name = "nodeId"];
+}
+message UpdateElementBattleLinkNode {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 elem_uid = 2 [json_name = "elemUid"];
+  optional uint32 node_id = 3 [json_name = "nodeId"];
+  optional .cs.BattleLinkNodeData data = 4 [json_name = "data"];
+}
+message AddBulletBattleLinkNode {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 bullet_uid = 2 [json_name = "bulletUid"];
+  optional .cs.BattleLinkNode node = 3 [json_name = "node"];
+}
+message DelBulletBattleLinkNode {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 bullet_uid = 2 [json_name = "bulletUid"];
+  optional uint32 node_id = 3 [json_name = "nodeId"];
+}
+message UpdateBulletBattleLinkNode {
+  optional uint64 uid = 1 [json_name = "uid"];
+  optional uint64 bullet_uid = 2 [json_name = "bulletUid"];
+  optional uint32 node_id = 3 [json_name = "nodeId"];
+  optional .cs.BattleLinkNodeData data = 4 [json_name = "data"];
+}
+message TeamCombineAttackTimerBegin {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 index = 2 [json_name = "index"];
+  optional uint64 begin_time = 3 [json_name = "beginTime"];
+  optional uint64 end_time = 4 [json_name = "endTime"];
+}
+message TeamCombineAttackTimerEnd {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+}
+message ReqTeamCombineAttackBegin {
+  optional uint64 target_uuid = 1 [json_name = "targetUuid"];
+  optional uint32 index = 2 [json_name = "index"];
+  optional uint64 uuid = 3 [json_name = "uuid"];
+}
+message RspTeamCombineAttackBegin {
+  optional uint64 target_uuid = 1 [json_name = "targetUuid"];
+  optional uint32 index = 2 [json_name = "index"];
+  optional bool success = 3 [json_name = "success"];
+  optional uint64 uuid = 4 [json_name = "uuid"];
+}
+message CSBattleAutoFightSync {
+  enum Status {
+    INVALID = 0;
+    START = 1;
+    STOP = 2;
+  }
+  optional .cs.CSBattleAutoFightSync.Status status = 1 [json_name = "status"];
+}
+message CSComboStart {
+}
+message CSComboEnd {
+  optional uint32 combo_num = 1 [json_name = "comboNum"];
+  optional uint64 combo_damage = 2 [json_name = "comboDamage"];
+}
+message CSPerfectDefense {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint64 target_uuid = 2 [json_name = "targetUuid"];
+}
+message CSDungeonBuffExtendNotify {
+  optional uint32 extend_seconds = 1 [json_name = "extendSeconds"];
+  optional uint32 change = 2 [json_name = "change"];
+}

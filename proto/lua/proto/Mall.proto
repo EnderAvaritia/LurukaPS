@@ -1,0 +1,180 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+import "BattlePass.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum MallRefreshType {
+  MallRefreshType_None = 0;
+  MallRefreshType_NoRefresh = 1;
+  MallRefreshType_Minute = 2;
+  MallRefreshType_Month = 3;
+  MallRefreshType_Day = 4;
+  MallRefreshType_Week = 5;
+}
+enum MallType {
+  MallType_General = 0;
+  MallType_Gift = 1;
+  MallType_SixYuanNewbie = 2;
+  MallType_Furniture = 3;
+}
+enum NonMallType {
+  NonMallType_None = 0;
+  NonMallType_RechargeDiamond = 1;
+  NonMallType_MonthlyCard = 2;
+  NonMallType_BattlePass = 3;
+}
+enum NovicePackStatus {
+  NPS_UNBOUGHT = 0;
+  NPS_BOUGHT = 1;
+  NPS_PAUSE = 2;
+}
+message PlayerMallGoods {
+  optional bool is_pay_goods = 1 [json_name = "isPayGoods"];
+  optional uint32 goods_id = 2 [json_name = "goodsId"];
+  optional uint64 begin_time = 3 [json_name = "beginTime"];
+  optional uint64 end_time = 4 [json_name = "endTime"];
+  optional uint32 curr_purchase_num = 5 [json_name = "currPurchaseNum"];
+  optional uint64 reset_time = 6 [json_name = "resetTime"];
+  repeated uint32 unlock_cond_id = 7 [json_name = "unlockCondId"];
+  repeated uint32 unlock_progress = 8 [json_name = "unlockProgress"];
+  optional bool is_all_cond_done = 9 [json_name = "isAllCondDone"];
+}
+message CSPlayerMallGetDiamondGoodsList {
+  optional uint32 diamond_shop_id = 1 [json_name = "diamondShopId"];
+}
+message SCPlayerMallGetDiamondGoodsList {
+  optional uint32 diamond_shop_id = 1 [json_name = "diamondShopId"];
+  repeated .cs.PlayerMallGoods diamond_goods_list = 2 [json_name = "diamondGoodsList"];
+}
+message CSPlayerMallBuyDiamondGoods {
+  optional uint32 diamond_shop_id = 1 [json_name = "diamondShopId"];
+  optional uint32 diamond_goods_id = 2 [json_name = "diamondGoodsId"];
+  optional uint32 buy_count = 3 [json_name = "buyCount"];
+}
+message SCPlayerMallBuyDiamondGoods {
+  optional uint32 diamond_shop_id = 1 [json_name = "diamondShopId"];
+  optional .cs.PlayerMallGoods diamond_goods = 2 [json_name = "diamondGoods"];
+  optional .cs.Rewards diamond_rewards = 3 [json_name = "diamondRewards"];
+}
+message CSPlayerMallGetPayGoodsList {
+  optional uint32 pay_shop_id = 1 [json_name = "payShopId"];
+  optional uint32 pay_goods_id = 2 [json_name = "payGoodsId"];
+}
+message SCPlayerMallGetPayGoodsList {
+  optional uint32 pay_shop_id = 1 [json_name = "payShopId"];
+  optional uint32 pay_goods_id = 2 [json_name = "payGoodsId"];
+  repeated .cs.PlayerMallGoods pay_goods_list = 3 [json_name = "payGoodsList"];
+}
+message CSPlayerMallBuyPayGoods {
+  optional uint32 pay_shop_id = 1 [json_name = "payShopId"];
+  optional uint32 pay_goods_id = 2 [json_name = "payGoodsId"];
+  optional uint32 buy_count = 3 [json_name = "buyCount"];
+}
+message SCPlayerMallBuyPayGoods {
+  optional uint32 pay_shop_id = 1 [json_name = "payShopId"];
+  optional .cs.PlayerMallGoods pay_goods = 2 [json_name = "payGoods"];
+  optional .cs.Rewards pay_rewards = 3 [json_name = "payRewards"];
+}
+message CSPlayerMallCreatePayOrder {
+  optional uint32 pay_shop_id = 1 [json_name = "payShopId"];
+  optional uint32 pay_goods_id = 2 [json_name = "payGoodsId"];
+  optional uint32 buy_count = 3 [json_name = "buyCount"];
+  optional string product_id = 4 [json_name = "productId"];
+  optional string amount = 5 [json_name = "amount"];
+}
+message SCPlayerMallCreatePayOrderNtf {
+  optional uint32 errcode = 1 [json_name = "errcode"];
+  optional uint32 pay_shop_id = 2 [json_name = "payShopId"];
+  optional uint32 pay_goods_id = 3 [json_name = "payGoodsId"];
+  optional uint32 buy_count = 4 [json_name = "buyCount"];
+  optional uint32 purchase_sdk_id = 5 [json_name = "purchaseSdkId"];
+  optional string purchase_sdk_item = 6 [json_name = "purchaseSdkItem"];
+  optional uint64 order_id = 7 [json_name = "orderId"];
+  optional string callback_url = 8 [json_name = "callbackUrl"];
+  optional string order_sign = 9 [json_name = "orderSign"];
+  optional string ext_info = 10 [json_name = "extInfo"];
+}
+message SCPlayerMallPaySuccessNtf {
+  optional uint32 pay_shop_id = 1 [json_name = "payShopId"];
+  optional uint32 pay_goods_id = 2 [json_name = "payGoodsId"];
+  optional .cs.Rewards pay_rewards = 3 [json_name = "payRewards"];
+  optional bool is_oversold = 4 [json_name = "isOversold"];
+  optional uint64 order_id = 5 [json_name = "orderId"];
+  optional uint32 send_type = 6 [json_name = "sendType"];
+}
+message CSNonMallCreatePayOrder {
+  optional uint32 purchase_sdk_id = 1 [json_name = "purchaseSdkId"];
+  optional uint32 buy_count = 2 [json_name = "buyCount"];
+  optional string product_id = 3 [json_name = "productId"];
+  optional string amount = 4 [json_name = "amount"];
+}
+message SCNonMallCreatePayOrderNtf {
+  optional uint32 errcode = 1 [json_name = "errcode"];
+  optional uint64 order_id = 2 [json_name = "orderId"];
+  optional uint32 purchase_sdk_id = 3 [json_name = "purchaseSdkId"];
+  optional string purchase_sdk_item = 4 [json_name = "purchaseSdkItem"];
+  optional string callback_url = 5 [json_name = "callbackUrl"];
+  optional string order_sign = 6 [json_name = "orderSign"];
+  optional string ext_info = 7 [json_name = "extInfo"];
+  optional uint32 buy_count = 8 [json_name = "buyCount"];
+}
+message SCPlayerNoMallPaySuccessNtf {
+  optional uint32 purchase_sdk_id = 1 [json_name = "purchaseSdkId"];
+  optional bool is_oversold = 2 [json_name = "isOversold"];
+  optional .cs.Rewards oversold_rewards = 3 [json_name = "oversoldRewards"];
+  optional uint64 order_id = 4 [json_name = "orderId"];
+  optional uint32 send_type = 5 [json_name = "sendType"];
+}
+message NovicePackInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional bool bought = 2 [json_name = "bought"];
+  optional uint32 login_days = 3 [json_name = "loginDays"];
+  repeated uint32 already_fetched = 4 [json_name = "alreadyFetched"];
+  optional uint32 group_id = 5 [json_name = "groupId"];
+  optional .cs.NovicePackStatus status = 6 [json_name = "status"];
+}
+message DebtInfo {
+  optional uint32 item_type = 1 [json_name = "itemType"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+  optional uint64 item_debt = 3 [json_name = "itemDebt"];
+}
+message DebtPackInfo {
+  repeated .cs.DebtInfo debt_list = 1 [json_name = "debtList"];
+}
+message MallGoodsReddot {
+  optional uint32 goods_id = 1 [json_name = "goodsId"];
+  optional uint32 status = 2 [json_name = "status"];
+}
+message MallReddotInfo {
+  repeated .cs.MallGoodsReddot diamond_reddot = 1 [json_name = "diamondReddot"];
+  repeated .cs.MallGoodsReddot pay_reddot = 2 [json_name = "payReddot"];
+}
+message SCPlayerMallGetRechargeDiamond {
+  repeated uint32 purchase_sdk_id_list = 1 [json_name = "purchaseSdkIdList"];
+  repeated uint64 first_recharge_time_list = 2 [json_name = "firstRechargeTimeList"];
+  optional uint32 purchase_sdk_id = 3 [json_name = "purchaseSdkId"];
+  optional uint32 buy_count = 4 [json_name = "buyCount"];
+  optional uint32 recharge_diamond_num = 5 [json_name = "rechargeDiamondNum"];
+  optional uint32 first_recharge_bonus = 6 [json_name = "firstRechargeBonus"];
+  optional uint32 recharge_bonus = 7 [json_name = "rechargeBonus"];
+  optional .cs.Rewards rewards = 8 [json_name = "rewards"];
+  optional uint64 first_recharge_time = 9 [json_name = "firstRechargeTime"];
+}
+message RechargePopupData {
+  optional uint32 popup_id = 1 [json_name = "popupId"];
+  optional .cs.SCPlayerMallPaySuccessNtf mall_data = 2 [json_name = "mallData"];
+  optional .cs.SCPlayerNoMallPaySuccessNtf non_mall_data = 3 [json_name = "nonMallData"];
+  optional .cs.SCBattlePassPayRewards battlepass_data = 4 [json_name = "battlepassData"];
+  optional .cs.SCPlayerMallGetRechargeDiamond recharge_diamond = 5 [json_name = "rechargeDiamond"];
+  optional .cs.SCPlayerMonthlyCardSuccessNtf monthly_card_data = 6 [json_name = "monthlyCardData"];
+  optional uint32 pay_source = 7 [json_name = "paySource"];
+  optional uint32 purchase_sdk_id = 8 [json_name = "purchaseSdkId"];
+}
+message SCPlayerMonthlyCardSuccessNtf {
+  optional .cs.Rewards rewards = 1 [json_name = "rewards"];
+}
+message TodoNoSense3 {
+  repeated uint32 reward_list = 2 [json_name = "rewardList"];
+}

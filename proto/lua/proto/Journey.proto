@@ -1,0 +1,68 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum JourneyTaskType {
+  JTY_linearTask = 0;
+  JTY_parallelism = 1;
+}
+enum JourneyTrackingPoint {
+  JTP_targetFinish = 1;
+  JTP_targetReward = 2;
+  JTP_pointReward = 3;
+  JTP_specialReward = 4;
+  JTP_taskFinish = 5;
+  JTP_taskReward = 6;
+}
+enum JourneyTypeInfo {
+  JTI_group = 1;
+  JTI_task = 2;
+  JTI_target = 3;
+  JTI_rec_page = 999;
+}
+enum JourneyRewardStatus {
+  JRS_CanntReceive = 0;
+  JRS_CouldReceive = 1;
+  JRS_AlreadyReceive = 2;
+}
+message JourneyGroup {
+  optional uint32 group_id = 1 [json_name = "groupId"];
+  repeated .cs.ProgressVal group_progress = 2 [json_name = "groupProgress"];
+  optional bool group_is_unlock = 3 [json_name = "groupIsUnlock"];
+}
+message JourneyTask {
+  optional uint32 task_id = 1 [json_name = "taskId"];
+  repeated .cs.ProgressVal task_progress = 2 [json_name = "taskProgress"];
+  optional bool task_is_unlock = 3 [json_name = "taskIsUnlock"];
+  optional uint32 task_reward_status = 4 [json_name = "taskRewardStatus"];
+}
+message JourneyTarget {
+  optional uint32 target_id = 1 [json_name = "targetId"];
+  repeated .cs.ProgressVal target_progress = 2 [json_name = "targetProgress"];
+  optional uint32 target_reward_status = 3 [json_name = "targetRewardStatus"];
+}
+message CSJourneyTrace {
+  optional uint32 journey_id = 1 [json_name = "journeyId"];
+  optional bool is_trace = 2 [json_name = "isTrace"];
+}
+message CSReceivePoint {
+  optional uint32 point_id = 1 [json_name = "pointId"];
+}
+message SCJourneySync {
+  repeated .cs.JourneyGroup journey_group = 1 [json_name = "journeyGroup"];
+  repeated .cs.JourneyTask journey_task = 2 [json_name = "journeyTask"];
+  repeated .cs.JourneyTarget journey_target = 3 [json_name = "journeyTarget"];
+  optional uint32 trace_id = 4 [json_name = "traceId"];
+  optional uint32 reward_index = 5 [json_name = "rewardIndex"];
+  optional bool proposal_page = 6 [json_name = "proposalPage"];
+  optional uint32 point_val = 7 [json_name = "pointVal"];
+  repeated .cs.ProgressVal proposal_progress = 8 [json_name = "proposalProgress"];
+  optional .cs.CommonItem special_item = 9 [json_name = "specialItem"];
+  optional uint32 window_show = 10 [json_name = "windowShow"];
+}
+message ProgressVal {
+  optional uint32 condition_id = 1 [json_name = "conditionId"];
+  optional uint32 condition_val = 2 [json_name = "conditionVal"];
+}

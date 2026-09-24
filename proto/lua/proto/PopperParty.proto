@@ -1,0 +1,113 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+import "Battle.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum PopperPartyState {
+  PPCS_NONE = 0;
+  PPCS_READY1 = 1;
+  PPCS_READY2 = 2;
+  PPCS_QUIT_TIMEOUT = 3;
+  PPCS_PRE_START = 4;
+  PPCS_START = 5;
+  PPCS_END = 6;
+}
+enum PopperPartyPlayerState {
+  CCPS_NONE = 0;
+  CCPS_LOAD = 1;
+  CCPS_READY = 2;
+  CCPS_QUIT = 3;
+}
+enum PopperPartyPlayerPlayState {
+  PPPPS_INVALID = 0;
+  PPPPS_PLAY = 1;
+  PPPPS_QUIT = 2;
+  PPPPS_END = 3;
+  PPPPS_WIN = 4;
+}
+message PopperPartyOutsideData {
+  optional bool full = 1 [json_name = "full"];
+  optional uint64 hero_id = 2 [json_name = "heroId"];
+  optional int64 ban_time = 3 [json_name = "banTime"];
+}
+message PopperPartyCampaignInfo {
+  optional uint32 dungeon_id = 1 [json_name = "dungeonId"];
+  optional uint32 map_id = 2 [json_name = "mapId"];
+  optional uint32 line_id = 3 [json_name = "lineId"];
+  optional .cs.PopperPartyStateInfo state_info = 4 [json_name = "stateInfo"];
+  repeated .cs.PopperPartyPlayerStateInfo player_state_list = 5 [json_name = "playerStateList"];
+  optional .cs.PopperPartyBompInfo bomp_info = 6 [json_name = "bompInfo"];
+  repeated .cs.PopperPartySkill skill_list = 7 [json_name = "skillList"];
+  repeated .cs.PopperPartyPlayerInfo player_info_list = 8 [json_name = "playerInfoList"];
+  optional .cs.CampaignHero campaign_hero = 9 [json_name = "campaignHero"];
+  repeated .cs.PopperPartyPlayerPlayStateInfo play_state_list = 10 [json_name = "playStateList"];
+  optional int64 create_time = 11 [json_name = "createTime"];
+}
+message PopperPartyPlayerInfo {
+  optional uint32 player_id = 3 [json_name = "playerId"];
+  optional string player_name = 1 [json_name = "playerName"];
+  optional uint32 control_hero = 2 [json_name = "controlHero"];
+  optional .cs.WardrobeInfo wardrobe = 4 [json_name = "wardrobe"];
+}
+message CampaignHero {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.HeroItemInfo hero_item = 2 [json_name = "heroItem"];
+  optional .cs.HeroAttrInfo hero_attr = 3 [json_name = "heroAttr"];
+  optional .cs.MoveInfo move = 4 [json_name = "move"];
+}
+message PopperPartyStateInfo {
+  optional .cs.PopperPartyState state = 1 [json_name = "state"];
+  optional uint32 state_start_time = 2 [json_name = "stateStartTime"];
+  optional uint32 state_end_time = 3 [json_name = "stateEndTime"];
+}
+message PopperPartyPlayerStateInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.PopperPartyPlayerState state = 2 [json_name = "state"];
+}
+message PopperPartyBompInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional int64 cooldown = 2 [json_name = "cooldown"];
+  optional int64 end_time = 3 [json_name = "endTime"];
+  optional int64 pause_time = 4 [json_name = "pauseTime"];
+}
+message PopperPartyTransferBompReq {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+}
+message PopperPartyChangeHeroReq {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+}
+message PopperPartySkill {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint32 skill_id = 2 [json_name = "skillId"];
+  optional uint64 cool_down = 4 [json_name = "coolDown"];
+  optional uint32 times = 5 [json_name = "times"];
+}
+message PopperPartyPlayerPlayStateSync {
+  repeated .cs.PopperPartyPlayerPlayStateInfo update_list = 1 [json_name = "updateList"];
+}
+message PopperPartyPlayerPlayStateInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.PopperPartyPlayerPlayState state = 2 [json_name = "state"];
+  optional uint32 play_time = 3 [json_name = "playTime"];
+}
+message PopperPartySettlementSync {
+  repeated .cs.PopperPartyPlayerPlayStateInfo player_list = 1 [json_name = "playerList"];
+  optional uint32 score = 2 [json_name = "score"];
+  optional bool score_limit = 5 [json_name = "scoreLimit"];
+  optional uint32 coin = 3 [json_name = "coin"];
+  optional bool coin_limit = 6 [json_name = "coinLimit"];
+  optional .cs.PopperPartyState state = 4 [json_name = "state"];
+  optional .cs.Rewards reward = 7 [json_name = "reward"];
+}
+message PopperPartyMatchSync {
+  optional int64 match_time = 1 [json_name = "matchTime"];
+  optional int32 reason = 2 [json_name = "reason"];
+}
+message PopperPartyTakeCardReq {
+  optional uint32 config_id = 1 [json_name = "configId"];
+}
+message PopperPartyMonitorSync {
+  optional int64 kick_time = 1 [json_name = "kickTime"];
+}

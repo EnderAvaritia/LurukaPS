@@ -1,0 +1,1069 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+import "Pet.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum WorldMapBuildStatusType {
+  WMBST_NORMAL = 1;
+  WMBST_BUILDING = 2;
+  WMBST_UPGRADING = 3;
+  WMBST_PRODUCT = 4;
+}
+enum WorldMapBuildType {
+  WMBT_HOUSE = 1;
+  WMBT_PRODUCT = 2;
+  WMBT_DECORATE = 3;
+  WMBT_CANTEEN = 4;
+  WMBT_DORM = 5;
+  WMBT_PET_CANTEEN = 6;
+  WMBT_PRO_BUILD = 7;
+  WMBT_PRO_ORNAMENT = 8;
+  WMBT_PRO_COMMON = 9;
+  WMBT_COOK = 10;
+  WMBT_HATCH = 12;
+  WMBT_MANAGE = 13;
+  WMBT_STOREHOUSE = 14;
+  WMBT_FIELD_NEW = 15;
+  WMBT_FIELD_HOUSE = 16;
+  WMBT_PARTICLE_STORE = 17;
+  WMBT_HOME_ORDER = 18;
+  WMBT_FIELD_NEW2 = 19;
+  WMBT_WAR_GOD_TOWER = 23;
+  WMBT_HOME_COLLECT = 24;
+  WMBT_RANCH = 53;
+  WMBT_FIELD = 54;
+  WMBT_WILD_COLLECT = 55;
+  WMBT_ACHIEVEMENT_SHOW = 61;
+  WMBT_ACTIVITY_SHOW = 62;
+  WMBT_WORLD_GAMEPLAY = 63;
+  WMBT_BATCH_HATCH = 64;
+}
+enum ProductType {
+  PT_Unkown2 = 2;
+  PT_Cook = 3;
+  PT_Unkown6 = 6;
+  PT_Unkown7 = 7;
+}
+enum FreeType {
+  FT_PASSIVE = 1;
+  FT_ACTIVE = 2;
+  FT_RECYCBUILD = 3;
+}
+enum WorldMapFieldStatusType {
+  WMFST_CLOSE = 1;
+  WMFST_OPEN = 2;
+  WMFST_CROP = 3;
+}
+enum WorldMapCropStatusType {
+  WMCST_SEED = 0;
+  WMCST_GROW = 1;
+  WMCST_PRE_HARVEST = 2;
+  WMCST_HARVEST = 3;
+}
+enum HomeResidentSpecialWorkType {
+  HRSW_SCIENCE = 1;
+  HRSW_MAX = 2;
+}
+enum PetStationedWorkStatusType {
+  PSWST_NONE = 0;
+  PSWST_HOME_REST = 1;
+  PSWST_HOME_WORK = 2;
+  PSWST_WILD_REST = 3;
+  PSWST_WILD_WORK = 4;
+  PSWST_FIELD_WORK = 5;
+  PSWST_RANCH_WORK = 6;
+  PSWST_CENTER = 7;
+}
+enum TechSyncType {
+  TST_EXP = 1;
+}
+enum StationEventType {
+  SET_COLLECT = 1;
+  SET_HOME_PRODUCT = 2;
+  SET_HOME_FIELD = 3;
+  SET_HOME_RANCH = 4;
+}
+enum HomeShortcutBarType {
+  HSBT_BUILD = 1;
+  HSBT_CROP = 2;
+}
+enum HomePetAutoWorkType {
+  HPAWT_WATER = 1;
+  HPAWT_HARVEST = 2;
+  HPAWT_PLANT = 3;
+  HRANCH_WORK = 4;
+  HRANCH_HARVEST = 5;
+}
+enum HomeOperateAutoWorkType {
+  HOAWT_ADD = 1;
+  HOAWT_DEL = 2;
+}
+enum HomeBuffValType {
+  HBVT_NUM = 1;
+  HBVT_RATIO = 2;
+  HBVT_TIME = 3;
+  HBVT_CATCH_PET = 4;
+  HBVT_BATTLE_ATTR = 5;
+}
+enum HomeBuffValCalcType {
+  HBVCT_Uncalc = 0;
+  HBVCT_OUTVAL = 2;
+  HBVCT_ADD = 3;
+  HBVCT_MAX = 4;
+  HBVCT_ADDMUL = 5;
+  HBVCT_SUBMUL = 6;
+  HBVCT_MIN = 7;
+  HBVCT_UNION = 8;
+  HBVCT_PRIORITY = 9;
+}
+enum HomeCropStateType {
+  HCST_NONE = 0;
+  HCST_SEED = 1;
+  HCST_GROW1 = 2;
+  HCST_GROW2 = 3;
+  HCST_HARVEST = 4;
+}
+enum HomeCropHarvestType {
+  HCHT_NONE = 0;
+  HCHT_COMMON_PLANT = 1;
+  HCHT_COMMON_FRUIT_TREE = 2;
+  HCHT_DNA_FRUIT_TREE = 3;
+}
+enum HomeHubTabType {
+  HHTT_PRODUCT = 1;
+  HHTT_AUTO_WORK = 2;
+  HHTT_RANCH = 3;
+  HHTT_COLLECT = 4;
+}
+enum HomeBuildingID {
+  FIELD_BUILDING = 20161;
+  GOOD_FIELD_BULDING = 20331;
+}
+enum PetEggHatchState {
+  PEHS_NORMAL = 0;
+  PEHS_IN_HATCH_QUEUE = 1;
+  PEHS_START_HATCH = 2;
+  PEHS_FINISH_HATCH = 3;
+}
+enum BatchHatchSlotState {
+  BHSS_EMPTY = 0;
+  BHSS_HATCHING = 1;
+  BHSS_FINISH = 2;
+}
+enum EUpDown {
+  EUD_None = 0;
+  EUD_Up = 1;
+  EUD_Down = 2;
+}
+enum EOrderType {
+  EOT_None = 0;
+  EOT_Plot = 1;
+  EOT_Fixed = 2;
+  EOT_Middle = 3;
+  EOT_Hight = 4;
+}
+enum EOrderState {
+  EOS_None = 0;
+  EOS_Accept = 1;
+  EOS_Complete = 2;
+}
+message CSQuickAddSeed {
+  repeated .cs.CommonItem items = 1 [json_name = "items"];
+  optional uint32 build_guid = 2 [json_name = "buildGuid"];
+}
+message HomeBuildLocate {
+  option (msg_to_server) = true;
+  optional uint32 block_id = 1 [json_name = "blockId"];
+  optional uint32 anchor = 2 [json_name = "anchor"];
+  optional uint32 direction = 3 [json_name = "direction"];
+  optional .cs.Position3f position = 4 [json_name = "position"];
+  optional .cs.Position3f rotation = 5 [json_name = "rotation"];
+  optional .cs.Position3f scale = 6 [json_name = "scale"];
+  optional .cs.Position3f center = 7 [json_name = "center"];
+}
+message HomeBuildProduct {
+  option (msg_to_server) = true;
+  optional uint32 product_id = 1 [json_name = "productId"];
+  optional uint32 start_time = 2 [json_name = "startTime"];
+  optional uint32 total_count = 3 [json_name = "totalCount"];
+  optional uint32 finish_count = 4 [json_name = "finishCount"];
+  optional uint32 product_guid = 5 [json_name = "productGuid"];
+  optional uint32 finish_time = 6 [json_name = "finishTime"];
+  optional uint32 state = 7 [json_name = "state"];
+  optional uint32 total_finish_time = 8 [json_name = "totalFinishTime"];
+  optional uint64 pet_guid = 9 [json_name = "petGuid"];
+}
+message SpecialProductInfos {
+  optional uint32 product_guid = 1 [json_name = "productGuid"];
+  optional uint32 extra_guid = 2 [json_name = "extraGuid"];
+  repeated .cs.CommonItem items = 3 [json_name = "items"];
+  optional uint32 extra_type = 4 [json_name = "extraType"];
+  optional uint32 designate_item_id = 5 [json_name = "designateItemId"];
+  repeated .cs.CommonItem designate_cost = 6 [json_name = "designateCost"];
+  optional uint32 designate_item_type = 7 [json_name = "designateItemType"];
+}
+message HomeBuildPetCanteen {
+  option (msg_to_server) = true;
+  repeated .cs.PetEatInfo pets = 1 [json_name = "pets"];
+  optional uint32 food_value = 2 [json_name = "foodValue"];
+  repeated .cs.CommonItem foods = 3 [json_name = "foods"];
+  repeated uint32 food_extra_ids = 5 [json_name = "foodExtraIds"];
+  repeated uint32 food_extra_values = 6 [json_name = "foodExtraValues"];
+}
+message HatchInfo {
+  option (msg_to_server) = true;
+  optional uint32 egg_guid = 1 [json_name = "eggGuid"];
+  optional uint32 start_time = 2 [json_name = "startTime"];
+  optional uint32 finish_time = 3 [json_name = "finishTime"];
+  optional uint32 state = 4 [json_name = "state"];
+  optional uint32 slot = 5 [json_name = "slot"];
+}
+message HomeBuildHatchInfo {
+  option (msg_to_server) = true;
+  repeated .cs.HatchInfo hatch_infos = 1 [json_name = "hatchInfos"];
+}
+message HomeBuildBatchHatchSlot {
+  option (msg_to_server) = true;
+  optional uint32 slot = 1 [json_name = "slot"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+  optional uint32 remain_time = 3 [json_name = "remainTime"];
+  optional uint32 last_update_time = 4 [json_name = "lastUpdateTime"];
+  optional uint32 state = 5 [json_name = "state"];
+}
+message HomeBuildBatchHatchInfo {
+  option (msg_to_server) = true;
+  repeated .cs.HomeBuildBatchHatchSlot slots = 1 [json_name = "slots"];
+}
+message ExtraProduct {
+  optional uint32 guid = 1 [json_name = "guid"];
+  repeated .cs.CommonItem item = 2 [json_name = "item"];
+}
+message WorldMapHomeBuild {
+  option (msg_to_server) = true;
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 build_id = 2 [json_name = "buildId"];
+  optional .cs.HomeBuildLocate locate = 3 [json_name = "locate"];
+  optional uint32 status = 4 [json_name = "status"];
+  optional uint32 start_time = 5 [json_name = "startTime"];
+  repeated .cs.HomeBuildProduct product = 6 [json_name = "product"];
+  optional uint64 station_pet_guid = 9 [json_name = "stationPetGuid"];
+  repeated .cs.ExtraProduct extra_product = 10 [json_name = "extraProduct"];
+  optional .cs.HomeBuildPetCanteen pet_canteen = 11 [json_name = "petCanteen"];
+  optional .cs.HomeBuildHatchInfo hatch = 12 [json_name = "hatch"];
+  repeated .cs.SpecialProductInfos specials = 13 [json_name = "specials"];
+  optional .cs.HomePetAutoWorkInfo auto_info = 14 [json_name = "autoInfo"];
+  optional .cs.CollectBuildData collect_build_data = 15 [json_name = "collectBuildData"];
+  optional .cs.HomeRanchPetWorkInfo ranch_pet_work_info = 16 [json_name = "ranchPetWorkInfo"];
+  repeated .cs.techExpInfo tech_exp = 17 [json_name = "techExp"];
+  optional .cs.WorldMapBuildCrop crop_info = 18 [json_name = "cropInfo"];
+  optional .cs.HomeDormInfo dorm = 19 [json_name = "dorm"];
+  optional uint32 build_type = 20 [json_name = "buildType"];
+  optional uint32 satiety_reduce_per = 21 [json_name = "satietyReducePer"];
+  optional uint32 satiety_reduce_remainder = 22 [json_name = "satietyReduceRemainder"];
+  optional .cs.HomeBuildBatchHatchInfo batch_hatch = 23 [json_name = "batchHatch"];
+  reserved 7 to 7;
+  reserved 8 to 8;
+}
+message FieldKey {
+  option (msg_to_server) = true;
+  optional uint32 field_id = 1 [json_name = "fieldId"];
+  optional uint32 block_id = 2 [json_name = "blockId"];
+}
+message buildPosInfo {
+  optional uint32 pos = 1 [json_name = "pos"];
+  optional uint32 build_guid = 2 [json_name = "buildGuid"];
+}
+message MineralsInfo {
+  optional uint32 region_id = 1 [json_name = "regionId"];
+  repeated uint32 mineral_id = 2 [json_name = "mineralId"];
+}
+message buildsInfo {
+  optional uint32 build_type = 1 [json_name = "buildType"];
+  repeated .cs.buildPosInfo builds = 2 [json_name = "builds"];
+}
+message FruitTreeExp {
+  optional uint32 seed_id = 1 [json_name = "seedId"];
+  optional uint32 exp = 2 [json_name = "exp"];
+}
+message HomeHub {
+  repeated .cs.buildsInfo pos_infos = 1 [json_name = "posInfos"];
+  repeated uint64 station_pets = 2 [json_name = "stationPets"];
+  repeated .cs.FruitTreeExp fruit_tree_exp = 3 [json_name = "fruitTreeExp"];
+  repeated .cs.FruitTreeExp fruit_dna_tree_drop_exp = 4 [json_name = "fruitDnaTreeDropExp"];
+}
+message WorldMapBuildCrop {
+  optional uint32 seed_id = 1 [json_name = "seedId"];
+  optional uint32 state = 2 [json_name = "state"];
+  optional uint32 state_start_time = 3 [json_name = "stateStartTime"];
+  optional uint32 water_num = 4 [json_name = "waterNum"];
+  optional uint32 water_max = 5 [json_name = "waterMax"];
+  optional uint32 state_finish_time = 6 [json_name = "stateFinishTime"];
+  optional uint64 water_pet = 7 [json_name = "waterPet"];
+  optional bool is_player_water = 8 [json_name = "isPlayerWater"];
+  optional uint32 grow_cost_time = 9 [json_name = "growCostTime"];
+  optional uint32 pre_cost_time = 10 [json_name = "preCostTime"];
+  optional bool is_fixed = 11 [json_name = "isFixed"];
+  optional uint32 fruit_tree_exp = 12 [json_name = "fruitTreeExp"];
+  optional uint32 fruit_grow_water_num = 13 [json_name = "fruitGrowWaterNum"];
+  optional uint32 fruit_grow_finish_water_time = 14 [json_name = "fruitGrowFinishWaterTime"];
+  optional uint32 dna_fruit_exp = 15 [json_name = "dnaFruitExp"];
+  optional uint32 dna_fruit_drop_index = 16 [json_name = "dnaFruitDropIndex"];
+  optional .cs.CSHomeHarvestResult dna_fruit_drop_result = 17 [json_name = "dnaFruitDropResult"];
+  optional uint32 field_type = 18 [json_name = "fieldType"];
+  optional uint32 main_build_guid = 19 [json_name = "mainBuildGuid"];
+  repeated uint32 follower_build_guids = 20 [json_name = "followerBuildGuids"];
+  optional uint32 fruit_grow_start_water_time = 21 [json_name = "fruitGrowStartWaterTime"];
+  optional .cs.CSHomeHarvestResult drop_result = 22 [json_name = "dropResult"];
+}
+message WorldMapHome {
+}
+message Build {
+  option (msg_to_server) = true;
+  optional uint32 build_id = 1 [json_name = "buildId"];
+  optional uint32 total_num = 2 [json_name = "totalNum"];
+  optional uint32 used_num = 3 [json_name = "usedNum"];
+  optional bool unlock = 4 [json_name = "unlock"];
+}
+message CSEnterHome {
+  optional uint32 creator_id = 1 [json_name = "creatorId"];
+}
+message WorldBuffBuild {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 build_id = 2 [json_name = "buildId"];
+}
+message HomeTree {
+  optional uint32 stage = 1 [json_name = "stage"];
+  optional uint32 process = 2 [json_name = "process"];
+  optional bool is_new = 3 [json_name = "isNew"];
+  repeated uint32 sub_process = 4 [json_name = "subProcess"];
+}
+message HomeFormulaInfo {
+  optional uint32 product_id = 1 [json_name = "productId"];
+  optional uint32 craft_count = 2 [json_name = "craftCount"];
+}
+message HomeMaterialWishlist {
+  optional uint32 uid = 1 [json_name = "uid"];
+  optional uint32 product_id = 2 [json_name = "productId"];
+  repeated uint32 selects = 3 [json_name = "selects"];
+  optional bool trace = 4 [json_name = "trace"];
+  optional uint32 count = 5 [json_name = "count"];
+}
+message RecentProductInfo {
+  optional uint32 product_id = 1 [json_name = "productId"];
+  optional uint32 build_id = 2 [json_name = "buildId"];
+}
+message HomeRecentProduction {
+  optional uint32 type = 1 [json_name = "type"];
+  repeated .cs.RecentProductInfo products = 2 [json_name = "products"];
+}
+message HomeLevelNewBase {
+  optional uint32 level = 1 [json_name = "level"];
+  optional uint32 exp = 2 [json_name = "exp"];
+  optional uint32 option_setting = 3 [json_name = "optionSetting"];
+}
+message SCHomeSync {
+  optional uint32 home_lv = 1 [json_name = "homeLv"];
+  optional bytes home_name = 2 [json_name = "homeName"];
+  repeated .cs.Build builds = 3 [json_name = "builds"];
+  repeated uint32 del_builds = 4 [json_name = "delBuilds"];
+  repeated .cs.WorldMapHomeBuild home_builds = 5 [json_name = "homeBuilds"];
+  repeated .cs.ShortcutBar shortcut_bars = 6 [json_name = "shortcutBars"];
+  optional .cs.TechnologyTypeList technology = 7 [json_name = "technology"];
+  repeated .cs.WorldBuffBuild buff_builds = 8 [json_name = "buffBuilds"];
+  optional .cs.HomeTree tree = 9 [json_name = "tree"];
+  repeated .cs.HomeFormulaInfo formula = 10 [json_name = "formula"];
+  optional .cs.HomeHub home_hub = 11 [json_name = "homeHub"];
+  repeated .cs.HomeMaterialWishlist wishlist = 12 [json_name = "wishlist"];
+  repeated uint32 del_wishlist = 13 [json_name = "delWishlist"];
+  optional .cs.HomeDormData dorm = 14 [json_name = "dorm"];
+  repeated .cs.HomeRecentProduction recent_products = 15 [json_name = "recentProducts"];
+  optional .cs.HomeLevelNewBase home_level_new_base = 16 [json_name = "homeLevelNewBase"];
+}
+message ShortcutBar {
+  option (msg_to_server) = true;
+  optional uint32 type = 1 [json_name = "type"];
+  repeated int32 item_id = 2 [json_name = "itemId"];
+}
+message CSShortcutBarChange {
+  repeated .cs.ShortcutBar shortcut_bar = 1 [json_name = "shortcutBar"];
+}
+message CSBuildCreate {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 build_id = 2 [json_name = "buildId"];
+  optional .cs.HomeBuildLocate locate = 3 [json_name = "locate"];
+  optional bool from_hub = 4 [json_name = "fromHub"];
+}
+message CSBuildCreateFinish {
+  optional uint32 guid = 1 [json_name = "guid"];
+}
+message CSBuildLocate {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 build_id = 2 [json_name = "buildId"];
+  optional .cs.HomeBuildLocate locate = 3 [json_name = "locate"];
+}
+message CSBuildUnlocate {
+  optional uint32 guid = 1 [json_name = "guid"];
+}
+message UnlockVal {
+  optional uint32 unlock_id = 1 [json_name = "unlockId"];
+  optional uint32 unlock_val = 2 [json_name = "unlockVal"];
+}
+message UnlockScience {
+  option (msg_to_server) = true;
+  optional uint32 sci_id = 1 [json_name = "sciId"];
+  optional uint32 state = 2 [json_name = "state"];
+  repeated .cs.UnlockVal unlock_val = 3 [json_name = "unlockVal"];
+}
+message HomeScienceInfos {
+  repeated .cs.UnlockScience unlock_science = 1 [json_name = "unlockScience"];
+  optional uint32 research_id = 2 [json_name = "researchId"];
+  optional uint32 finish_time = 3 [json_name = "finishTime"];
+}
+message Technology {
+  optional uint32 subType = 1 [json_name = "subType"];
+  optional uint32 subLevel = 2 [json_name = "subLevel"];
+  optional uint32 lastTime = 3 [json_name = "lastTime"];
+  optional uint32 maxSubLevel = 4 [json_name = "maxSubLevel"];
+  optional bool isOpened = 5 [json_name = "isOpened"];
+}
+message TechnologyTypeInfo {
+  repeated .cs.Technology list = 1 [json_name = "list"];
+  optional uint32 type = 2 [json_name = "type"];
+}
+message TechnologyTypeList {
+  repeated .cs.TechnologyTypeInfo list = 1 [json_name = "list"];
+  optional uint32 point = 2 [json_name = "point"];
+  optional uint32 totalPoint = 3 [json_name = "totalPoint"];
+  optional uint32 level = 4 [json_name = "level"];
+}
+message CSProductStart {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint32 product_id = 2 [json_name = "productId"];
+  optional uint32 count = 3 [json_name = "count"];
+  repeated uint32 select_material = 4 [json_name = "selectMaterial"];
+}
+message CSProductOrnament {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint32 product_id = 2 [json_name = "productId"];
+  optional uint32 ornament_guid = 3 [json_name = "ornamentGuid"];
+  optional uint32 designated_item_id = 4 [json_name = "designatedItemId"];
+  optional uint32 count = 5 [json_name = "count"];
+}
+message CSCookRequest {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint32 cook_id = 2 [json_name = "cookId"];
+  repeated .cs.SimpleItem cook_material = 3 [json_name = "cookMaterial"];
+  optional uint32 cook_count = 4 [json_name = "cookCount"];
+}
+message SCProductFinish {
+  optional .cs.WorldMapHomeBuild build = 1 [json_name = "build"];
+  optional .cs.Rewards reward = 2 [json_name = "reward"];
+  optional .cs.Rewards special_reward = 3 [json_name = "specialReward"];
+  repeated uint32 triggered_affix_ids = 4 [json_name = "triggeredAffixIds"];
+}
+message CSProductsOps {
+  optional uint32 guid = 1 [json_name = "guid"];
+  repeated uint32 product_guids = 2 [json_name = "productGuids"];
+  optional bool is_all = 3 [json_name = "isAll"];
+}
+message CSCropPlant {
+  optional uint32 seed_id = 1 [json_name = "seedId"];
+  optional uint32 build_guid = 2 [json_name = "buildGuid"];
+  repeated uint32 follower_build_guids = 3 [json_name = "followerBuildGuids"];
+}
+message CSCropPlantReq {
+  repeated .cs.CSCropPlant plant_info = 1 [json_name = "plantInfo"];
+  optional bool is_pet = 2 [json_name = "isPet"];
+}
+message CSBuildTargetLocate {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional .cs.HomeBuildLocate locate = 2 [json_name = "locate"];
+}
+message CSCropRePlant {
+  optional .cs.CSBuildTargetLocate main_build = 1 [json_name = "mainBuild"];
+  repeated .cs.CSBuildTargetLocate follower_builds = 2 [json_name = "followerBuilds"];
+}
+message CSCropOptionSetting {
+  optional uint32 option_setting = 1 [json_name = "optionSetting"];
+}
+message CSOperateCanteenItem {
+  optional uint32 counts = 1 [json_name = "counts"];
+  optional uint32 guid = 2 [json_name = "guid"];
+}
+message CollectProductInfo {
+  option (msg_to_server) = true;
+  optional uint32 product_id = 1 [json_name = "productId"];
+  optional uint32 collect_num = 2 [json_name = "collectNum"];
+  optional uint32 last_collect_time = 3 [json_name = "lastCollectTime"];
+  optional uint32 next_collect_time = 4 [json_name = "nextCollectTime"];
+}
+message CollectItem {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional uint32 item_type = 2 [json_name = "itemType"];
+  optional uint32 item_num = 3 [json_name = "itemNum"];
+  optional uint32 source_product_id = 4 [json_name = "sourceProductId"];
+  optional uint32 sort_arg1 = 5 [json_name = "sortArg1"];
+  optional uint32 sort_arg2 = 6 [json_name = "sortArg2"];
+}
+message CollectBuildData {
+  option (msg_to_server) = true;
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 build_id = 2 [json_name = "buildId"];
+  repeated .cs.CollectProductInfo product_infos = 3 [json_name = "productInfos"];
+  optional uint32 start_time = 4 [json_name = "startTime"];
+  optional uint64 pet_guid = 5 [json_name = "petGuid"];
+  repeated .cs.CollectItem items = 7 [json_name = "items"];
+  reserved 6 to 6;
+}
+message CSCollectStart {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 plan_time = 2 [json_name = "planTime"];
+}
+message CSCollectGetReward {
+  repeated uint32 guid = 1 [json_name = "guid"];
+  optional uint32 source_build = 2 [json_name = "sourceBuild"];
+}
+message CSFieldOperate {
+  optional .cs.HomeBuildLocate locate = 1 [json_name = "locate"];
+  optional uint32 field_type = 2 [json_name = "fieldType"];
+}
+message SCFieldCloseReq {
+  optional uint32 field_id = 1 [json_name = "fieldId"];
+}
+message CSWaterField {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional bool is_pet = 2 [json_name = "isPet"];
+}
+message CSPetStationed {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 build_type = 2 [json_name = "buildType"];
+  optional uint32 build_guid = 3 [json_name = "buildGuid"];
+  optional uint32 source_build = 4 [json_name = "sourceBuild"];
+  optional uint32 sub_work_type = 5 [json_name = "subWorkType"];
+  optional bool out_hub = 6 [json_name = "outHub"];
+}
+message AutoPetInfo {
+  option (msg_to_server) = true;
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 last_work_time = 2 [json_name = "lastWorkTime"];
+}
+message techExpInfo {
+  option (msg_to_server) = true;
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 exp = 2 [json_name = "exp"];
+}
+message HomePetAutoWorkInfo {
+  option (msg_to_server) = true;
+  optional uint64 plant_pet = 1 [json_name = "plantPet"];
+  optional uint64 water_pet = 2 [json_name = "waterPet"];
+  optional uint64 harvest_pet = 3 [json_name = "harvestPet"];
+  repeated .cs.CommonItem seeds = 4 [json_name = "seeds"];
+  repeated .cs.CommonItem crops = 5 [json_name = "crops"];
+  optional uint32 block_id = 6 [json_name = "blockId"];
+  optional uint32 water_target = 7 [json_name = "waterTarget"];
+  repeated .cs.CommonItem got_crops = 8 [json_name = "gotCrops"];
+  repeated .cs.SlotSatietyReduceInfo slot_satiety_reduce = 14 [json_name = "slotSatietyReduce"];
+}
+message SlotSatietyReduceInfo {
+  option (msg_to_server) = true;
+  optional uint32 capacity_id = 1 [json_name = "capacityId"];
+  optional uint32 per = 2 [json_name = "per"];
+  optional uint32 remainder = 3 [json_name = "remainder"];
+}
+message CSOperateSeedStorehouse {
+  optional uint32 operate_type = 1 [json_name = "operateType"];
+  optional .cs.CommonItem seed = 2 [json_name = "seed"];
+  optional uint32 build_guid = 3 [json_name = "buildGuid"];
+}
+message CSChoseAutoWorkPet {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 work_type = 2 [json_name = "workType"];
+  optional uint32 operate_type = 3 [json_name = "operateType"];
+  optional uint32 build_guid = 4 [json_name = "buildGuid"];
+  optional bool out_hub = 5 [json_name = "outHub"];
+}
+message CSExchangeSeedLoc {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint32 guid = 2 [json_name = "guid"];
+  optional uint32 target_guid = 3 [json_name = "targetGuid"];
+}
+message CSHomeHarvest {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional bool is_pet = 2 [json_name = "isPet"];
+}
+message CSHomeHarvestResult {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional .cs.Rewards reward = 2 [json_name = "reward"];
+  repeated uint32 drop_ids = 3 [json_name = "dropIds"];
+}
+message CSHomeHarvestResultList {
+  repeated .cs.CSHomeHarvestResult results = 1 [json_name = "results"];
+}
+message CSHomeHarvestList {
+  repeated uint32 build_guids = 1 [json_name = "buildGuids"];
+  optional bool is_pet = 2 [json_name = "isPet"];
+}
+message HomeRanchDropReward {
+  option (msg_to_server) = true;
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional .cs.CommonItem item = 2 [json_name = "item"];
+  optional uint64 pet_guid = 3 [json_name = "petGuid"];
+  optional uint32 drop_id = 4 [json_name = "dropId"];
+}
+message HomeRanchPetDropTime {
+  option (msg_to_server) = true;
+  optional uint32 drop_id = 1 [json_name = "dropId"];
+  optional uint32 time = 2 [json_name = "time"];
+}
+message HomeRanchProductPetInfo {
+  option (msg_to_server) = true;
+  optional uint32 slot = 1 [json_name = "slot"];
+  optional uint64 pet_guid = 2 [json_name = "petGuid"];
+  repeated .cs.HomeRanchPetDropTime drop_times = 3 [json_name = "dropTimes"];
+}
+message SCHomeUnlockInfo {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 id = 2 [json_name = "id"];
+}
+message SCHomeUnlockSync {
+  repeated .cs.SCHomeUnlockInfo infos = 1 [json_name = "infos"];
+}
+message HomeRanchDailyBuffLimit {
+  option (msg_to_server) = true;
+  optional uint32 buff_type = 1 [json_name = "buffType"];
+  optional uint32 used = 2 [json_name = "used"];
+}
+message HomeRanchPetWorkInfo {
+  option (msg_to_server) = true;
+  optional uint32 block_id = 1 [json_name = "blockId"];
+  repeated .cs.HomeRanchProductPetInfo product_pets = 2 [json_name = "productPets"];
+  optional uint64 harvest_pet = 3 [json_name = "harvestPet"];
+  repeated .cs.HomeRanchDropReward drops = 4 [json_name = "drops"];
+  repeated .cs.PetEggbaseInfo eggs = 5 [json_name = "eggs"];
+  repeated .cs.CommonItem stores = 6 [json_name = "stores"];
+  optional uint32 lv = 7 [json_name = "lv"];
+  optional uint32 daily_buff_egg_count = 8 [json_name = "dailyBuffEggCount"];
+  optional uint32 daily_buff_egg_reset_time = 9 [json_name = "dailyBuffEggResetTime"];
+  optional uint32 buff_prob_extra_accum = 10 [json_name = "buffProbExtraAccum"];
+  optional uint32 buff_drop_egg_accum = 11 [json_name = "buffDropEggAccum"];
+  repeated .cs.HomeRanchDailyBuffLimit daily_buff_limits = 12 [json_name = "dailyBuffLimits"];
+}
+message CSHomeRanchPlayerGetReward {
+  option (msg_to_server) = true;
+  optional uint32 block_id = 1 [json_name = "blockId"];
+  repeated uint32 reward_guids = 2 [json_name = "rewardGuids"];
+  repeated uint32 egg_guids = 3 [json_name = "eggGuids"];
+}
+message CSHomeRanchPetAutoGetReward {
+  option (msg_to_server) = true;
+  optional uint32 block_id = 1 [json_name = "blockId"];
+  optional uint32 reward_guid = 2 [json_name = "rewardGuid"];
+}
+message CSHomeRanchSetPetOption {
+  option (msg_to_server) = true;
+  optional uint32 block_id = 1 [json_name = "blockId"];
+  optional uint32 slot = 2 [json_name = "slot"];
+  optional uint64 pet_guid = 3 [json_name = "petGuid"];
+  optional uint32 work_type = 4 [json_name = "workType"];
+  optional bool out_hub = 5 [json_name = "outHub"];
+}
+message CSTechnologyTypeInfo {
+  optional uint32 type = 1 [json_name = "type"];
+}
+message SCTechnologyTypeInfo {
+  optional .cs.TechnologyTypeInfo info = 1 [json_name = "info"];
+}
+message SCTechnologyTypeSync {
+  optional .cs.TechnologyTypeList info = 1 [json_name = "info"];
+  optional uint32 sync_type = 2 [json_name = "syncType"];
+}
+message CSTechnologyLevelUp {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 subType = 2 [json_name = "subType"];
+}
+message SCTechnologyLevelUp {
+  optional uint32 errorCode = 1 [json_name = "errorCode"];
+}
+message CSTechnologyFirstOpen {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 subType = 2 [json_name = "subType"];
+}
+message SCHomeBuildInfo {
+  repeated .cs.WorldMapHomeBuild builds = 1 [json_name = "builds"];
+}
+message PlayerPlanInfo {
+  optional uint32 seed_id = 1 [json_name = "seedId"];
+  optional uint32 plan_num = 2 [json_name = "planNum"];
+}
+message CSHatchOperator {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+}
+message SCHatchFinish {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  repeated uint32 triggered_affix_ids = 2 [json_name = "triggeredAffixIds"];
+}
+message CSCollectBuildCreate {
+  optional uint32 collect_id = 1 [json_name = "collectId"];
+  optional uint32 source_build = 2 [json_name = "sourceBuild"];
+}
+message SCPetHandingProduct {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional .cs.Rewards reward = 2 [json_name = "reward"];
+}
+message SCPetEatFinish {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 food_id = 2 [json_name = "foodId"];
+}
+message HomeBuildsCheckCallbackData {
+  optional uint32 area = 1 [json_name = "area"];
+  optional uint32 partition = 2 [json_name = "partition"];
+  optional uint32 platid = 3 [json_name = "platid"];
+  optional string openid = 4 [json_name = "openid"];
+  optional uint32 timestamp = 5 [json_name = "timestamp"];
+  optional uint32 build_id = 6 [json_name = "buildId"];
+  optional string client_version = 7 [json_name = "clientVersion"];
+}
+message RelativeRotation {
+  optional float pitch_degree = 1 [json_name = "pitchDegree"];
+  optional float yaw_degree = 2 [json_name = "yawDegree"];
+  optional float roll_degree = 3 [json_name = "rollDegree"];
+}
+message RelativeScale3D {
+  optional float scale_x = 1 [json_name = "scaleX"];
+  optional float scale_y = 2 [json_name = "scaleY"];
+  optional float scale_z = 3 [json_name = "scaleZ"];
+}
+message HomeBuildsCheckBuildData {
+  optional uint32 obj_id = 1 [json_name = "objId"];
+  optional uint32 assetid = 2 [json_name = "assetid"];
+  optional .cs.Position3f RelativeLocation = 3 [json_name = "RelativeLocation"];
+  optional .cs.RelativeRotation RelativeRotation = 4 [json_name = "RelativeRotation"];
+  optional .cs.RelativeScale3D RelativeScale3D = 5 [json_name = "RelativeScale3D"];
+  optional .cs.Position3f Barycenter = 6 [json_name = "Barycenter"];
+  optional uint32 Material_id1 = 7 [json_name = "MaterialId1"];
+  optional uint32 Material_id2 = 8 [json_name = "MaterialId2"];
+}
+message HomeBuildsCheck {
+  optional .cs.HomeBuildsCheckCallbackData callback_data = 1 [json_name = "callbackData"];
+  repeated .cs.HomeBuildsCheckBuildData build_data = 2 [json_name = "buildData"];
+}
+message SSHomeBuildsCheck {
+  optional uint32 playerId = 1 [json_name = "playerId"];
+  optional .cs.HomeBuildsCheck info = 2 [json_name = "info"];
+}
+message CSHomeBuildsCheck {
+  optional uint32 err_code = 1 [json_name = "errCode"];
+  optional uint32 err_label = 2 [json_name = "errLabel"];
+  optional string err_url = 3 [json_name = "errUrl"];
+}
+message BagSimpleProduct {
+  optional uint32 product_guid = 1 [json_name = "productGuid"];
+  optional uint32 product_id = 2 [json_name = "productId"];
+  optional uint32 start_time = 3 [json_name = "startTime"];
+  optional uint32 total_count = 4 [json_name = "totalCount"];
+  optional uint32 finish_time = 5 [json_name = "finishTime"];
+}
+message SCSimpleProductInfo {
+  repeated .cs.BagSimpleProduct products = 1 [json_name = "products"];
+  optional .cs.Rewards reward = 2 [json_name = "reward"];
+  optional .cs.Rewards special_reward = 3 [json_name = "specialReward"];
+  repeated uint32 dels = 4 [json_name = "dels"];
+}
+message CSPetStationedHomeHub {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 type = 2 [json_name = "type"];
+}
+message CSChangeHomeHubPos {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 source_pos = 2 [json_name = "sourcePos"];
+  optional uint32 target_pos = 3 [json_name = "targetPos"];
+}
+message CSGetAllBuildRewardReq {
+  repeated uint32 build_guid = 1 [json_name = "buildGuid"];
+}
+message SCGetAllBuildRewardReq {
+  repeated .cs.BuildRewardBase base = 1 [json_name = "base"];
+  optional uint32 home_exp = 2 [json_name = "homeExp"];
+  repeated .cs.Rewards new_awards = 3 [json_name = "newAwards"];
+}
+message SCGetAutoWorkCropReward {
+  optional .cs.Rewards reward = 1 [json_name = "reward"];
+  optional uint32 home_exp = 2 [json_name = "homeExp"];
+}
+message BuildRewardBase {
+  optional uint32 type = 1 [json_name = "type"];
+  optional .cs.Rewards award = 2 [json_name = "award"];
+}
+message CSSmeltOrnament {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  repeated uint32 ornament_guid = 2 [json_name = "ornamentGuid"];
+}
+message HomeDormInfo {
+  option (msg_to_server) = true;
+  optional uint32 block_id = 1 [json_name = "blockId"];
+  optional string name = 2 [json_name = "name"];
+  repeated uint64 hero_ids = 3 [json_name = "heroIds"];
+  repeated .cs.DormHerosInfo dorm_heros = 4 [json_name = "dormHeros"];
+}
+message CSChangeHeroBackGround {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 build_guid = 2 [json_name = "buildGuid"];
+  optional uint32 itemid = 3 [json_name = "itemid"];
+  optional bool is_change = 4 [json_name = "isChange"];
+}
+message HomeDormData {
+  option (msg_to_server) = true;
+  repeated .cs.DormHeroPajamas hero_pajamas = 1 [json_name = "heroPajamas"];
+  optional .cs.Rewards back_ground_scene = 2 [json_name = "backGroundScene"];
+  repeated .cs.DormHeroBackGround hero_back_ground = 3 [json_name = "heroBackGround"];
+}
+message DormHeroPajamas {
+  option (msg_to_server) = true;
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 pajamas_itemid = 2 [json_name = "pajamasItemid"];
+}
+message DormHeroBackGround {
+  option (msg_to_server) = true;
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 sceneid = 2 [json_name = "sceneid"];
+  optional uint32 night_sceneid = 3 [json_name = "nightSceneid"];
+  optional uint32 itemid = 4 [json_name = "itemid"];
+}
+message DormHerosInfo {
+  option (msg_to_server) = true;
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 dorm_index = 2 [json_name = "dormIndex"];
+}
+message CSRoleDormDressUp {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+}
+message CSHomeDormCheckInfo {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint32 dorm_index = 2 [json_name = "dormIndex"];
+  optional uint64 hero_in = 3 [json_name = "heroIn"];
+  optional uint64 hero_out = 4 [json_name = "heroOut"];
+}
+message CSHomeDormName {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional string name = 2 [json_name = "name"];
+}
+message SCDormHeroInfo {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+}
+message CSHomeDormEnter {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional uint64 hero_id = 2 [json_name = "heroId"];
+  optional bool is_change = 3 [json_name = "isChange"];
+}
+message ItemParam {
+  optional uint32 item_type = 1 [json_name = "itemType"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+  optional uint32 item_count = 3 [json_name = "itemCount"];
+  optional uint64 item_guid = 4 [json_name = "itemGuid"];
+}
+message HomeOrder {
+  optional uint32 order_guid = 1 [json_name = "orderGuid"];
+  optional uint32 order_id = 2 [json_name = "orderId"];
+  optional uint32 order_state = 3 [json_name = "orderState"];
+  optional uint32 event_id = 4 [json_name = "eventId"];
+  optional int32 updown_value = 5 [json_name = "updownValue"];
+  optional uint32 order_type = 6 [json_name = "orderType"];
+}
+message HomeOrderEvent {
+  optional uint32 event_id = 1 [json_name = "eventId"];
+}
+message HomeOrderReplace {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 new_guid = 2 [json_name = "newGuid"];
+}
+message SCHomeOrderSync {
+  optional uint64 refresh_time = 1 [json_name = "refreshTime"];
+  optional uint64 next_refresh_time = 2 [json_name = "nextRefreshTime"];
+  repeated .cs.HomeOrder orders = 3 [json_name = "orders"];
+  repeated .cs.HomeOrderEvent events = 4 [json_name = "events"];
+  repeated .cs.HomeOrderEvent future_events = 5 [json_name = "futureEvents"];
+  repeated uint32 del_orders = 6 [json_name = "delOrders"];
+  optional uint32 refresh_count = 7 [json_name = "refreshCount"];
+  optional bool is_all = 8 [json_name = "isAll"];
+  optional uint32 home_money = 9 [json_name = "homeMoney"];
+  repeated .cs.HomeOrderReplace order_replace = 10 [json_name = "orderReplace"];
+}
+message CSHomeOrderAccept {
+  optional uint32 order_guid = 1 [json_name = "orderGuid"];
+}
+message CSHomeOrderSubmit {
+  optional uint32 order_guid = 1 [json_name = "orderGuid"];
+  repeated .cs.ItemParam items = 2 [json_name = "items"];
+}
+message CSHomeOrderRefresh {
+  optional uint32 order_guid = 1 [json_name = "orderGuid"];
+}
+message SCHomeFurnitureRecommend {
+  repeated uint32 id = 1 [json_name = "id"];
+}
+message HomeHeroStoryInfo {
+  optional uint32 heor_id = 1 [json_name = "heorId"];
+  optional uint32 story_id = 2 [json_name = "storyId"];
+}
+message SCHomeHeroStoryInfo {
+  repeated .cs.HomeHeroStoryInfo storys = 1 [json_name = "storys"];
+}
+message CSHomeHeroStoryReward {
+  optional .cs.HomeHeroStoryInfo storys = 1 [json_name = "storys"];
+}
+message SCHomeHeroStoryReward {
+  optional .cs.HomeHeroStoryInfo storys = 1 [json_name = "storys"];
+  optional uint32 favorability = 2 [json_name = "favorability"];
+}
+message HomeExchangeNewInfo {
+  optional uint32 nowEventId = 1 [json_name = "nowEventId"];
+  optional uint32 NextEventId = 2 [json_name = "NextEventId"];
+  repeated .cs.ObjChangePerchent cinfo = 3 [json_name = "cinfo"];
+  repeated uint32 tag = 4 [json_name = "tag"];
+}
+message ObjChangePerchent {
+  optional uint32 objid = 1 [json_name = "objid"];
+  optional bool isupper = 2 [json_name = "isupper"];
+  optional uint32 percent = 3 [json_name = "percent"];
+}
+message ExchangeObjInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 num = 2 [json_name = "num"];
+  optional .cs.Ornament orname = 3 [json_name = "orname"];
+}
+message CSExchangeObjInfo {
+}
+message CSAddExchangeObj {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 num = 2 [json_name = "num"];
+  optional uint32 guid = 3 [json_name = "guid"];
+  optional uint32 type = 4 [json_name = "type"];
+}
+message CSCancelExangeObj {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 guid = 2 [json_name = "guid"];
+}
+message SCExchangeObj {
+  repeated .cs.ExchangeObjInfo obj_info = 1 [json_name = "objInfo"];
+  optional uint32 settle_num = 2 [json_name = "settleNum"];
+}
+message CSSettleImmediately {
+}
+message SCSettleImmediatelyAward {
+  optional .cs.Rewards award = 1 [json_name = "award"];
+  optional .cs.SCExchangeObj obj_info = 2 [json_name = "objInfo"];
+}
+message CSHistoryReport {
+}
+message SCHistoryReport {
+  repeated .cs.HistoryReportBase info = 1 [json_name = "info"];
+  optional .cs.ExchangeExtraAward extra_info = 2 [json_name = "extraInfo"];
+}
+message HistoryReportBase {
+  optional uint32 history_time = 1 [json_name = "historyTime"];
+  optional uint32 profit = 2 [json_name = "profit"];
+  optional uint32 settle_num = 3 [json_name = "settleNum"];
+  optional uint32 extra_num = 4 [json_name = "extraNum"];
+}
+message ExchangeExtraAward {
+  optional .cs.Rewards award = 1 [json_name = "award"];
+}
+message ExchangeOrderBoard {
+  optional uint32 start_time = 1 [json_name = "startTime"];
+  optional uint32 end_time = 2 [json_name = "endTime"];
+  optional uint32 refresh_times = 3 [json_name = "refreshTimes"];
+  repeated .cs.OrderBase order_guid = 4 [json_name = "orderGuid"];
+}
+message OrderBase {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 order_id = 2 [json_name = "orderId"];
+}
+message CSExchangeOrderBoard {
+}
+message SCExchangeOrderBoard {
+  optional .cs.ExchangeOrderBoard base = 1 [json_name = "base"];
+  repeated .cs.Rewards rewards = 2 [json_name = "rewards"];
+}
+message CSRefrshOneOrder {
+  optional uint32 order_guid = 1 [json_name = "orderGuid"];
+}
+message CSFinishOrder {
+  optional uint32 order_guid = 1 [json_name = "orderGuid"];
+}
+message SCHomeExchangeInfo {
+  optional .cs.SCHistoryReport history = 1 [json_name = "history"];
+  optional .cs.SCExchangeOrderBoard order_board = 2 [json_name = "orderBoard"];
+}
+message ExchangeBaseInfo {
+  optional bool is_update = 1 [json_name = "isUpdate"];
+  optional uint32 curtime = 2 [json_name = "curtime"];
+  optional uint32 lasttime = 3 [json_name = "lasttime"];
+  optional bool settle_flag = 4 [json_name = "settleFlag"];
+  optional uint32 curday_settle_num = 5 [json_name = "curdaySettleNum"];
+  optional uint32 all_num = 6 [json_name = "allNum"];
+  optional uint32 all_settle_num = 7 [json_name = "allSettleNum"];
+  optional .cs.ExchangeExtraAward extra_award = 8 [json_name = "extraAward"];
+  optional uint32 max_guid = 9 [json_name = "maxGuid"];
+  optional uint32 extra_num = 10 [json_name = "extraNum"];
+}
+message HatchSlotDetail {
+  optional uint32 slot = 1 [json_name = "slot"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+  optional uint32 egg_id = 3 [json_name = "eggId"];
+  optional uint32 state = 4 [json_name = "state"];
+  optional uint32 start_time = 5 [json_name = "startTime"];
+  optional uint32 finish_time = 6 [json_name = "finishTime"];
+  optional uint32 total_time = 7 [json_name = "totalTime"];
+  repeated uint32 egg_affix = 8 [json_name = "eggAffix"];
+}
+message HatchSlotParam {
+  optional uint32 slot = 1 [json_name = "slot"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+}
+message BatchHatchResult {
+  optional uint32 slot = 1 [json_name = "slot"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+  optional uint64 pet_guid = 3 [json_name = "petGuid"];
+  repeated uint32 triggered_affix_ids = 4 [json_name = "triggeredAffixIds"];
+}
+message CSBatchHatchPetEgg {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  repeated .cs.HatchSlotParam slots = 2 [json_name = "slots"];
+}
+message SCBatchHatchPetEggRsp {
+  repeated .cs.HatchSlotDetail slots = 1 [json_name = "slots"];
+}
+message CSCancelBatchHatch {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  repeated uint32 slots = 2 [json_name = "slots"];
+}
+message SCCancelBatchHatchRsp {
+  repeated .cs.HatchSlotDetail slots = 1 [json_name = "slots"];
+}
+message CSBatchHatchOut {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  repeated uint32 slots = 2 [json_name = "slots"];
+}
+message SCBatchHatchOutRsp {
+  repeated .cs.BatchHatchResult results = 1 [json_name = "results"];
+  repeated .cs.HatchSlotDetail slots = 2 [json_name = "slots"];
+}
+message CSBatchHatchPetStation {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 build_guid = 2 [json_name = "buildGuid"];
+  optional uint32 type = 3 [json_name = "type"];
+}
+message SCHatchSlotFinish {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+  optional .cs.HatchSlotDetail slot = 2 [json_name = "slot"];
+}
+message CSBatchHatchInfo {
+  optional uint32 build_guid = 1 [json_name = "buildGuid"];
+}
+message SCBatchHatchInfoRsp {
+  repeated .cs.HatchSlotDetail slots = 1 [json_name = "slots"];
+}

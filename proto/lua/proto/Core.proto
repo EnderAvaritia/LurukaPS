@@ -1,0 +1,44 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "Battle.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+message CSStatInfo {
+}
+message BagInfo {
+  repeated .cs.CommonItem items = 1 [json_name = "items"];
+}
+message SoulEssenceBagInfo {
+  repeated .cs.SoulEssence soulessences = 1 [json_name = "soulessences"];
+  repeated uint32 del_pos = 2 [json_name = "delPos"];
+  repeated uint32 cfg_story_id = 3 [json_name = "cfgStoryId"];
+}
+message RedPointInfos {
+  repeated .cs.PlayerRedPointBase redpoints = 1 [json_name = "redpoints"];
+  repeated .cs.PlayerRedPointBase dredpoints = 2 [json_name = "dredpoints"];
+}
+message PlayerHerosInfo {
+  repeated .cs.HeroItemInfo heros = 1 [json_name = "heros"];
+  repeated .cs.GroupHero battle_infos = 2 [json_name = "battleInfos"];
+}
+message BattleBasicInfo {
+  optional uint32 dungeon_id = 1 [json_name = "dungeonId"];
+  optional uint32 battle_lost_time = 2 [json_name = "battleLostTime"];
+}
+message GuideInfo {
+  repeated .cs.GuideBase infos = 1 [json_name = "infos"];
+}
+message PlayerData {
+  optional .cs.PlayerBasicInfo basic_info = 1 [json_name = "basicInfo"];
+  optional .cs.PlayerHerosInfo heros_info = 3 [json_name = "herosInfo"];
+  optional .cs.BagInfo sbag_infos = 5 [json_name = "sbagInfos"];
+  optional .cs.PlayerAttrInfo attr_infos = 6 [json_name = "attrInfos"];
+  optional .cs.SoulEssenceBagInfo soulessence_infos = 8 [json_name = "soulessenceInfos"];
+  repeated .cs.GroupManager group_mgrs = 20 [json_name = "groupMgrs"];
+  optional .cs.GuideInfo guide_infos = 27 [json_name = "guideInfos"];
+  optional .cs.GameClientSetting settings = 29 [json_name = "settings"];
+  optional .cs.GameClientSetting home_settings = 30 [json_name = "homeSettings"];
+  optional .cs.PlayerCatchWorldBossInfo catch_world_boss_info = 31 [json_name = "catchWorldBossInfo"];
+  optional .cs.ClientCustomOptions custom_options = 32 [json_name = "customOptions"];
+}

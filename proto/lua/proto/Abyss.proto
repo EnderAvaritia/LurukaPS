@@ -1,0 +1,172 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CSCore.proto";
+import "KiboDuel.proto";
+import "CommonMsg.proto";
+import "Pet.proto";
+import "WorldMap.proto";
+import "Campaign.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum AbyssModeType {
+  ABYSS_MODE_NULL = 0;
+  ABYSS_MODE_NEWER = 1;
+  ABYSS_MODE_PERSISTANT = 2;
+  ABYSS_MODE_ROTATION = 3;
+}
+enum ChallengeTaskStatus {
+  CHALLENGE_TASK_STATUS_NONE = 0;
+  CHALLENGE_TASK_STATUS_IN_PROGRESS = 1;
+  CHALLENGE_TASK_STATUS_COMPLETED = 2;
+  CHALLENGE_TASK_STATUS_FAILED = 3;
+}
+message AbyssHeroUnit {
+  optional uint32 index = 1 [json_name = "index"];
+  optional .cs.CSWearPet hero = 2 [json_name = "hero"];
+  optional uint32 hp = 3 [json_name = "hp"];
+  optional uint32 pet_hp = 4 [json_name = "petHp"];
+}
+message AbyssChallengeNode {
+  optional uint32 dungeon_id = 1 [json_name = "dungeonId"];
+  optional uint64 control = 2 [json_name = "control"];
+  repeated .cs.AbyssHeroUnit heros = 3 [json_name = "heros"];
+  optional uint32 buff_id = 4 [json_name = "buffId"];
+  optional bool win = 5 [json_name = "win"];
+  optional uint32 battle_time = 6 [json_name = "battleTime"];
+  optional uint32 dead_hero_num = 7 [json_name = "deadHeroNum"];
+  repeated .cs.ProtectEnemyNode protect_enemy_list = 8 [json_name = "protectEnemyList"];
+}
+message ChallengeTaskNode {
+  optional int32 tag_type = 1 [json_name = "tagType"];
+  optional int64 tag_progress = 2 [json_name = "tagProgress"];
+  optional .cs.ChallengeTaskStatus status = 3 [json_name = "status"];
+}
+message ProtectEnemyNode {
+  optional uint32 enemy_id = 1 [json_name = "enemyId"];
+  optional uint32 cur_hp = 2 [json_name = "curHp"];
+  optional uint32 max_hp = 3 [json_name = "maxHp"];
+}
+message AbyssLevelInfo {
+  optional uint32 cur_level = 1 [json_name = "curLevel"];
+  repeated .cs.AbyssChallengeNode challenge_list = 2 [json_name = "challengeList"];
+  optional bool pass_level_reward_flag = 3 [json_name = "passLevelRewardFlag"];
+  optional uint32 star_num = 4 [json_name = "starNum"];
+  optional bool passed = 5 [json_name = "passed"];
+  repeated .cs.ChallengeTaskNode task_tags_list = 6 [json_name = "taskTagsList"];
+}
+message AbyssStarRewardNode {
+  optional uint32 stage_num = 1 [json_name = "stageNum"];
+  optional bool reward_flag = 2 [json_name = "rewardFlag"];
+}
+message AbyssStarRewardInfo {
+  repeated .cs.AbyssStarRewardNode reward_list = 1 [json_name = "rewardList"];
+}
+message CSAbyssData {
+}
+message SCAbyssData {
+  repeated .cs.AbyssLevelInfo newer_mode_info = 1 [json_name = "newerModeInfo"];
+  optional .cs.AbyssStarRewardInfo newer_star_reward_info = 2 [json_name = "newerStarRewardInfo"];
+  repeated .cs.AbyssLevelInfo persistent_mode_info = 3 [json_name = "persistentModeInfo"];
+  optional .cs.AbyssStarRewardInfo persistent_star_reward_info = 4 [json_name = "persistentStarRewardInfo"];
+  repeated .cs.AbyssLevelInfo rotation_mode_info = 5 [json_name = "rotationModeInfo"];
+  optional .cs.AbyssStarRewardInfo rotation_star_reward_info = 6 [json_name = "rotationStarRewardInfo"];
+  optional uint32 rotation_id = 7 [json_name = "rotationId"];
+  optional uint32 rotation_mode_end_time = 8 [json_name = "rotationModeEndTime"];
+  optional uint32 max_rotation_3star_count = 9 [json_name = "maxRotation3starCount"];
+  optional bool inherit_notify_flag = 10 [json_name = "inheritNotifyFlag"];
+  repeated .cs.AbyssChallengeNode last_rotation_heros = 11 [json_name = "lastRotationHeros"];
+  optional uint32 rotation_remind_mail_sent_rotation_id = 12 [json_name = "rotationRemindMailSentRotationId"];
+}
+message CSAbyssChallenge {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+  optional uint32 abyss_level = 2 [json_name = "abyssLevel"];
+  repeated .cs.AbyssChallengeNode challenge_list = 3 [json_name = "challengeList"];
+}
+message CSAbyssChallengeReset {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+  optional uint32 abyss_level = 2 [json_name = "abyssLevel"];
+}
+message CSAbyssChallengeRealStart {
+}
+message CSAbyssChallengeRetry {
+}
+message CSAbyssChallengeNext {
+}
+message CSAbyssChallengeQuit {
+}
+message SCAbyssLevelInfoUpdate {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+  optional .cs.AbyssLevelInfo level_info = 2 [json_name = "levelInfo"];
+}
+message CSAbyssGetPassReward {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+}
+message SCAbyssGetPassReward {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+  repeated .cs.AbyssLevelInfo level_info = 2 [json_name = "levelInfo"];
+}
+message CSAbyssGetStarReward {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+}
+message SCAbyssGetStarReward {
+  optional .cs.AbyssModeType mode = 1 [json_name = "mode"];
+  optional .cs.AbyssStarRewardInfo reward_info = 2 [json_name = "rewardInfo"];
+}
+message CSAbyssGlobalView {
+  optional bool clear_inherit_flag = 1 [json_name = "clearInheritFlag"];
+}
+message SCAbyssGlobalView {
+  optional uint32 rotation_id = 1 [json_name = "rotationId"];
+  optional uint32 rotation_mode_end_time = 2 [json_name = "rotationModeEndTime"];
+  optional uint32 cur_level = 3 [json_name = "curLevel"];
+  optional uint32 total_star = 4 [json_name = "totalStar"];
+  optional bool inherit_notify_flag = 5 [json_name = "inheritNotifyFlag"];
+  optional .cs.AbyssModeType mode = 6 [json_name = "mode"];
+}
+message SCAbyssHeroInfoSync {
+  repeated .cs.HeroItemInfo heros = 1 [json_name = "heros"];
+  repeated .cs.PetbaseInfo pets = 2 [json_name = "pets"];
+}
+message AbyssHeroUnitHP {
+  optional uint32 index = 1 [json_name = "index"];
+  optional .cs.CSWearPet hero = 2 [json_name = "hero"];
+  optional uint32 hp = 3 [json_name = "hp"];
+  optional uint32 pet_hp = 4 [json_name = "petHp"];
+}
+message SCAbyssDungeonEndSync {
+  optional uint32 type = 1 [json_name = "type"];
+  optional .cs.CampaignStatusType state = 2 [json_name = "state"];
+  optional uint32 star = 3 [json_name = "star"];
+  optional uint32 cost_time = 4 [json_name = "costTime"];
+  optional uint32 total_cost_time = 5 [json_name = "totalCostTime"];
+  repeated .cs.AbyssHeroUnitHP heros = 6 [json_name = "heros"];
+  optional bool last_dungeon = 7 [json_name = "lastDungeon"];
+  repeated .cs.ChallengeTaskNode task_tags_list = 8 [json_name = "taskTagsList"];
+}
+message SCAbyssDungeonInfoSync {
+  optional uint32 dungeon_id = 1 [json_name = "dungeonId"];
+  repeated .cs.ChallengeTaskNode task_tags_list = 2 [json_name = "taskTagsList"];
+  optional uint32 abyss_level = 3 [json_name = "abyssLevel"];
+  optional uint32 total_battle_time = 4 [json_name = "totalBattleTime"];
+  repeated .cs.ProtectEnemyNode protect_enemy_list = 5 [json_name = "protectEnemyList"];
+  optional bool is_retry = 6 [json_name = "isRetry"];
+}
+message SCAbyssDungeonMonsterBuffSync {
+  repeated uint32 buff_ids = 1 [json_name = "buffIds"];
+}
+message AbyssDungeonMonsterHpNode {
+  optional uint32 enemy_id = 1 [json_name = "enemyId"];
+  optional uint32 hp = 2 [json_name = "hp"];
+  optional uint32 max_hp = 3 [json_name = "maxHp"];
+}
+message SCAbyssDungeonEnemyHpSync {
+  repeated .cs.AbyssDungeonMonsterHpNode enemy_hp_list = 1 [json_name = "enemyHpList"];
+}
+message SCAbyssBossIntro {
+  optional uint32 stage_id = 1 [json_name = "stageId"];
+  optional uint32 target_id = 2 [json_name = "targetId"];
+}
+message CSAbyssBossIntroDone {
+  optional uint32 stage_id = 1 [json_name = "stageId"];
+}

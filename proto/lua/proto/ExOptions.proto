@@ -1,0 +1,58 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+import "descriptor.proto";
+enum SaveType {
+  SAVE_NONE = 0;
+  SAVE_SPLIT = 1;
+  SAVE_BYTES = 2;
+}
+enum DBObjectType {
+  DB_OBJECT_PLAYER = 0;
+  DB_OBJECT_SCENE = 1;
+  DB_GLOBAL_MAIL = 2;
+  DB_DIRTY_WORDS = 3;
+  DB_SYSTEM_INFO = 4;
+  DB_BAN_PID = 5;
+}
+extend .google.protobuf.EnumValueOptions {
+  optional string req = 51000 [default = "null", json_name = "req"];
+  optional string rsp = 51001 [default = "null", json_name = "rsp"];
+  optional string desc = 51002 [default = "null", json_name = "desc"];
+  optional int32 obsolete = 51003 [default = 0, json_name = "obsolete"];
+  optional int32 norsp = 51004 [default = 0, json_name = "norsp"];
+  optional int32 platform = 51005 [default = 0, json_name = "platform"];
+}
+extend .google.protobuf.MessageOptions {
+  optional bytes redis_key = 51010 [default = "", json_name = "redisKey"];
+  optional bytes list_req = 51011 [default = "", json_name = "listReq"];
+  optional bytes update_req = 51012 [default = "", json_name = "updateReq"];
+  optional bytes redis_build_way = 51013 [default = "", json_name = "redisBuildWay"];
+  optional bool need_del = 51014 [default = false, json_name = "needDel"];
+  optional bool need_mongo = 51015 [default = false, json_name = "needMongo"];
+  optional int32 sql_split = 51016 [default = 0, json_name = "sqlSplit"];
+  optional int32 zcore = 51017 [default = 0, json_name = "zcore"];
+  optional bytes zchandler = 51018 [default = "", json_name = "zchandler"];
+  optional bytes msg_gen = 51019 [default = "", json_name = "msgGen"];
+  optional bool need_truncate = 51020 [default = false, json_name = "needTruncate"];
+  optional bool export_msg = 51021 [default = false, json_name = "exportMsg"];
+  optional bool self_def_msg = 51022 [default = false, json_name = "selfDefMsg"];
+  optional bytes sql_way = 51023 [default = "", json_name = "sqlWay"];
+  optional bool nolistcode = 51024 [default = false, json_name = "nolistcode"];
+  optional bool noupcode = 51025 [default = false, json_name = "noupcode"];
+  optional bytes sql_table_name = 51026 [default = "tbPlayerCore", json_name = "sqlTableName"];
+  optional bytes sql_build_way = 51027 [default = "single", json_name = "sqlBuildWay"];
+  optional bytes sql_column_name = 51028 [default = "", json_name = "sqlColumnName"];
+  optional bool msg_to_server = 52000 [json_name = "msgToServer"];
+  optional bool constructor_to_server = 52002 [json_name = "constructorToServer"];
+  optional .SaveType save_type = 55003 [default = SAVE_SPLIT, json_name = "saveType"];
+  optional .DBObjectType save_obj_type = 55004 [default = DB_OBJECT_PLAYER, json_name = "saveObjType"];
+}
+extend .google.protobuf.FieldOptions {
+  optional bool key = 51000 [default = false, json_name = "key"];
+  optional bool del_key = 51001 [default = false, json_name = "delKey"];
+  optional bool reset_key = 51002 [default = false, json_name = "resetKey"];
+  optional bytes redis_field_name = 51011 [json_name = "redisFieldName"];
+  optional bytes compare_way = 51012 [json_name = "compareWay"];
+  optional bool field_to_server = 52001 [json_name = "fieldToServer"];
+  optional bool not_save = 55003 [default = false, json_name = "notSave"];
+}

@@ -1,0 +1,15 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+message DungeonMaterialInfo {
+  optional uint32 material_id = 1 [json_name = "materialId"];
+  optional uint32 material_star = 2 [json_name = "materialStar"];
+  optional uint64 success_time = 3 [json_name = "successTime"];
+  optional uint32 difficulty_id = 4 [json_name = "difficultyId"];
+  optional uint32 success_count = 5 [json_name = "successCount"];
+}
+message SCDungeonMaterialInfoSync {
+  repeated .cs.DungeonMaterialInfo infos = 1 [json_name = "infos"];
+}

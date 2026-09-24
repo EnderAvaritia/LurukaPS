@@ -1,0 +1,75 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum DungeonModeType {
+  DUNGEON_MODE_NORMAL = 1;
+  DUNGEON_MODE_ROTATE = 2;
+}
+enum DungeonStatus {
+  DUNGEON_STATUS_INIT = 0;
+  DUNGEON_STATUS_GAME = 1;
+  DUNGEON_STATUS_END = 2;
+}
+message DungeonResumeRes {
+  optional uint32 result = 1 [json_name = "result"];
+}
+message PlayerDungeonPersistData {
+  repeated string instance_key = 1 [json_name = "instanceKey"];
+}
+message EntityState {
+  optional uint64 entity_id = 1 [json_name = "entityId"];
+  optional uint32 entity_type = 2 [json_name = "entityType"];
+  optional .cs.Position position = 3 [json_name = "position"];
+  optional uint32 hp = 4 [json_name = "hp"];
+  optional uint32 mp = 5 [json_name = "mp"];
+}
+message EventState {
+  optional uint32 event_id = 1 [json_name = "eventId"];
+  optional uint32 event_state = 2 [json_name = "eventState"];
+}
+message ItemState {
+  optional uint64 item_id = 1 [json_name = "itemId"];
+  optional uint32 item_type = 2 [json_name = "itemType"];
+  optional uint32 item_count = 3 [json_name = "itemCount"];
+  optional .cs.Position position = 4 [json_name = "position"];
+}
+message DungeonSaveData {
+  optional uint32 dungeon_id = 1 [json_name = "dungeonId"];
+  optional uint32 map_id = 2 [json_name = "mapId"];
+  optional uint32 timestamp = 3 [json_name = "timestamp"];
+  optional .cs.DungeonStatus status = 4 [json_name = "status"];
+  optional .cs.Position player_pos = 5 [json_name = "playerPos"];
+  repeated .cs.EntityState entity_states = 6 [json_name = "entityStates"];
+  repeated .cs.EventState event_states = 7 [json_name = "eventStates"];
+  repeated .cs.ItemState item_states = 8 [json_name = "itemStates"];
+}
+message SavePointInfo {
+  optional uint32 save_id = 1 [json_name = "saveId"];
+  optional uint32 dungeon_id = 2 [json_name = "dungeonId"];
+  optional uint32 timestamp = 3 [json_name = "timestamp"];
+  optional string dungeon_name = 4 [json_name = "dungeonName"];
+  optional uint32 progress = 5 [json_name = "progress"];
+}
+message SavePointList {
+  repeated .cs.SavePointInfo save_points = 1 [json_name = "savePoints"];
+}
+message CSSaveDungeon {
+  optional uint32 save_mode = 1 [json_name = "saveMode"];
+}
+message SCSaveDungeon {
+  optional uint32 save_id = 1 [json_name = "saveId"];
+}
+message CSLoadDungeon {
+  optional uint32 save_id = 1 [json_name = "saveId"];
+}
+message CSGetSavePoints {
+}
+message SCGetSavePoints {
+  optional .cs.SavePointList save_points = 1 [json_name = "savePoints"];
+}
+message CSDeleteSavePoint {
+  optional uint32 save_id = 1 [json_name = "saveId"];
+}

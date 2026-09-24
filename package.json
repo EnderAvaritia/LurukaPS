@@ -1,0 +1,1 @@
+{"name":"azurjs","version":"0.1.0","private":true,"type":"module","description":"Azur Promilia local game server","license":"AGPL-3.0-only","engines":{"node":">=22"},"scripts":{"start":"node src/main.js","generate":"node scripts/generate.js","test":"node --test","coverage:protocol":"node scripts/coverage.js"},"dependencies":{"better-sqlite3":"^13.0.3","protobufjs":"^7.5.0"}}

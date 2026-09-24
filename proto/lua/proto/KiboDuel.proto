@@ -1,0 +1,306 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+import "Pet.proto";
+import "Battle.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum KiboDuelType {
+  KDuelTypeNpc = 1;
+  KDuelTypeLevels = 2;
+}
+enum KiboDuelStatus {
+  KDS_NORMAL = 0;
+  KDS_QUIT = 1;
+  KDS_START = 2;
+  KDS_AGOING = 3;
+  KDS_END = 4;
+}
+enum KiboDuelPVPStatus {
+  KIBO_DUEL_STATUS_NONE = 0;
+  KIBO_DUEL_STATUS_QUIT = 1;
+  KIBO_DUEL_STATUS_READY = 2;
+  KIBO_DUEL_STATUS_PRE_START = 3;
+  KIBO_DUEL_STATUS_REAL_START = 4;
+  KIBO_DUEL_STATUS_FIN = 5;
+  KIBO_DUEL_STATUS_OVERTIME = 8;
+  KIBO_DUEL_STATUS_OVERTIME_EXPIRED = 9;
+}
+enum KiboDuelFinType {
+  KIBO_DUEL_FIN_INVALID = 0;
+  KIBO_DUEL_FIN_CAMP1_WIN = 1;
+  KIBO_DUEL_FIN_CAMP2_WIN = 2;
+  KIBO_DUEL_FIN_DRAW = 3;
+}
+enum KiboDuelPVPFinReason {
+  KIBO_DUEL_FIN_REASON_INVALID = 0;
+  KIBO_DUEL_FIN_REASON_DESTROY_CLAM = 1;
+  KIBO_DUEL_FIN_REASON_TIMEOUT = 2;
+  KIBO_DUEL_FIN_REASON_PLAYER_QUIT = 3;
+}
+enum MiniGameMode {
+  MINI_GAME_MODE_FAIR = 0;
+  MINI_GAME_MODE_INIT = 1;
+}
+enum MiniGameModeOp {
+  MINI_GAME_MODE_OP_ASK = 0;
+  MINI_GAME_MODE_OP_FAIL = 1;
+  MINI_GAME_MODE_OP_SUCC = 2;
+}
+message PetDuelInfo {
+  optional uint32 use_slot = 1 [json_name = "useSlot"];
+  repeated .cs.PetDuelGroupInfo groups = 2 [json_name = "groups"];
+}
+message PetDuelGroupInfo {
+  option (msg_to_server) = true;
+  optional uint32 slot = 1 [json_name = "slot"];
+  repeated .cs.TrialPet pet_guids = 2 [json_name = "petGuids"];
+  optional uint64 hero = 3 [json_name = "hero"];
+  repeated .cs.UnitSkillInfo hero_skills = 4 [json_name = "heroSkills"];
+  optional uint32 duel_id = 5 [json_name = "duelId"];
+  optional uint32 index = 6 [json_name = "index"];
+}
+message PetDuelAreaInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 exp = 2 [json_name = "exp"];
+  optional uint32 lvl = 3 [json_name = "lvl"];
+  repeated uint32 got_lvl_reward = 4 [json_name = "gotLvlReward"];
+}
+message PlayerKiboDuelBase {
+  optional uint32 use_slot = 1 [json_name = "useSlot"];
+  repeated .cs.PetDuelGroupInfo groups = 2 [json_name = "groups"];
+  repeated .cs.PetDuelRecordInfo records = 3 [json_name = "records"];
+  optional .cs.MoveInfo last_position = 4 [json_name = "lastPosition"];
+  repeated .cs.PetDuelAreaInfo area_infos = 5 [json_name = "areaInfos"];
+  repeated uint32 unlock_skills = 6 [json_name = "unlockSkills"];
+  optional uint32 last_slot = 7 [json_name = "lastSlot"];
+  repeated uint32 locked_kibo_duel = 8 [json_name = "lockedKiboDuel"];
+}
+message KiboDuelTrainerInfo {
+  optional uint32 trainerId = 1 [json_name = "trainerId"];
+  optional string name = 2 [json_name = "name"];
+  optional uint32 level = 3 [json_name = "level"];
+}
+message KiboDuelFightingInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 start_time = 2 [json_name = "startTime"];
+  repeated uint32 challenge_values = 3 [json_name = "challengeValues"];
+  optional uint32 status = 4 [json_name = "status"];
+  optional uint32 star = 5 [json_name = "star"];
+  optional uint32 end_time = 6 [json_name = "endTime"];
+  optional uint32 activity_id = 7 [json_name = "activityId"];
+  optional uint32 kibo_duel_uid = 8 [json_name = "kiboDuelUid"];
+}
+message PetDuelRecordInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 star = 2 [json_name = "star"];
+  optional uint64 success_time = 3 [json_name = "successTime"];
+}
+message KiboDuleOpRecord {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint32 conf_id = 2 [json_name = "confId"];
+  optional uint64 ts = 3 [json_name = "ts"];
+}
+message KiboDuelDamagRecord {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional uint64 owner_id = 2 [json_name = "ownerId"];
+  optional uint32 damage = 3 [json_name = "damage"];
+  optional uint32 take_damage = 4 [json_name = "takeDamage"];
+  optional uint32 heal = 5 [json_name = "heal"];
+  optional uint32 kill = 6 [json_name = "kill"];
+  optional uint32 destroy_tower = 7 [json_name = "destroyTower"];
+  optional uint32 destroy_clam = 8 [json_name = "destroyClam"];
+  optional uint32 conf_id = 9 [json_name = "confId"];
+  optional uint32 camp = 10 [json_name = "camp"];
+}
+message KiboDuelPlayerSkillCastRecord {
+  optional uint32 skill_id = 1 [json_name = "skillId"];
+  optional uint64 ts = 2 [json_name = "ts"];
+}
+message KiboDuelCostChangeRecord {
+  optional uint32 value = 1 [json_name = "value"];
+  optional uint64 ts = 2 [json_name = "ts"];
+}
+message KiboDuelStat {
+  repeated .cs.KiboDuelPlayerSkillCastRecord play_skill_record = 4 [json_name = "playSkillRecord"];
+  repeated .cs.KiboDuelCostChangeRecord cost_change_record = 5 [json_name = "costChangeRecord"];
+}
+message KiboDuelStats {
+  repeated .cs.KiboDuelDamagRecord damage_record = 1 [json_name = "damageRecord"];
+}
+message KiboDuelKillEvent {
+  message Detail {
+    optional uint64 uuid = 4 [json_name = "uuid"];
+    optional uint32 conf_id = 1 [json_name = "confId"];
+    optional uint32 camp = 2 [json_name = "camp"];
+    optional uint32 fo_type = 3 [json_name = "foType"];
+    optional uint32 level = 5 [json_name = "level"];
+  }
+  optional .cs.KiboDuelKillEvent.Detail from = 1 [json_name = "from"];
+  optional .cs.KiboDuelKillEvent.Detail to = 2 [json_name = "to"];
+}
+message CSKiboDuelFinish {
+  optional uint32 status = 1 [json_name = "status"];
+  optional uint32 time = 2 [json_name = "time"];
+  optional .cs.KiboDuelStat stat = 3 [json_name = "stat"];
+  optional .cs.KiboDuelStat ai_stat = 4 [json_name = "aiStat"];
+}
+message CSKiboDuelQuit {
+  optional uint32 time = 1 [json_name = "time"];
+  optional .cs.KiboDuelStat stat = 2 [json_name = "stat"];
+  optional .cs.KiboDuelStat ai_stat = 3 [json_name = "aiStat"];
+}
+message KiboDuelPetAttrInfo {
+  optional .cs.TrialPet pet_guid = 1 [json_name = "petGuid"];
+  optional .cs.FightAttr attrs = 2 [json_name = "attrs"];
+  repeated .cs.HeroAttrModuleInfo skills = 3 [json_name = "skills"];
+  repeated uint32 gene_list = 8 [json_name = "geneList"];
+  optional uint32 special = 4 [json_name = "special"];
+  optional uint32 pet_conf_id = 5 [json_name = "petConfId"];
+  optional uint32 pet_lv = 6 [json_name = "petLv"];
+  optional uint32 pet_color = 7 [json_name = "petColor"];
+  optional uint32 colorful = 9 [json_name = "colorful"];
+}
+message KiboDuelHeroAttrInfo {
+  optional uint64 hero_guid = 1 [json_name = "heroGuid"];
+  optional .cs.FightAttr attrs = 2 [json_name = "attrs"];
+  repeated .cs.UnitSkillInfo skills = 3 [json_name = "skills"];
+  optional uint32 hero_conf_id = 4 [json_name = "heroConfId"];
+  optional uint32 hero_lv = 5 [json_name = "heroLv"];
+  optional uint32 hero_star = 6 [json_name = "heroStar"];
+  optional uint32 hero_grade = 7 [json_name = "heroGrade"];
+}
+message KiboDuelAllPetAttrInfo {
+  repeated .cs.KiboDuelPetAttrInfo infos = 1 [json_name = "infos"];
+  optional .cs.KiboDuelHeroAttrInfo hero_info = 2 [json_name = "heroInfo"];
+}
+message RobotSummonData {
+  optional uint32 conf_id = 1 [json_name = "confId"];
+  optional uint32 level = 2 [json_name = "level"];
+}
+message CSKiboSummonReq {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional .cs.Position pos = 2 [json_name = "pos"];
+  optional int32 angle = 3 [json_name = "angle"];
+  optional uint64 source_pet_guid = 4 [json_name = "sourcePetGuid"];
+  optional .cs.RobotSummonData robot_data = 5 [json_name = "robotData"];
+  optional uint64 del_guid = 6 [json_name = "delGuid"];
+}
+message CSKiboSummonSyncInfo {
+  optional .cs.KiboEntityInfo kibo = 1 [json_name = "kibo"];
+}
+message KiboDuelActInfo {
+  optional uint32 activity_id = 1 [json_name = "activityId"];
+  optional uint32 kibo_duel_uid = 2 [json_name = "kiboDuelUid"];
+}
+message KiboDuelExtraInfo {
+  optional .cs.KiboDuelActInfo activity_info = 1 [json_name = "activityInfo"];
+}
+message CSKiboDuelGetAreaReward {
+  optional uint32 area = 1 [json_name = "area"];
+  optional uint32 lvl = 2 [json_name = "lvl"];
+}
+message CSKiboDuelBTTreeRunning {
+  repeated uint64 guids = 1 [packed = true, json_name = "guids"];
+}
+message KiboGuid {
+  optional uint64 kibo_guid = 1 [json_name = "kiboGuid"];
+  optional uint64 source_pet_guid = 2 [json_name = "sourcePetGuid"];
+}
+message KiboDuelPVPPlayerInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint32 player_camp = 2 [json_name = "playerCamp"];
+  optional uint32 dungeon_id = 3 [json_name = "dungeonId"];
+  optional .cs.KiboDuelAllPetAttrInfo attr = 4 [json_name = "attr"];
+  optional .cs.KiboGuid kibo_guid = 5 [json_name = "kiboGuid"];
+  optional string name = 6 [json_name = "name"];
+  optional uint32 rank = 7 [json_name = "rank"];
+}
+message SCKiboDuelPVPAllInfo {
+  repeated .cs.KiboDuelPVPPlayerInfo player_info = 1 [json_name = "playerInfo"];
+}
+message CSChangeKiboDuelGroupInfo {
+  optional uint32 type = 1 [json_name = "type"];
+  optional .cs.PetDuelGroupInfo group = 4 [json_name = "group"];
+}
+message CSSetKiboDuelCurGroup {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 cur_group = 2 [json_name = "curGroup"];
+}
+message PetDuelGroupShowInfo {
+  message PetInfo {
+    optional uint32 conf_id = 1 [json_name = "confId"];
+    optional uint32 catch_item = 2 [json_name = "catchItem"];
+    optional bool trial = 3 [json_name = "trial"];
+  }
+  optional uint32 hero_id = 1 [json_name = "heroId"];
+  repeated .cs.PetDuelGroupShowInfo.PetInfo pets = 2 [json_name = "pets"];
+}
+message SCKiboDuelGroup {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.PetDuelGroupShowInfo group = 2 [json_name = "group"];
+}
+message KiboDuelPVPFightInfo {
+  optional .cs.KiboDuelPVPStatus status = 1 [json_name = "status"];
+  optional .cs.KiboDuelFinType fin_type = 2 [json_name = "finType"];
+  optional .cs.KiboDuelPVPFinReason result = 3 [json_name = "result"];
+  optional uint64 start_time = 4 [json_name = "startTime"];
+  optional uint64 end_time = 5 [json_name = "endTime"];
+  optional uint64 state_start_time = 6 [json_name = "stateStartTime"];
+  optional uint64 state_end_time = 7 [json_name = "stateEndTime"];
+}
+message SCEntityMove {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional .cs.Position target = 2 [json_name = "target"];
+  optional float precision = 3 [json_name = "precision"];
+  optional float angular_velocity = 4 [json_name = "angularVelocity"];
+  optional float dir_change_slerp_time = 5 [json_name = "dirChangeSlerpTime"];
+  optional uint64 target_uuid = 6 [json_name = "targetUuid"];
+}
+message SCKiboMove {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+  optional .cs.Position target = 2 [json_name = "target"];
+  optional float precision = 3 [json_name = "precision"];
+  optional uint32 move_action_type = 4 [json_name = "moveActionType"];
+  optional float angular_velocity = 5 [json_name = "angularVelocity"];
+  optional float dir_change_slerp_time = 6 [json_name = "dirChangeSlerpTime"];
+  optional uint64 target_uuid = 7 [json_name = "targetUuid"];
+}
+message PetDuelPetInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 lv = 2 [json_name = "lv"];
+  optional uint32 catch_item = 3 [json_name = "catchItem"];
+}
+message PetDuelGroupNormalInfo {
+  repeated .cs.PetDuelPetInfo pets = 1 [json_name = "pets"];
+  optional uint32 hero = 2 [json_name = "hero"];
+  optional uint32 hero_skin_id = 3 [json_name = "heroSkinId"];
+}
+message KiboDuelPlayerInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.PetDuelGroupNormalInfo data = 2 [json_name = "data"];
+}
+message KiboDuelPlaySummonAction {
+  optional uint64 uuid = 1 [json_name = "uuid"];
+}
+message MiniGameChangeMode {
+  optional .cs.MiniGameMode mode = 1 [json_name = "mode"];
+  optional bool agree = 2 [json_name = "agree"];
+}
+message MiniGameChangeModeNtf {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.MiniGameMode mode = 2 [json_name = "mode"];
+  optional .cs.MiniGameModeOp op = 3 [json_name = "op"];
+}
+message KiboInfo {
+  optional int32 id = 1 [json_name = "id"];
+  optional int32 level = 2 [json_name = "level"];
+  optional float cost = 3 [json_name = "cost"];
+  optional int32 index = 4 [json_name = "index"];
+  optional uint64 cardUid = 5 [json_name = "cardUid"];
+}
+message CSKiboCastUltraSkill {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional bool cast_ultra_skill = 2 [json_name = "castUltraSkill"];
+}

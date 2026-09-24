@@ -1,0 +1,405 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+import "Pet.proto";
+import "CSCore.proto";
+import "DungeonCore.proto";
+import "google/protobuf/field_mask.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum RogueGraphNodeType {
+  RGNT_NORMAL = 0;
+  RGNT_BEGIN = 1;
+  RGNT_END = 2;
+}
+enum RogueNodeType {
+  RGT_SHOP = 0;
+  RGT_BATTLE = 1;
+  RGT_RELEX = 2;
+  RGT_CONDITION = 3;
+  RGT_RANDOM = 4;
+  RGT_NODEGROUP = 5;
+  RGT_COUNT = 6;
+}
+enum RogueDungeonState {
+  RDS_NONE = 0;
+  RDS_BEFORE = 1;
+  RDS_CHOSENB = 2;
+  RDS_AFTER = 3;
+  RDS_CHOSENA = 4;
+}
+enum RogueSelectionType {
+  RST_NORMAL = 0;
+  RST_SHOP = 1;
+  RST_CARP = 2;
+}
+enum RogueRewardType {
+  RogueReward_Dragon = 1;
+  RogueReward_Gather = 2;
+  RogueReward_Score_Normal = 3;
+}
+enum ENUM_ROGUELIKE_EVENT_STATUS_TYPE {
+  eROGUELIKE_ES_TYPE_NONE = 0;
+  eROGUELIKE_ES_TYPE_RUNNING = 1;
+  eROGUELIKE_ES_TYPE_SUCCESS = 2;
+}
+enum ENUM_ROGUELIKE_EVENT_EFFECT_TYPE {
+  eROGLK_EFCT_NONE = 0;
+  eROGLK_EFCT_ROUND_ITEM_NUM = 1;
+  eROGLK_EFCT_ROUND_DRAGON_ACTIVE = 2;
+  eROGLK_EFCT_SHOP_DISCOUNT = 3;
+  eROGLK_EFCT_ADD_ENEMY_BUFF = 4;
+  eROGLK_EFCT_ADD_MY_BUFF = 5;
+  eROGLK_EFCT_CURRENCY_UP_PR = 6;
+  eROGLK_EFCT_BEGIN_NODE_CURRENCY_GIVE = 7;
+  eROGLK_EFCT_SKILL_COIN_UP_PR = 8;
+  eROGLK_EFCT_HP_FREE = 9;
+  eROGLK_EFCT_SELECTION_REFRESH = 10;
+  eROGLK_EFCT_NODE_EXTRA_CURRENCY = 11;
+  eROGLK_EFCT_DRAGON_EXTRA_SELECTION = 12;
+  eROGLK_EFCT_QUALITY_CARP_PROB_INC = 13;
+  eROGLK_EFCT_SHOP_EXTRA_COUNT = 14;
+  eROGLK_EFCT_SHOP_DRAGON_UNLOCK = 15;
+  eROGLK_EFCT_DRAGON_OBTAIN_CARP = 16;
+  eROGLK_EFCT_MAX = 20;
+}
+enum ENUM_ROGUELIKE_REWARD_SELECT_FLAG {
+  eROGLK_RSF_NORMAL = 0;
+  eROGLK_RSF_SELECT = 1;
+  eROGLK_RSF_REFRESH = 10;
+}
+enum ENUM_ROGUELIKE_EVENT_TYPE {
+  eROGLK_ET_IDLE = -1;
+  eROGLK_ET_NONE = 0;
+  eROGLK_ET_ENTER_BATTLE = 1;
+  eROGLK_ET_RAND_EVENT = 2;
+  eROGLK_ET_RAND_WEIGHT_EVENT = 3;
+  eROGLK_ET_ROUND_ITEM_NUM = 4;
+  eROGLK_ET_ROUND_DRAGON_ACTIVE = 5;
+  eROGLK_ET_HAVE_CARP_CURRENCY_NUM = 6;
+  eROGLK_ET_RAND_UNACTIVE_DRAGON_GIVE_CARP = 7;
+  eROGLK_ET_RAND_GIVE_DRAGON = 8;
+  eROGLK_ET_RAND_GIVE_DRAGON_SELECT = 9;
+  eROGLK_ET_RAND_LOSE_DARGON = 10;
+  eROGLK_ET_RAND_LOSE_DARGON_SELECT = 11;
+  eROGLK_ET_RAND_GIVE_QUALITY_CARP = 12;
+  eROGLK_ET_RAND_GIVE_QUALITY_CARP_SELECT = 13;
+  eROGLK_ET_RAND_LOSE_QUALITY_CARP = 14;
+  eROGLK_ET_RAND_LOSE_QUALITY_CARP_SELECCT = 15;
+  eROGLK_ET_UNACTIVE_DRAGON_RAND_GIVE_CARP = 16;
+  eROGLK_ET_GIVE_CURRENCY = 17;
+  eROGLK_ET_LOSE_CURRENCY = 18;
+  eROGLK_ET_SHOP_DISCOUNT = 19;
+  eROGLK_ET_ADD_BUFF_TOME = 20;
+  eROGLK_ET_ADD_BUFF_TOENEMY = 21;
+  eROGLK_ET_RAND_GIVE_TYPE_CARP = 22;
+  eROGLK_ET_RAND_GIVE_TYPE_CARP_SELECT = 23;
+  eROGLK_ET_RAND_LOSE_TYPE_CARP = 24;
+  eROGLK_ET_RAND_LOSE_TYPE_CARP_SELECCT = 25;
+  eROGLK_ET_RAND_GIVE_CARP_BY_QLT_WT = 26;
+  eROGLK_ET_RAND_GIVE_CARP_BY_QLT_WT_SELECT = 27;
+  eROGLK_ET_RAND_LOSE_CARP_BY_QLT_WT = 28;
+  eROGLK_ET_RAND_LOSE_CARP_BY_QLT_WT_SELECT = 29;
+  eROGLK_ET_NODE_CURRENCY_UP_BY_PR = 101;
+  eROGLK_ET_BEIGN_NODE_GIVE_CURRENCY = 102;
+  eROGLK_ET_NODE_SKILL_COIN_UP_BY_PR = 103;
+  eROGLK_ET_CHILL_NODE_HP_FREE = 104;
+  eROGLK_ET_SELECTION_REFRESH = 105;
+  eROGLK_ET_SPECIFIC_NODE_FINISH_CURRENCY = 106;
+  eROGLK_ET_DRAGON_ACT_EXTRA_SELECTION = 107;
+  eROGLK_ET_QUALITY_CARP_DROP_INC_BY_PY = 108;
+  eROGLK_ET_CARP_SHOP_EXTRA_COUNT = 109;
+  eROGLK_ET_DRAGON_OBTAIN_SPECIFIC_CARP = 110;
+  eROGLK_ET_UNLOCK_DRAGON_SHOP = 111;
+  eROGLK_ET_MAX = 112;
+}
+message RefreshInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 times = 2 [json_name = "times"];
+}
+message RefreshData {
+  optional .cs.RogueSelectionType type = 1 [json_name = "type"];
+  repeated .cs.RefreshInfo infos = 2 [json_name = "infos"];
+}
+message NodeData {
+  optional uint32 node_uid = 1 [json_name = "nodeUid"];
+  optional uint32 node_id = 2 [json_name = "nodeId"];
+  optional uint32 dungeon_id = 3 [json_name = "dungeonId"];
+  repeated uint32 pre_nodes = 4 [json_name = "preNodes"];
+  repeated uint32 next_nodes = 5 [json_name = "nextNodes"];
+  optional uint32 state = 6 [json_name = "state"];
+  optional .cs.RogueDungeonState dungeon_state = 7 [json_name = "dungeonState"];
+  optional uint32 floor_duration = 8 [json_name = "floorDuration"];
+  optional uint32 bi_sign = 9 [json_name = "biSign"];
+  optional uint32 route_id = 10 [json_name = "routeId"];
+  optional uint32 node_key = 11 [json_name = "nodeKey"];
+  optional uint32 runtime_level = 12 [json_name = "runtimeLevel"];
+  repeated .cs.RefreshData refresh_data = 13 [json_name = "refreshData"];
+}
+message GraphData {
+  optional uint32 rogue_id = 1 [json_name = "rogueId"];
+  optional uint32 graph_id = 2 [json_name = "graphId"];
+  optional uint32 curr_uid = 3 [json_name = "currUid"];
+  optional uint32 begin_uid = 4 [json_name = "beginUid"];
+  optional uint32 end_uid = 5 [json_name = "endUid"];
+  repeated .cs.NodeData node_datas = 6 [json_name = "nodeDatas"];
+  optional uint32 level = 7 [json_name = "level"];
+  optional uint32 rogue_uid = 8 [json_name = "rogueUid"];
+  optional uint32 play_id = 9 [json_name = "playId"];
+}
+message RogueLikeDragonInfo {
+  optional uint32 dragon_id = 1 [json_name = "dragonId"];
+  optional bool is_active = 2 [json_name = "isActive"];
+  optional uint32 active_level = 3 [json_name = "activeLevel"];
+}
+message RogueLikeCurrency {
+  optional uint32 currency_id = 1 [json_name = "currencyId"];
+  optional uint32 currency_num = 2 [json_name = "currencyNum"];
+}
+message CarpDragonRewardCell {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 type = 2 [json_name = "type"];
+}
+message RogueLikeSelectRewardCache {
+  repeated .cs.CarpDragonRewardCell add_rewards = 1 [json_name = "addRewards"];
+  repeated .cs.CarpDragonRewardCell remove_rewards = 2 [json_name = "removeRewards"];
+  optional bool is_event_running = 3 [json_name = "isEventRunning"];
+  optional uint32 event_effect_id = 4 [json_name = "eventEffectId"];
+}
+message RogueLikeCarpDragonData {
+  repeated uint32 carp_ids = 1 [json_name = "carpIds"];
+  repeated .cs.RogueLikeDragonInfo dragons = 2 [json_name = "dragons"];
+  repeated .cs.RogueLikeCurrency currencys = 3 [json_name = "currencys"];
+  optional .cs.RogueLikeSelectRewardCache select_cache = 4 [json_name = "selectCache"];
+}
+message SCRogueLikeCarpDragonSync {
+  optional .cs.RogueLikeCarpDragonData carp_dragon_data = 1 [json_name = "carpDragonData"];
+}
+message SCRogueLikeCarpDragonReward {
+  repeated .cs.CarpDragonRewardCell rewards = 1 [json_name = "rewards"];
+  optional int32 select_flag = 2 [json_name = "selectFlag"];
+}
+message CSRogueLikeCarpDragonRwdSelectReq {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 type = 2 [json_name = "type"];
+}
+message SCRogueLikeCarpDragonRwdSelectRsp {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 type = 2 [json_name = "type"];
+  optional int32 err_code = 3 [json_name = "errCode"];
+  optional bool is_event_running = 4 [json_name = "isEventRunning"];
+  optional bool is_remove = 5 [json_name = "isRemove"];
+}
+message RogueLikeEventEfctInfo {
+  option (msg_to_server) = true;
+  optional uint32 effect_type = 1 [json_name = "effectType"];
+  repeated int32 effect_params = 2 [json_name = "effectParams"];
+  optional int32 pros_param = 3 [json_name = "prosParam"];
+}
+message RogueLikeEventEffects {
+  repeated .cs.RogueLikeEventEfctInfo effect_list = 1 [json_name = "effectList"];
+}
+message RogueLikeEvent {
+  optional uint32 cur_gatherid = 1 [json_name = "curGatherid"];
+  optional uint32 cur_event_id = 2 [json_name = "curEventId"];
+  optional uint32 cur_event_efct_idx = 3 [json_name = "curEventEfctIdx"];
+  repeated uint32 cur_finished_eventefctid_list = 4 [json_name = "curFinishedEventefctidList"];
+  optional uint32 cur_emergencies_gather_id = 5 [json_name = "curEmergenciesGatherId"];
+  repeated uint32 finished_gatherids = 9 [json_name = "finishedGatherids"];
+  optional .cs.RogueLikeEventEffects effects = 10 [json_name = "effects"];
+  optional float discount = 11 [json_name = "discount"];
+}
+message SCRogueLikeEventSync {
+  optional .cs.RogueLikeEvent event_data = 1 [json_name = "eventData"];
+}
+message CSRogueLikeEventSelectReq {
+  optional uint32 gather_id = 1 [json_name = "gatherId"];
+  optional uint32 event_id = 2 [json_name = "eventId"];
+}
+message SCRogueLikeEventSelectRsp {
+  repeated .cs.CarpDragonRewardCell add_rewards = 1 [json_name = "addRewards"];
+  repeated .cs.CarpDragonRewardCell remove_rewards = 2 [json_name = "removeRewards"];
+  optional int32 select_flag = 3 [json_name = "selectFlag"];
+  repeated .cs.RogueLikeCurrency add_currencys = 4 [json_name = "addCurrencys"];
+  repeated .cs.RogueLikeCurrency remove_currencys = 5 [json_name = "removeCurrencys"];
+  optional uint32 effect_case_type = 6 [json_name = "effectCaseType"];
+  optional uint32 effect_case_id = 7 [json_name = "effectCaseId"];
+  optional uint32 event_status = 8 [json_name = "eventStatus"];
+  optional uint32 next_content_id = 9 [json_name = "nextContentId"];
+}
+message CSRogueLikeEventTriggerNextReq {
+  optional uint32 event_id = 1 [json_name = "eventId"];
+}
+message SCRogueGraphInfoSync {
+  optional .cs.GraphData graph_data = 1 [json_name = "graphData"];
+}
+message SCRogueGraphInfoUpdate {
+  required .cs.GraphData graph_data = 1 [json_name = "graphData"];
+}
+message CSRogueLikeRecoverHero {
+  optional uint64 hero_guid = 1 [json_name = "heroGuid"];
+}
+message SCRogueGraphExtraInfoSync {
+  optional uint32 rogue_id = 1 [json_name = "rogueId"];
+  optional uint32 graph_id = 2 [json_name = "graphId"];
+  optional uint32 max_difficulty_static = 3 [json_name = "maxDifficultyStatic"];
+  repeated uint32 rogue_ids = 4 [json_name = "rogueIds"];
+  optional uint32 state = 5 [json_name = "state"];
+  repeated uint32 skills = 6 [json_name = "skills"];
+  optional uint32 max_difficulty_rotate = 7 [json_name = "maxDifficultyRotate"];
+  optional uint32 turn_id = 8 [json_name = "turnId"];
+  optional uint32 end_time = 9 [json_name = "endTime"];
+}
+message SCRogueLikeHeroInfoSync {
+  repeated .cs.HeroItemInfo heros = 2 [json_name = "heros"];
+  repeated .cs.PetbaseInfo pets = 3 [json_name = "pets"];
+}
+message CSRogueLikeCreateRogue {
+  optional uint32 rogue_id = 1 [json_name = "rogueId"];
+  optional uint64 control = 2 [json_name = "control"];
+  repeated .cs.CSWearPet heros = 3 [json_name = "heros"];
+  optional bool force = 4 [json_name = "force"];
+}
+message CSRogueTeam {
+  optional uint64 control = 1 [json_name = "control"];
+  repeated .cs.CSWearPet members = 2 [json_name = "members"];
+}
+message CSRogueLikeEnterRoom {
+  optional uint32 node_uid = 1 [json_name = "nodeUid"];
+}
+message CSRogueLikeCreateGroup {
+  repeated uint64 hero_uids = 1 [json_name = "heroUids"];
+}
+message CSRogueLikeShopInfo {
+  optional uint32 npc_id = 1 [json_name = "npcId"];
+  optional uint32 npc_guid = 2 [json_name = "npcGuid"];
+}
+message SCRogueLikeShopInfo {
+  repeated uint32 carp_ids = 1 [json_name = "carpIds"];
+  repeated uint32 buy_carps = 2 [json_name = "buyCarps"];
+  optional uint32 npc_id = 3 [json_name = "npcId"];
+  optional uint32 npc_guid = 4 [json_name = "npcGuid"];
+}
+message CSRogueLikeBuy {
+  repeated uint32 carp_ids = 1 [json_name = "carpIds"];
+}
+message SCRogueLikeBuy {
+  repeated uint32 carp_ids = 1 [json_name = "carpIds"];
+}
+message SCRogueLikeDungeonEndSync {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 succ = 2 [json_name = "succ"];
+  optional uint32 integral = 3 [json_name = "integral"];
+  optional .cs.Rewards rewards = 4 [json_name = "rewards"];
+  repeated uint32 carps = 5 [json_name = "carps"];
+  repeated uint32 dragons = 6 [json_name = "dragons"];
+}
+message RogueLikeBox {
+  optional uint32 box_id = 1 [json_name = "boxId"];
+  optional uint32 box_lv = 2 [json_name = "boxLv"];
+  optional uint32 event_id = 3 [json_name = "eventId"];
+}
+message SCRogueLikeBoxSync {
+  repeated .cs.RogueLikeBox boxes = 1 [json_name = "boxes"];
+}
+message RogueStatusResultInfo {
+  optional uint32 event_id = 1 [json_name = "eventId"];
+  optional .cs.RogueDungeonState event_type = 2 [json_name = "eventType"];
+  repeated uint32 choose_ids = 3 [json_name = "chooseIds"];
+}
+message RogueStatusResultData {
+  repeated .cs.RogueStatusResultInfo events = 1 [json_name = "events"];
+}
+message RogueEventResultInfo {
+  optional uint32 gather_id = 1 [json_name = "gatherId"];
+  repeated uint32 event_ids = 2 [json_name = "eventIds"];
+}
+message RogueEventRoomInfo {
+  optional uint32 node_uid = 1 [json_name = "nodeUid"];
+  optional uint32 dungeon_id = 2 [json_name = "dungeonId"];
+  repeated .cs.RogueEventResultInfo events = 3 [json_name = "events"];
+}
+message RogueEventRoomData {
+  repeated .cs.RogueEventRoomInfo rooms = 1 [json_name = "rooms"];
+}
+message RogueCarpData {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+}
+message RogueDragonData {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional uint32 item_level = 2 [json_name = "itemLevel"];
+}
+message RogueItemSync {
+  repeated .cs.RogueDragonData dragon_data = 1 [json_name = "dragonData"];
+}
+message RogueGatherSync {
+  repeated uint32 gather_id = 1 [json_name = "gatherId"];
+}
+message RogueRewardRecordSync {
+  repeated uint32 reward_id = 1 [json_name = "rewardId"];
+}
+message CSRogueLikeRewardReq {
+  optional uint32 reward_type = 1 [json_name = "rewardType"];
+}
+message CSRogueLikeRewardSingleReq {
+  optional uint32 reward_id = 1 [json_name = "rewardId"];
+}
+message RogueLikeScore {
+  optional uint32 score_type = 1 [json_name = "scoreType"];
+  optional uint32 score_value = 2 [json_name = "scoreValue"];
+}
+message RogueLikeScoreSync {
+  repeated .cs.RogueLikeScore score = 1 [json_name = "score"];
+}
+message RogueLikeScoreRewardRefreshNtf {
+  optional uint32 time_type = 1 [json_name = "timeType"];
+  optional uint32 score_type = 2 [json_name = "scoreType"];
+  optional uint64 time_stamp = 3 [json_name = "timeStamp"];
+  optional bool is_new = 4 [json_name = "isNew"];
+}
+message RogueRefreshhSelection {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 npc_id = 2 [json_name = "npcId"];
+  optional uint32 npc_guid = 3 [json_name = "npcGuid"];
+}
+message RogueRealTimeCarpWeightUnit {
+  optional uint32 carp_type = 1 [json_name = "carpType"];
+  optional uint32 carp_weight = 2 [json_name = "carpWeight"];
+}
+message RogueRealTimeCarpWeight {
+  repeated .cs.RogueRealTimeCarpWeightUnit detail = 1 [json_name = "detail"];
+}
+message RogueCommonRewardRedpoint {
+  repeated uint32 points = 1 [json_name = "points"];
+}
+message RogueDungeonResumeData {
+  optional uint32 mode = 1 [json_name = "mode"];
+  optional string internal_key = 2 [json_name = "internalKey"];
+}
+message DungeonSummaryData {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 current_difficulty = 2 [json_name = "currentDifficulty"];
+}
+message DungeonLogicData {
+  optional .cs.SCRogueLikeEventSync event_sync = 1 [json_name = "eventSync"];
+  optional .cs.SCRogueLikeEventSelectRsp event_select = 2 [json_name = "eventSelect"];
+  optional .cs.GraphData graph_data = 3 [json_name = "graphData"];
+}
+message DungeonStorageData {
+  optional uint32 mode = 1 [json_name = "mode"];
+  optional string internal_key = 2 [json_name = "internalKey"];
+  optional .cs.DungeonSummaryData dungeon_summary = 3 [json_name = "dungeonSummary"];
+  optional .cs.DungeonLogicData dungeon_logic = 4 [json_name = "dungeonLogic"];
+}
+message RogueDungeonStorageSingleDataSync {
+  optional uint32 mode = 1 [json_name = "mode"];
+  optional string internal_key = 2 [json_name = "internalKey"];
+  optional .cs.DungeonSummaryData summary_data = 3 [json_name = "summaryData"];
+}
+message RogueDungeonStorageDataSync {
+  repeated .cs.RogueDungeonStorageSingleDataSync dungeon_summary = 1 [json_name = "dungeonSummary"];
+}
+message DungeonStorageDataWrapper {
+  repeated .cs.DungeonStorageData data = 1 [json_name = "data"];
+}

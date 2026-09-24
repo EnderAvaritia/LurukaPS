@@ -1,0 +1,353 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+import "Campaign.proto";
+import "KiboDuel.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum TeamV2UpdateReason {
+  T2UR_NONE = 0;
+  T2UR_CREATE = 1;
+  T2UR_LOGIN = 2;
+  T2UR_FSM_PREPARE = 3;
+  T2UR_PREPARE = 4;
+  T2UR_FSM_NORMAL = 5;
+  T2UR_FSM_PRE_START = 6;
+  T2UR_JOIN = 7;
+  T2UR_FSM_PLAY = 8;
+  T2UR_URGE = 9;
+  T2UR_LIMIT = 10;
+  T2UR_FSM_CHANGE = 11;
+  T2UR_VOTE_CHANGE = 12;
+  T2UR_FSM_CHANGE_SUCC = 13;
+  T2UR_FSM_CHANGE_FAIL = 14;
+  T2UR_FSM_CHANGE_CHECK_FAIL = 15;
+  T2UR_FSM_CAMCEL_PREPARE = 16;
+  T2UR_WORLD_INVITE = 17;
+  T2UR_FSM_MATCH = 18;
+  T2UR_FSM_MATCH_CANCEL = 19;
+  T2UR_FSM_MATCH_SUCC = 20;
+  T2UR_FSM_PLAY_FINISH = 21;
+  T2UR_TEAM_INVITE = 22;
+  T2UR_INIT = 23;
+  T2UR_CANCEL_CHANGE_TARGET = 24;
+  T2UR_FSM_MATCH_TIMEOUT = 25;
+}
+enum TeamV2LeaveReason {
+  T2LR_NONE = 0;
+  T2LR_LEAVE = 1;
+  T2LR_KICK = 2;
+  T2LR_DISMISS = 3;
+  T2LR_OFFLINE = 4;
+  T2LR_SYNC = 5;
+  T2LR_LOGIN = 6;
+}
+enum TeamV2MemberUpdateReason {
+  T2MUR_NONE = 0;
+  T2MUR_LOGIN = 1;
+  T2MUR_OFFLINE = 2;
+  T2MUR_JOIN = 3;
+  T2MUR_DATA_CHANGE = 4;
+  T2MUR_PLAY = 5;
+}
+enum InviteSyncReason {
+  ISR_INVALID = 0;
+  ISR_LOGIN = 1;
+  ISR_INVITING = 2;
+  ISR_INVITED = 3;
+  ISR_INVITING_CANCEL = 4;
+  ISR_INVITED_CANCEL = 5;
+  ISR_INVITING_REJECT = 6;
+  ISR_INVITED_REJECT = 7;
+  ISR_INVITING_ACCEPT = 8;
+  ISR_INVITED_ACCEPT = 9;
+  ISR_INVITED_JOIN_TEAM = 10;
+  ISR_INVITE_JOIN_TEAM_REJECT = 11;
+}
+enum TeamV2MatchUpdateReason {
+  T2MR_NONE = 0;
+  T2MR_LOGIN = 1;
+  T2MR_CANCEL = 2;
+  T2MR_TIMEOUT = 3;
+  T2MR_START = 4;
+  T2MR_SUCCESS = 5;
+}
+enum TeamV2MatchState {
+  T2MS_NONE = 0;
+  T2MS_MATCHING = 1;
+  T2MS_SUCCESS = 2;
+}
+enum TeamV2State {
+  TS_INVALID = 0;
+  TS_NORMAL = 1;
+  TS_PREPARE = 2;
+  TS_PRE_START = 3;
+  TS_PLAY = 4;
+}
+message TeamV2CreateTeamReq {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.CampaignType typ = 3 [json_name = "typ"];
+  optional .cs.TeamV2Limit limit = 4 [json_name = "limit"];
+  optional .cs.TeamV2Target target = 5 [json_name = "target"];
+}
+message TeamV2DismissTeamReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2TeamUpdateNotify {
+  optional .cs.TeamV2UpdateReason reason = 1 [json_name = "reason"];
+  optional .cs.TeamV2 team = 2 [json_name = "team"];
+  optional uint32 player_id = 3 [json_name = "playerId"];
+  optional int64 world_invite = 4 [json_name = "worldInvite"];
+  repeated .cs.PlayerCheck check_list = 5 [json_name = "checkList"];
+}
+message PlayerCheck {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional int32 code = 2 [json_name = "code"];
+}
+message TeamV2MemberUpdateNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional .cs.TeamV2Member member = 2 [json_name = "member"];
+  optional .cs.TeamV2MemberUpdateReason reason = 3 [json_name = "reason"];
+}
+message TeamV2MemberLeaveNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional .cs.TeamV2LeaveReason reason = 3 [json_name = "reason"];
+}
+message TeamV2InviteJoinTeamReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional int32 site = 3 [json_name = "site"];
+}
+message TeamV2InviteJoinTeamNotify {
+  optional .cs.TeamV2InviteJoinTeam invite = 1 [json_name = "invite"];
+}
+message TeamV2InviteReq {
+  optional uint32 target_player = 1 [json_name = "targetPlayer"];
+  optional int32 team_typ = 3 [json_name = "teamTyp"];
+  optional .cs.TeamV2Target target = 4 [json_name = "target"];
+}
+message TeamV2CancelInviteReq {
+  optional uint32 target_player = 1 [json_name = "targetPlayer"];
+}
+message TeamV2ReplyInviteReq {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint32 target_player = 2 [json_name = "targetPlayer"];
+  optional bool reject = 3 [json_name = "reject"];
+  optional int64 team_id = 4 [json_name = "teamId"];
+}
+message TeamV2InviteSync {
+  optional .cs.InviteSyncReason reason = 4 [json_name = "reason"];
+  optional .cs.TeamV2Invite inviting = 1 [json_name = "inviting"];
+  optional .cs.TeamV2Invite invited = 2 [json_name = "invited"];
+  optional .cs.TeamV2InviteJoinTeam invite_join_team = 3 [json_name = "inviteJoinTeam"];
+}
+message TeamV2ReplyInviteJoinReq {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional int64 team_id = 3 [json_name = "teamId"];
+  optional bool is_accept = 2 [json_name = "isAccept"];
+}
+message TeamV2RejectInviteJoinNotify {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional string name = 2 [json_name = "name"];
+}
+message TeamV2ApplyEnterTeamReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional .cs.TeamV2Target target = 3 [json_name = "target"];
+}
+message TeamV2ApplyEnterTeamNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional string name = 3 [json_name = "name"];
+}
+message TeamV2LeaveTeamReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2KickoutMemberReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional uint32 target_player = 3 [json_name = "targetPlayer"];
+}
+message TeamV2StartMatchReq {
+  optional .cs.CampaignType typ = 1 [json_name = "typ"];
+  optional uint32 dungeon_system_id = 2 [json_name = "dungeonSystemId"];
+  optional .cs.TeamV2MatchTarget target = 3 [json_name = "target"];
+}
+message TeamV2StartTeamMatchReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2CancelMatchReq {
+  optional .cs.CampaignType typ = 1 [json_name = "typ"];
+  optional uint32 dungeon_system_id = 2 [json_name = "dungeonSystemId"];
+  optional .cs.TeamV2MatchTarget target = 3 [json_name = "target"];
+}
+message TeamV2CancelTeamMatchReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2MatchNotify {
+  optional .cs.CampaignType typ = 1 [json_name = "typ"];
+  optional uint32 dungeon_system_id = 2 [json_name = "dungeonSystemId"];
+  optional int64 match_time = 3 [json_name = "matchTime"];
+  optional bool succeed = 4 [json_name = "succeed"];
+  optional .cs.TeamV2MatchUpdateReason reason = 5 [json_name = "reason"];
+  optional .cs.TeamV2Match match = 6 [json_name = "match"];
+}
+message TeamV2Match {
+  optional .cs.TeamV2MatchState state = 1 [json_name = "state"];
+  optional .cs.TeamV2MatchTarget target = 2 [json_name = "target"];
+  optional int64 timestamp = 3 [json_name = "timestamp"];
+}
+message TeamV2MatchTarget {
+  optional .cs.CampaignType typ = 1 [json_name = "typ"];
+  optional uint32 dungeon_system_id = 2 [json_name = "dungeonSystemId"];
+}
+message TeamV2UpdateTeamLimitReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional .cs.TeamV2Limit team_limit = 2 [json_name = "teamLimit"];
+}
+message TeamV2UpdateTeamLimitNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional .cs.TeamV2Limit team_limit = 2 [json_name = "teamLimit"];
+}
+message TeamV2StartChangeTargetReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional .cs.TeamV2Target target = 2 [json_name = "target"];
+}
+message TeamV2VoteChangeTargetReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional bool accept = 2 [json_name = "accept"];
+}
+message TeamV2CancelChangeTargetReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2StartPrepareReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2PrepareReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional bool cancel = 2 [json_name = "cancel"];
+}
+message TeamV2StartNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2WorldInviteReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2 {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional .cs.CampaignType typ = 2 [json_name = "typ"];
+  optional uint32 captain = 3 [json_name = "captain"];
+  repeated .cs.TeamV2Member member_list = 5 [json_name = "memberList"];
+  optional .cs.TeamV2Target target = 6 [json_name = "target"];
+  optional .cs.TeamV2Limit limit = 15 [json_name = "limit"];
+  optional .cs.TeamV2State state = 4 [json_name = "state"];
+  optional int64 urge_time = 14 [json_name = "urgeTime"];
+  repeated .cs.TeamV2WorldInvite world_invite = 19 [json_name = "worldInvite"];
+  optional bool world_inviting = 22 [json_name = "worldInviting"];
+  repeated uint32 change_vote = 17 [json_name = "changeVote"];
+  optional .cs.TeamV2Target change_target = 18 [json_name = "changeTarget"];
+  optional int64 change_vote_time = 23 [json_name = "changeVoteTime"];
+  optional int64 pre_start_time = 11 [json_name = "preStartTime"];
+  repeated uint32 prepare = 8 [json_name = "prepare"];
+  optional int64 start_time = 9 [json_name = "startTime"];
+  optional .cs.TeamV2Play play = 10 [json_name = "play"];
+  optional int64 match_time = 20 [json_name = "matchTime"];
+  repeated .cs.TeamV2InviteHistory invite_list = 21 [json_name = "inviteList"];
+}
+message TeamV2InviteHistory {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional int64 invite_time = 2 [json_name = "inviteTime"];
+}
+message TeamV2WorldInvite {
+  optional int64 id = 1 [json_name = "id"];
+  optional int64 expire_time = 2 [json_name = "expireTime"];
+}
+message TeamV2Target {
+  optional uint32 dungeon_system_id = 1 [json_name = "dungeonSystemId"];
+}
+message TeamV2Play {
+  optional uint32 map_id = 1 [json_name = "mapId"];
+  optional uint32 line_id = 2 [json_name = "lineId"];
+}
+message TeamV2Apply {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional string name = 2 [json_name = "name"];
+}
+message TeamV2Limit {
+  optional uint32 level = 1 [json_name = "level"];
+}
+message TeamV2Member {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional bool online = 2 [json_name = "online"];
+  optional bool play = 3 [json_name = "play"];
+  optional int32 site = 5 [json_name = "site"];
+  optional .cs.TeamV2MemberData data = 6 [json_name = "data"];
+}
+message TeamV2MemberData {
+  optional string name = 2 [json_name = "name"];
+  optional uint32 lv = 3 [json_name = "lv"];
+  optional .cs.TeamV2MemberGroup group = 4 [json_name = "group"];
+  optional .cs.PetDuelGroupNormalInfo pet_duel_group = 5 [json_name = "petDuelGroup"];
+  optional uint32 rank = 6 [json_name = "rank"];
+  optional uint32 ui_status = 7 [json_name = "uiStatus"];
+  optional .cs.WardrobeInfo wardrobe = 8 [json_name = "wardrobe"];
+  optional .cs.ClothesInfo clothes = 9 [json_name = "clothes"];
+}
+message TeamV2Pet {
+  optional uint32 pet_id = 1 [json_name = "petId"];
+  optional uint32 level = 2 [json_name = "level"];
+  optional uint32 special = 3 [json_name = "special"];
+  optional uint32 color = 4 [json_name = "color"];
+  optional uint32 colorful = 5 [json_name = "colorful"];
+}
+message TeamV2MemberGroup {
+  optional uint32 control_hero = 1 [json_name = "controlHero"];
+  repeated .cs.TeamV2Hero hero_list = 2 [json_name = "heroList"];
+}
+message TeamV2Hero {
+  optional uint32 hero_id = 1 [json_name = "heroId"];
+  optional .cs.TeamV2Pet pet = 2 [json_name = "pet"];
+  optional uint32 hero_level = 3 [json_name = "heroLevel"];
+  optional uint32 hero_skin_id = 4 [json_name = "heroSkinId"];
+}
+message TeamV2UrgeReq {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2InviteJoinTeam {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional string player_name = 2 [json_name = "playerName"];
+  optional uint32 target_player = 3 [json_name = "targetPlayer"];
+  optional string target_player_name = 9 [json_name = "targetPlayerName"];
+  optional int64 expired_time = 4 [json_name = "expiredTime"];
+  optional int64 team_id = 5 [json_name = "teamId"];
+  optional .cs.CampaignType team_typ = 6 [json_name = "teamTyp"];
+  optional .cs.TeamV2Target target = 7 [json_name = "target"];
+  optional int32 site = 8 [json_name = "site"];
+}
+message TeamV2Invite {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional string player_name = 2 [json_name = "playerName"];
+  optional uint32 target_player = 3 [json_name = "targetPlayer"];
+  optional string target_player_name = 4 [json_name = "targetPlayerName"];
+  optional int64 expired_time = 5 [json_name = "expiredTime"];
+  optional int64 team_id = 6 [json_name = "teamId"];
+  optional .cs.CampaignType team_typ = 7 [json_name = "teamTyp"];
+  optional .cs.TeamV2Target target = 8 [json_name = "target"];
+}
+message TeamV2StartChangeTargetNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+}
+message TeamV2VoteChangeTargetNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional bool accept = 3 [json_name = "accept"];
+}
+message TeamV2ChangeTargetNotify {
+  optional int64 team_id = 1 [json_name = "teamId"];
+  optional int32 dungeon_id = 2 [json_name = "dungeonId"];
+}
+message CompetitionStartMatch {
+  optional uint32 mode = 1 [json_name = "mode"];
+  optional bool cancel = 2 [json_name = "cancel"];
+}

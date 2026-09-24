@@ -1,0 +1,25 @@
+import {addHomeBuildings} from './home.js';
+import {ensure} from './handlers/common.js';import {addItems} from './inventory.js';import {createEggs} from './eggs.js';
+export function parseRewards(value,allowZero=false){if(!value)return [];return String(value).split('|').filter(Boolean).map(token=>{const [itemtype,itemid,itemnum,...rest]=token.split('#').map(Number);ensure(!rest.length&&[itemtype,itemid].every(n=>Number.isSafeInteger(n)&&n>0)&&Number.isSafeInteger(itemnum)&&itemnum>=(allowZero?0:1)&&itemnum<=0xffffffff,'Malformed reward configuration',1007);return {itemtype,itemid,itemnum};});}
+export function grantRewards(tables,state,rewards,depth=0) {
+ ensure(depth<=100,'Reward recursion limit',1007);const granted=[];
+ for(const reward of rewards){
+  const {itemtype,itemid,itemnum}=reward;
+  ensure([itemtype,itemid,itemnum].every(x=>Number.isSafeInteger(x)&&x>0)&&itemnum<=0xffffffff,'Invalid reward quantity');
+  if(itemtype===3){ensure(tables.find('common_item',itemid),'Unknown reward item',1007);addItems(state,[reward]);}
+  else if(itemtype===13){addHomeBuildings(tables,state,itemid,itemnum);}
+  else if(itemtype===14){const eggs=createEggs(tables,state,itemid,itemnum);granted.push(...eggs.map(e=>({itemtype:14,itemid,itemnum:1,guid:String(e.guid)})));continue;}
+  else if(itemtype===10){const basic=state.player.basic_info;
+   if(itemid===1||itemid===2){const key=itemid===1?'diamond':'gold';ensure(basic[key]+itemnum<=0x7fffffff,'Currency overflow');basic[key]+=itemnum;}
+   else if(itemid===10){ensure(Number.isSafeInteger(basic.exp+itemnum)&&basic.exp+itemnum<=0x7fffffff,'Experience overflow');basic.exp+=itemnum;
+    const rows=tables.get('player_level'),max=Math.max(...rows.map(x=>x.id));while(basic.lv<max){const row=tables.find('player_level',basic.lv);ensure(row&&Number.isSafeInteger(row.exp)&&row.exp>0,'Invalid player level curve',1007);if(basic.exp<row.exp)break;basic.exp-=row.exp;basic.lv++;const next=tables.find('player_level',basic.lv);granted.push(...grantRewards(tables,state,parseRewards(next.reward),depth+1));}
+   }else {const attrs=state.player.attr_infos.attrs;let a=attrs.find(x=>x.attr_id===itemid);if(!a){a={attr_id:itemid,attr_val:'0'};attrs.push(a);}const n=BigInt(a.attr_val)+BigInt(itemnum);ensure(n<=0xffffffffffffffffn,'Currency overflow');a.attr_val=String(n);}
+  }else ensure(false,`Unsupported reward type ${itemtype}`,1021);
+  granted.push(reward);
+ }
+ return granted;
+}
+
+
+
+

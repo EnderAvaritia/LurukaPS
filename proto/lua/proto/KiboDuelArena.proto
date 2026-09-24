@@ -1,0 +1,151 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+import "KiboDuel.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum KiboDuelArenaStatus {
+  KIBO_DUEL_ARENA_STATUS_NONE = 0;
+  KIBO_DUEL_ARENA_STATUS_READY = 1;
+  KIBO_DUEL_ARENA_STATUS_START = 2;
+  KIBO_DUEL_ARENA_STATUS_FIRST = 3;
+  KIBO_DUEL_ARENA_STATUS_REGULAR = 4;
+  KIBO_DUEL_ARENA_STATUS_FINISH = 5;
+  KIBO_DUEL_ARENA_STATUS_STINGER = 6;
+  KIBO_DUEL_ARENA_STATUS_EXIT = 7;
+}
+enum KiboDuelArenaFinReason {
+  KIBO_DUEL_ARENA_FIN_REASON_INVALID = 0;
+  KIBO_DUEL_ARENA_FIN_REASON_BATTLE = 1;
+  KIBO_DUEL_ARENA_FIN_REASON_TIMEOUT = 2;
+  KIBO_DUEL_ARENA_FIN_REASON_PLAYER_QUIT = 3;
+}
+enum KiboDuelArenaStingerStage {
+  KIBO_DUEL_ARENA_STINGER_STAGE_INVALID = 0;
+  KIBO_DUEL_ARENA_STINGER_STAGE_START = 1;
+  KIBO_DUEL_ARENA_STINGER_STAGE_FIRST = 2;
+  KIBO_DUEL_ARENA_STINGER_STAGE_FINISH = 3;
+}
+enum KIBO_DUEL_ARENA_PVP_ENTER_TYPE {
+  NORMAL = 0;
+  INVITE = 1;
+  MATCH = 2;
+  COMPETITION = 3;
+}
+message KiboDuelArenaScoreInfo {
+  optional uint32 camp = 1 [json_name = "camp"];
+  optional uint32 score = 2 [json_name = "score"];
+}
+message KiboDuelArenaPlayerBaseInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional string name = 2 [json_name = "name"];
+  optional uint32 player_camp = 3 [json_name = "playerCamp"];
+  optional uint32 rank = 4 [json_name = "rank"];
+  optional uint64 hero_guid = 5 [json_name = "heroGuid"];
+  optional uint32 hero_conf_id = 6 [json_name = "heroConfId"];
+}
+message SCKiboDuelArenaPlayerBaseInfo {
+  repeated .cs.KiboDuelArenaPlayerBaseInfo infos = 1 [json_name = "infos"];
+}
+message SCKiboDuelArenaInfo {
+  optional .cs.KiboDuelArenaStatus status = 1 [json_name = "status"];
+  optional uint64 status_endtime = 2 [json_name = "statusEndtime"];
+  repeated .cs.KiboDuelTrainerInfo trainerInfos = 3 [json_name = "trainerInfos"];
+  optional uint64 status_elapsed_time = 4 [json_name = "statusElapsedTime"];
+  optional bool is_competition = 5 [json_name = "isCompetition"];
+  optional bool in_speed_stage = 6 [json_name = "inSpeedStage"];
+  optional .cs.KIBO_DUEL_ARENA_PVP_ENTER_TYPE enter_type = 7 [json_name = "enterType"];
+  optional bool cost_change = 8 [json_name = "costChange"];
+}
+message SCKiboDuelArenaCardInfo {
+  repeated uint64 pet_guids = 1 [json_name = "petGuids"];
+  optional uint64 global_cd_endtime = 2 [json_name = "globalCdEndtime"];
+}
+message SCKiboDuelArenaFirstInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint64 pet_guid = 2 [json_name = "petGuid"];
+  optional uint32 catch_item = 3 [json_name = "catchItem"];
+}
+message KiboDuelArenaFirstConfirmInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional bool isConfirm = 2 [json_name = "isConfirm"];
+}
+message SCKiboDuelArenaFirstConfirmInfo {
+  repeated .cs.KiboDuelArenaFirstConfirmInfo confirm_infos = 1 [json_name = "confirmInfos"];
+}
+message SCKiboDuelArenaScoreInfo {
+  repeated .cs.KiboDuelArenaScoreInfo score_infos = 1 [json_name = "scoreInfos"];
+}
+message SCKiboDuelArenaResultInfo {
+  optional .cs.KiboDuelFinType result = 1 [json_name = "result"];
+  optional .cs.KiboDuelArenaFinReason reason = 2 [json_name = "reason"];
+  optional uint32 star = 3 [json_name = "star"];
+  optional uint64 clearance_time = 4 [json_name = "clearanceTime"];
+  optional bool is_competition = 5 [json_name = "isCompetition"];
+  optional bool is_first = 6 [json_name = "isFirst"];
+}
+message SCKiboDuelArenaStingerInfo {
+  optional uint64 stage = 1 [json_name = "stage"];
+  optional uint64 end_time = 2 [json_name = "endTime"];
+  repeated string args = 3 [json_name = "args"];
+}
+message CSKiboDuelArenaSummonReq {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional .cs.Position pos = 2 [json_name = "pos"];
+  optional int32 angle = 3 [json_name = "angle"];
+  optional uint64 source_pet_guid = 4 [json_name = "sourcePetGuid"];
+  optional uint64 replace_kibo_guid = 5 [json_name = "replaceKiboGuid"];
+}
+message CSKiboDuelArenaSetFirstReq {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+}
+message CSKiboDuelArenaFirstConfirmReq {
+}
+message KiboInFight {
+  optional uint64 kibo_guid = 1 [json_name = "kiboGuid"];
+  optional bool in_fight = 2 [json_name = "inFight"];
+  optional .cs.Position pos = 3 [json_name = "pos"];
+  optional int32 angle = 4 [json_name = "angle"];
+  optional bool is_first = 5 [json_name = "isFirst"];
+}
+message SCKiboInFightChange {
+  repeated .cs.KiboInFight changes = 1 [json_name = "changes"];
+}
+message SCKiboDuelArenaActionPointSync {
+  optional int32 current_points = 1 [json_name = "currentPoints"];
+  optional int32 max_points = 2 [json_name = "maxPoints"];
+  optional uint64 next_recover_time = 3 [json_name = "nextRecoverTime"];
+}
+message CSKiboDuelArenaRestartConfirm {
+  enum ConfirmOp {
+    INVITE = 0;
+    ACCEPT = 1;
+    REJECT = 2;
+  }
+  optional .cs.CSKiboDuelArenaRestartConfirm.ConfirmOp op = 1 [json_name = "op"];
+  optional uint32 ret_code = 2 [json_name = "retCode"];
+}
+message SCKiboDuelArenaCompetitionSeasonSync {
+  optional uint32 season = 1 [json_name = "season"];
+  optional int64 start_time = 2 [json_name = "startTime"];
+  optional int64 end_time = 3 [json_name = "endTime"];
+  optional bool is_new_season = 4 [json_name = "isNewSeason"];
+}
+message CSKiboDuelArenaAutoFightSync {
+  enum Status {
+    INVALID = 0;
+    START = 1;
+    STOP = 2;
+  }
+  optional .cs.CSKiboDuelArenaAutoFightSync.Status status = 1 [json_name = "status"];
+}
+message CSControlMapAI {
+  enum ControlObjType {
+    ALL = 0;
+    NPC = 1;
+    KIBO = 2;
+  }
+  optional .cs.CSControlMapAI.ControlObjType control_type = 1 [json_name = "controlType"];
+  optional uint32 status = 2 [json_name = "status"];
+}

@@ -1,0 +1,67 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+message ShopItem {
+  optional uint32 slot_id = 1 [json_name = "slotId"];
+  optional uint32 goods_id = 2 [json_name = "goodsId"];
+  optional uint32 shop_store_num = 3 [json_name = "shopStoreNum"];
+  optional uint32 buy_times = 4 [json_name = "buyTimes"];
+  optional uint32 dead_time = 5 [json_name = "deadTime"];
+  repeated uint32 unlock_progress = 6 [json_name = "unlockProgress"];
+  optional uint32 begin_time = 7 [json_name = "beginTime"];
+  optional uint32 end_time = 8 [json_name = "endTime"];
+}
+message ShopInfo {
+  optional uint32 shop_id = 1 [json_name = "shopId"];
+  repeated .cs.ShopItem shop_items = 2 [json_name = "shopItems"];
+  optional uint32 begin_time = 4 [json_name = "beginTime"];
+  optional uint32 end_time = 5 [json_name = "endTime"];
+}
+message CSShopInfoReq {
+  optional uint32 shop_id = 1 [json_name = "shopId"];
+}
+message SCShopInfoSync {
+  optional uint32 shop_id = 1 [json_name = "shopId"];
+  optional .cs.ShopInfo shop_info = 2 [json_name = "shopInfo"];
+}
+message ShopBuyItem {
+  optional uint32 slot_id = 1 [json_name = "slotId"];
+  optional uint32 times = 2 [json_name = "times"];
+  optional uint32 goods_id = 3 [json_name = "goodsId"];
+}
+message CSShopBuyItems {
+  optional uint32 shop_id = 1 [json_name = "shopId"];
+  repeated .cs.ShopBuyItem items = 2 [json_name = "items"];
+  optional uint32 sign = 3 [json_name = "sign"];
+}
+message SCShopBuyItems {
+  optional uint32 shop_id = 1 [json_name = "shopId"];
+  repeated .cs.Rewards rewards = 2 [json_name = "rewards"];
+}
+message CSListShopItemsArray {
+  repeated uint32 shop_ids = 1 [json_name = "shopIds"];
+}
+message SCListShopItemsArray {
+  repeated .cs.ShopInfo infos = 1 [json_name = "infos"];
+}
+message CSBuyShopItem {
+  optional uint32 slot_id = 1 [json_name = "slotId"];
+  optional uint32 times = 2 [json_name = "times"];
+  optional uint32 sign = 3 [json_name = "sign"];
+}
+message SCBuyShopItem {
+  optional .cs.ShopItem info = 1 [json_name = "info"];
+  optional .cs.Rewards rewards = 2 [json_name = "rewards"];
+}
+message CSShopGoodsTipReq {
+  optional uint32 shop_id = 1 [json_name = "shopId"];
+  optional uint32 slot_id = 2 [json_name = "slotId"];
+  optional uint32 goods_id = 3 [json_name = "goodsId"];
+}
+message SCShopGoodsTipSync {
+  repeated uint32 tipInfos = 1 [json_name = "tipInfos"];
+  optional bool isAll = 2 [json_name = "isAll"];
+}

@@ -1,0 +1,846 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "Core.proto";
+import "Pet.proto";
+import "ExOptions.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum PlatformType {
+  PFT_PC = 0;
+  PFT_Andriod = 1;
+  PFT_IOS = 2;
+  PFT_PS5 = 3;
+  PFT_HARMONY = 4;
+  PFT_Web = 100;
+}
+enum EnterGameType {
+  EGT_Normal = 1;
+  EGT_Reconnect = 2;
+  EGT_Refresh = 3;
+}
+enum FriendChangeType {
+  FriendChangeTypeNone = 0;
+  Add2FriendList = 1;
+  Add2BlackList = 2;
+  Add2ApplyList = 4;
+  DelFromFriendList = 8;
+  DelFromBlackList = 16;
+  DelFromApplyList = 32;
+  ClearApplyList = 64;
+}
+enum FriendOPType {
+  FOL_None = 0;
+  FOL_Friend = 1;
+  FOL_Apply = 2;
+  FOL_Ban = 3;
+}
+enum FriendOPVal {
+  FOT_None = 0;
+  FOT_Add = 1;
+  FOT_Del = 2;
+  FOT_AllAgree = 3;
+  FOT_AllDel = 4;
+}
+enum ChatType {
+  CT_PersonType = 0;
+  CT_GroupType = 1;
+  CT_WorldType = 2;
+  CT_MapType = 3;
+}
+message CSHeartBeat {
+  optional .cs.CommonTime client_time = 1 [json_name = "clientTime"];
+  optional .cs.CommonTime server_time = 2 [json_name = "serverTime"];
+}
+message CSLogin {
+  optional string open_id = 1 [json_name = "openId"];
+  optional string token = 2 [json_name = "token"];
+  optional string app_version = 3 [json_name = "appVersion"];
+  optional string device_id = 4 [json_name = "deviceId"];
+  optional string job_name = 5 [json_name = "jobName"];
+  optional string build_pipe = 6 [json_name = "buildPipe"];
+  optional uint32 zone_id = 7 [json_name = "zoneId"];
+  optional string server_token = 8 [json_name = "serverToken"];
+  optional bool reconnect = 9 [json_name = "reconnect"];
+  optional string game_id = 10 [json_name = "gameId"];
+  optional string channel_code = 11 [json_name = "channelCode"];
+  optional string app_id = 12 [json_name = "appId"];
+}
+message SCLogin {
+  optional string open_id = 1 [json_name = "openId"];
+  optional uint32 pid = 2 [json_name = "pid"];
+  optional string server_token = 3 [json_name = "serverToken"];
+  optional uint32 guid = 4 [json_name = "guid"];
+  optional uint64 sign = 5 [json_name = "sign"];
+}
+message CSEnterGame {
+  optional string open_id = 1 [json_name = "openId"];
+  optional string token = 2 [json_name = "token"];
+  optional string channel_code = 3 [json_name = "channelCode"];
+  optional string app_id = 4 [json_name = "appId"];
+  optional string server_token = 5 [json_name = "serverToken"];
+  optional bool reconnect = 6 [json_name = "reconnect"];
+  optional .cs.SwitchSvrInfo switch_info = 7 [json_name = "switchInfo"];
+  optional uint32 platform = 8 [json_name = "platform"];
+  optional uint32 queue_time = 9 [json_name = "queueTime"];
+  optional string device_id = 10 [json_name = "deviceId"];
+  optional string model = 11 [json_name = "model"];
+  optional string os_version = 12 [json_name = "osVersion"];
+  optional string network = 13 [json_name = "network"];
+  optional string mac = 14 [json_name = "mac"];
+  optional uint32 tour_indicator = 15 [json_name = "tourIndicator"];
+  optional uint32 channel_id = 16 [json_name = "channelId"];
+  optional string app_version = 17 [json_name = "appVersion"];
+  optional string ip = 18 [json_name = "ip"];
+  optional string platform_str = 19 [json_name = "platformStr"];
+  optional string game_id = 20 [json_name = "gameId"];
+  optional uint32 device_type = 21 [json_name = "deviceType"];
+  optional bool new_role = 22 [json_name = "newRole"];
+  optional uint32 ntf_seq = 23 [json_name = "ntfSeq"];
+  optional string init_trace_id = 24 [json_name = "initTraceId"];
+  optional string previous_trace_id = 25 [json_name = "previousTraceId"];
+  optional string current_trace_id = 26 [json_name = "currentTraceId"];
+  optional uint32 device_grade = 27 [json_name = "deviceGrade"];
+  optional string job_name = 28 [json_name = "jobName"];
+  optional uint32 zone_id = 29 [json_name = "zoneId"];
+  optional uint32 os_type = 30 [json_name = "osType"];
+  optional string build_pipe = 31 [json_name = "buildPipe"];
+  optional string sub_channel = 32 [json_name = "subChannel"];
+  optional string session_id = 33 [json_name = "sessionId"];
+  repeated uint32 created_players = 34 [json_name = "createdPlayers"];
+}
+message SCEnterGame {
+  optional .cs.PlayerData data = 1 [json_name = "data"];
+  optional bool reconnect = 2 [json_name = "reconnect"];
+  optional int32 time_zone = 3 [json_name = "timeZone"];
+  optional fixed32 time = 4 [json_name = "time"];
+  optional fixed32 time_msec = 5 [json_name = "timeMsec"];
+  optional uint32 player_id = 6 [json_name = "playerId"];
+  optional string server_token = 7 [json_name = "serverToken"];
+  optional bytes rc4_key = 8 [json_name = "rc4Key"];
+  optional uint32 ntf_seq = 9 [json_name = "ntfSeq"];
+  optional uint32 req_seq = 10 [json_name = "reqSeq"];
+  optional uint32 line_id = 11 [json_name = "lineId"];
+  optional string server_id = 12 [json_name = "serverId"];
+  optional string node_id = 13 [json_name = "nodeId"];
+}
+message SCEnterGameToken {
+  optional string server_param1 = 1 [json_name = "serverParam1"];
+  optional bytes rc4_key = 2 [json_name = "rc4Key"];
+  optional string server_param2 = 3 [json_name = "serverParam2"];
+}
+message SCEnterGameCallbackStart {
+  optional bool reconnect = 1 [json_name = "reconnect"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional uint32 crc_rand_index = 3 [json_name = "crcRandIndex"];
+  optional uint64 server_time = 4 [json_name = "serverTime"];
+  optional uint64 time_offset = 5 [json_name = "timeOffset"];
+}
+message SCEnterGameType {
+  optional uint32 enter_type = 1 [json_name = "enterType"];
+}
+message CSPlayerCustomData {
+  optional bytes name = 1 [json_name = "name"];
+  optional .cs.WardrobeInfo wardrobe_info = 2 [json_name = "wardrobeInfo"];
+}
+message SCDesKeyNtf {
+  optional bytes encrptKey = 1 [json_name = "encrptKey"];
+}
+message CSCreatePlayer {
+  optional bytes name = 1 [json_name = "name"];
+  optional .cs.WardrobeInfo wardrobe_info = 2 [json_name = "wardrobeInfo"];
+}
+message SCCreatePlayer {
+  optional .cs.PlayerData data = 1 [json_name = "data"];
+}
+message CSMoveSoulEssence {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 guid = 2 [json_name = "guid"];
+}
+message CSComposeSoulEssence {
+  optional uint32 guid = 1 [json_name = "guid"];
+  repeated uint32 costs = 2 [json_name = "costs"];
+  repeated .cs.SoulEssenceAddLvCost cost_items = 3 [json_name = "costItems"];
+}
+message CSRisingStarSoulEssence {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 item_num = 2 [json_name = "itemNum"];
+  repeated uint32 guids = 3 [json_name = "guids"];
+  repeated .cs.SoulEssenceAddLvCost cost_items = 4 [json_name = "costItems"];
+  optional bool use_unlock = 5 [json_name = "useUnlock"];
+}
+message CSSetLockSoulEssence {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional bool lock = 2 [json_name = "lock"];
+  repeated uint32 guids = 3 [json_name = "guids"];
+}
+message CSRankUpSoulEssence {
+  optional uint32 guid = 1 [json_name = "guid"];
+}
+message CSMoveWeaponApp {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 app_guid = 2 [json_name = "appGuid"];
+}
+message CSSetLockWeaponApp {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional bool lock = 2 [json_name = "lock"];
+}
+message SCGetAllEquipOrnament {
+  repeated .cs.Ornament ornaments = 1 [json_name = "ornaments"];
+  optional uint32 smelt_num = 2 [json_name = "smeltNum"];
+}
+message SCUpdateOrnament {
+  repeated .cs.Ornament ornaments = 1 [json_name = "ornaments"];
+  repeated uint32 guid = 2 [json_name = "guid"];
+  optional uint32 smelt_num = 3 [json_name = "smeltNum"];
+}
+message CSMoveOrnament {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 ornament_guid = 2 [json_name = "ornamentGuid"];
+}
+message CSOrnamentGradeUp {
+  optional uint32 target_guid = 1 [json_name = "targetGuid"];
+  repeated uint32 material_guids = 2 [json_name = "materialGuids"];
+}
+message CSOrnamentInherit {
+  optional uint32 target_quality_guid = 1 [json_name = "targetQualityGuid"];
+  optional uint32 source_quality_guid = 2 [json_name = "sourceQualityGuid"];
+}
+message CSDecomposeSoulEssence {
+  repeated uint32 guids = 1 [json_name = "guids"];
+}
+message CSOrnamentRecommendList {
+  repeated uint32 hero_ids = 1 [json_name = "heroIds"];
+}
+message SCOrnamentRecommendListSync {
+  message OrnamentRecommendList {
+    optional uint32 hero_id = 1 [json_name = "heroId"];
+    repeated .cs.CSRepeatedUint32 recommend_list = 2 [json_name = "recommendList"];
+  }
+  repeated .cs.SCOrnamentRecommendListSync.OrnamentRecommendList data_list = 2 [json_name = "dataList"];
+}
+message CSRemoveOrnament {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 type = 2 [json_name = "type"];
+  optional bool remove_all = 3 [json_name = "removeAll"];
+}
+message CSSetLockOrnament {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional bool lock = 2 [json_name = "lock"];
+}
+message CSEnhanceOrnament {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 op = 2 [json_name = "op"];
+}
+message SCEnhanceOrnament {
+  optional bool suc = 1 [json_name = "suc"];
+}
+message CSQuickWear {
+  optional uint64 hero_guid = 1 [json_name = "heroGuid"];
+  optional uint32 soulessence_guid = 2 [json_name = "soulessenceGuid"];
+  repeated uint32 ornament_guids = 3 [json_name = "ornamentGuids"];
+}
+message CSUseItem {
+  optional uint32 itemid = 1 [json_name = "itemid"];
+  optional uint32 num = 2 [json_name = "num"];
+  repeated uint64 args = 3 [json_name = "args"];
+}
+message SCUseItem {
+  optional uint32 ret = 1 [json_name = "ret"];
+}
+message CSBatchUseItem {
+  repeated .cs.CSUseItem items = 1 [json_name = "items"];
+}
+message CSPing {
+  optional uint32 ping = 4 [json_name = "ping"];
+  optional uint64 client_ts = 7 [json_name = "clientTs"];
+}
+message SCPing {
+  optional int32 time_zone = 1 [json_name = "timeZone"];
+  optional fixed32 time = 2 [json_name = "time"];
+  optional fixed32 time_msec = 3 [json_name = "timeMsec"];
+  optional uint64 client_ts = 4 [json_name = "clientTs"];
+}
+message SCQuestSync {
+  repeated .cs.QuestGroupInfo groups = 1 [json_name = "groups"];
+}
+message CSMailList {
+}
+message SCMailList {
+  repeated .cs.MailInfo mails = 1 [json_name = "mails"];
+}
+message SCMailSync {
+  repeated .cs.MailInfo mails = 1 [json_name = "mails"];
+  optional uint32 collect_count = 2 [json_name = "collectCount"];
+  repeated uint64 dels = 3 [json_name = "dels"];
+}
+message SCMailFetch {
+  repeated uint64 guids = 1 [json_name = "guids"];
+  optional .cs.Rewards rewards = 2 [json_name = "rewards"];
+  optional uint32 errcode = 3 [json_name = "errcode"];
+}
+message SCFriendIdList {
+  optional .cs.FriendAllId info = 1 [json_name = "info"];
+}
+message FriendChangeOne {
+  optional .cs.FriendId friendItem = 1 [json_name = "friendItem"];
+  optional uint32 type = 2 [json_name = "type"];
+}
+message SCFriendIncChange {
+  repeated .cs.FriendChangeOne datalist = 1 [json_name = "datalist"];
+}
+message CSOpFriend {
+  optional uint32 optype = 1 [json_name = "optype"];
+  optional uint32 op = 2 [json_name = "op"];
+  optional uint32 id = 3 [json_name = "id"];
+}
+message CSChangeFriendRemark {
+  optional uint32 id = 1 [json_name = "id"];
+  optional bytes remark = 2 [json_name = "remark"];
+}
+message CSChangeFriendRemarkRsp {
+  optional uint32 id = 1 [json_name = "id"];
+  optional bytes remark = 2 [json_name = "remark"];
+}
+message CSReportOnPlayer {
+  optional uint32 pid = 1 [json_name = "pid"];
+  optional bytes name = 2 [json_name = "name"];
+  optional string text = 3 [json_name = "text"];
+  optional string reason = 4 [json_name = "reason"];
+}
+message SCDelChatShield {
+  optional uint32 del = 1 [json_name = "del"];
+}
+message SCChatShieldInfo {
+  repeated uint32 infos = 1 [json_name = "infos"];
+}
+message CSChatGetIsolateList {
+}
+message SCChatGetIsolateList {
+  repeated uint32 isolates = 1 [json_name = "isolates"];
+  repeated .cs.ChatIsolateItem lists = 2 [json_name = "lists"];
+}
+message ChatIsolateItem {
+  optional uint32 id = 1 [json_name = "id"];
+  optional string lang = 2 [json_name = "lang"];
+}
+message CSChatShieldOp {
+  optional uint32 tar_id = 1 [json_name = "tarId"];
+  optional uint32 op = 2 [json_name = "op"];
+}
+message SCChatShieldOp {
+  optional uint32 err = 1 [json_name = "err"];
+  repeated .cs.ChatShieldItem items = 2 [json_name = "items"];
+}
+message CSChatGetShieldList {
+}
+message SCChatGetShieldList {
+  optional uint32 err = 1 [json_name = "err"];
+  repeated .cs.ChatShieldItem items = 2 [json_name = "items"];
+}
+message ChatShieldItem {
+  optional uint32 pid = 1 [json_name = "pid"];
+  optional uint32 time = 2 [json_name = "time"];
+}
+message CSAddChatShield {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message CSDelChatShield {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message SCChatListInfo {
+  repeated .cs.FriendChat info = 1 [json_name = "info"];
+}
+message SCChatMsgCnt {
+  message MsgIDCnt {
+    optional uint32 id = 1 [json_name = "id"];
+    optional uint32 cnt = 2 [json_name = "cnt"];
+  }
+  repeated .cs.SCChatMsgCnt.MsgIDCnt msg_list = 1 [json_name = "msgList"];
+}
+message ChatTarget {
+  optional uint64 tid = 1 [json_name = "tid"];
+  optional uint32 chat_type = 2 [json_name = "chatType"];
+  optional bool shield = 3 [json_name = "shield"];
+}
+message SCChatInfoChange {
+  optional .cs.ChatTarget target = 2 [json_name = "target"];
+  optional .cs.ChatInfo chat = 3 [json_name = "chat"];
+}
+message CSAddChat {
+  optional .cs.ChatTarget target = 1 [json_name = "target"];
+  optional bytes msg = 2 [json_name = "msg"];
+  optional uint32 type = 3 [json_name = "type"];
+  optional uint32 time = 4 [json_name = "time"];
+  optional bytes extra_info = 5 [json_name = "extraInfo"];
+  optional uint32 bubbleId = 6 [json_name = "bubbleId"];
+  optional uint32 language = 7 [json_name = "language"];
+}
+message SCAddChatRsp {
+  optional uint32 ban_time = 1 [json_name = "banTime"];
+}
+message CSDelFriendChat {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message CSQueryChatInfoReq {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message CSReadFriendChat {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 order = 2 [json_name = "order"];
+}
+message CSCreateFriendChat {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message SCCreateFriendChat {
+  optional uint32 upgrade = 1 [json_name = "upgrade"];
+}
+message CSPlayerSimpleListInfo {
+  optional uint32 type = 1 [json_name = "type"];
+}
+message CSPlayerMiniListInfo {
+  optional uint32 type = 1 [json_name = "type"];
+}
+message CSQueryPlayerInfo {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message SCQueryPlayerInfo {
+  optional .cs.PlayerBasicInfo info = 1 [json_name = "info"];
+}
+message CSChangeName {
+  optional bytes name = 1 [json_name = "name"];
+  optional uint32 cr = 2 [json_name = "cr"];
+  optional uint32 check = 3 [json_name = "check"];
+}
+message CSChangeTitle {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 id = 2 [json_name = "id"];
+}
+message CSChangeSign {
+  optional bytes sign = 1 [json_name = "sign"];
+}
+message ShowHeroInfo {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 pos = 2 [json_name = "pos"];
+}
+message CSChangeShowHero {
+  repeated .cs.ShowHeroInfo hero = 1 [json_name = "hero"];
+}
+message ShowPetInfo {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 pos = 2 [json_name = "pos"];
+}
+message CSChangeShowPet {
+  repeated .cs.ShowPetInfo pet = 1 [json_name = "pet"];
+}
+message SCInQueue {
+  optional uint32 queue_pos = 1 [json_name = "queuePos"];
+  optional float queue_speed = 2 [json_name = "queueSpeed"];
+}
+message SCMainBuildInfo {
+  repeated .cs.MainBuild infos = 1 [json_name = "infos"];
+}
+message SCBuildInfo {
+  repeated .cs.BuildBase infos = 1 [json_name = "infos"];
+}
+message SCProsperityInfo {
+  repeated .cs.ProsperityReward reward = 1 [json_name = "reward"];
+}
+message CSUint32 {
+  optional uint32 u32 = 1 [json_name = "u32"];
+}
+message CSRepeatedUint32 {
+  repeated uint32 u32s = 1 [json_name = "u32s"];
+}
+message CSUint64 {
+  optional uint64 u64 = 1 [json_name = "u64"];
+}
+message CSRepeatedUint64 {
+  repeated uint64 u64s = 1 [json_name = "u64s"];
+}
+message CSLvUpHero {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  repeated .cs.SimpleItem items = 2 [json_name = "items"];
+}
+message CSHeroRankReward {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 rank_id = 2 [json_name = "rankId"];
+}
+message CSLvUpSkill {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  optional uint32 skill_id = 2 [json_name = "skillId"];
+}
+message CSGuideUpdate {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 sub_id = 2 [json_name = "subId"];
+}
+message SCGuideUpdate {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 sub_id = 2 [json_name = "subId"];
+  optional bool complete = 3 [json_name = "complete"];
+}
+message SCRedPointSync {
+  optional .cs.RedPointInfos infos = 1 [json_name = "infos"];
+}
+message CSRedPointSetReq {
+  optional uint32 id = 1 [json_name = "id"];
+  optional uint32 sub_id = 2 [json_name = "subId"];
+  optional bool flag = 3 [json_name = "flag"];
+}
+message SCStorySync {
+  optional .cs.StoryInfos infos = 1 [json_name = "infos"];
+}
+message CSSwitchGroup {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 group_id = 2 [json_name = "groupId"];
+}
+message CSSwitchGroupControl {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint64 control = 2 [json_name = "control"];
+  optional .cs.Position pos = 3 [json_name = "pos"];
+  optional int32 angle = 4 [json_name = "angle"];
+  optional int32 switch_type = 5 [json_name = "switchType"];
+}
+message CSChangeGroupIndex {
+  optional uint32 type = 1 [json_name = "type"];
+  optional .cs.Group group = 2 [json_name = "group"];
+}
+message CSChangeGroupName {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 group_id = 2 [json_name = "groupId"];
+  optional bytes name = 3 [json_name = "name"];
+}
+message CSQuickChangeGroup {
+  optional uint32 type = 1 [json_name = "type"];
+  optional uint32 id = 2 [json_name = "id"];
+  repeated .cs.CSWearPet infos = 3 [json_name = "infos"];
+}
+message CSTrialGroupChange {
+  message trials {
+    optional int32 pos = 1 [json_name = "pos"];
+    optional uint32 id = 2 [json_name = "id"];
+  }
+  optional bool open = 1 [json_name = "open"];
+  optional bool force = 2 [json_name = "force"];
+  repeated .cs.CSTrialGroupChange.trials trial_heros = 3 [json_name = "trialHeros"];
+  repeated .cs.CSTrialGroupChange.trials trial_pets = 4 [json_name = "trialPets"];
+  optional .cs.CSTrialGroupChange.trials trial_control = 5 [json_name = "trialControl"];
+}
+message CSTrialDatas {
+  repeated .cs.HeroItemInfo trial_heros = 1 [json_name = "trialHeros"];
+  repeated .cs.PetbaseInfo trial_pets = 2 [json_name = "trialPets"];
+}
+message SCAchievementSync {
+  repeated .cs.AchievementGroup groups = 1 [json_name = "groups"];
+  repeated .cs.Achievement achievements = 2 [json_name = "achievements"];
+  optional uint32 last_achievement_award_point = 3 [json_name = "lastAchievementAwardPoint"];
+  repeated .cs.AchievementMedal achievement_medals = 4 [json_name = "achievementMedals"];
+}
+message SCAchievementFinishNotice {
+  optional uint32 id = 1 [json_name = "id"];
+}
+message CSClientBehaviourRecord {
+  optional uint32 key = 1 [json_name = "key"];
+  repeated uint32 args = 4 [json_name = "args"];
+}
+message CSPetGetCharKibo {
+  optional uint64 hero_guid = 1 [json_name = "heroGuid"];
+  optional uint32 config_id = 2 [json_name = "configId"];
+}
+message SCCharDataSync {
+  optional uint32 hero_id = 1 [json_name = "heroId"];
+  optional uint32 type_id = 2 [json_name = "typeId"];
+  repeated uint32 record_id = 3 [json_name = "recordId"];
+}
+message CSCharDataGet {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+}
+message CharDataSingle {
+  optional uint32 type_id = 1 [json_name = "typeId"];
+  repeated uint32 record_id = 2 [json_name = "recordId"];
+}
+message SCCharDataRsp {
+  optional uint32 hero_id = 1 [json_name = "heroId"];
+  repeated .cs.CharDataSingle infos = 2 [json_name = "infos"];
+}
+message SCCharDataAll {
+  repeated .cs.SCCharDataRsp heros_char_data = 1 [json_name = "herosCharData"];
+}
+message CSGetComplexReq {
+  optional uint32 friend_pid = 1 [json_name = "friendPid"];
+}
+message SCGetComplexRsp {
+  optional .cs.ComplexShowInfo complex_info = 1 [json_name = "complexInfo"];
+}
+message SCFishSync {
+  repeated .cs.FishHandbook handbooks = 1 [json_name = "handbooks"];
+  optional uint32 cur_rod = 2 [json_name = "curRod"];
+  optional uint32 cur_bait = 3 [json_name = "curBait"];
+  repeated .cs.FishEventHandbook event_handbooks = 4 [json_name = "eventHandbooks"];
+}
+message SCFishPondSync {
+  repeated .cs.FishPond ponds = 1 [json_name = "ponds"];
+}
+message CSFishSet {
+  optional uint32 bait_id = 1 [json_name = "baitId"];
+  optional uint32 rod_id = 2 [json_name = "rodId"];
+}
+message CSFishFinish {
+  optional bool success = 1 [json_name = "success"];
+}
+message SCFishFinish {
+  optional uint32 fish_id = 1 [json_name = "fishId"];
+  optional uint32 fish_weight = 2 [json_name = "fishWeight"];
+  optional uint32 fish_status = 3 [json_name = "fishStatus"];
+  optional .cs.Rewards rewards = 4 [json_name = "rewards"];
+  optional uint32 event_id = 5 [json_name = "eventId"];
+}
+message CSGetActiveReward {
+  optional uint32 reward_type = 1 [json_name = "rewardType"];
+  optional bool is_all = 2 [json_name = "isAll"];
+  optional uint32 reward_id = 3 [json_name = "rewardId"];
+}
+message SCActiveTaskComplete {
+  repeated .cs.PlayerActiveTaskInfo task_infos = 1 [json_name = "taskInfos"];
+}
+message CSStarGiftEquip {
+  repeated uint32 star_ids = 1 [json_name = "starIds"];
+  optional uint64 hero_id = 2 [json_name = "heroId"];
+}
+message SCStarGiftDataSync {
+  repeated .cs.SimpleItem star_gifts = 1 [json_name = "starGifts"];
+  repeated uint32 del_items = 2 [json_name = "delItems"];
+}
+message CSWearPet {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint64 hero_guid = 2 [json_name = "heroGuid"];
+}
+message SCUnLockSync {
+  repeated uint32 unlock_id = 1 [json_name = "unlockId"];
+}
+message CSActGetDetail {
+  optional uint32 act_id = 1 [json_name = "actId"];
+}
+message CSPamiMailChoose {
+  optional uint32 text_id = 1 [json_name = "textId"];
+  optional uint32 reply_id = 2 [json_name = "replyId"];
+}
+message PamiMailLetterContent {
+  message LetterReply {
+    optional uint32 text_id = 1 [json_name = "textId"];
+    optional uint32 record = 2 [json_name = "record"];
+    optional uint32 timestamp = 3 [json_name = "timestamp"];
+  }
+  optional uint32 mail_id = 1 [json_name = "mailId"];
+  optional uint64 hero_id = 2 [json_name = "heroId"];
+  repeated .cs.PamiMailLetterContent.LetterReply reply = 3 [json_name = "reply"];
+  optional bool latest_read = 4 [json_name = "latestRead"];
+  optional uint32 timestamp = 5 [json_name = "timestamp"];
+  repeated uint32 reward = 6 [json_name = "reward"];
+  repeated .cs.ExtraInfo args = 7 [json_name = "args"];
+}
+message PamiMailTab {
+  optional uint32 mail_type = 1 [json_name = "mailType"];
+  repeated .cs.PamiMailLetterContent contents = 2 [json_name = "contents"];
+}
+message SCPamiMailSync {
+  repeated .cs.PamiMailTab mail_tab = 1 [json_name = "mailTab"];
+}
+message CSExchangeItemReq {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional uint32 item_type = 2 [json_name = "itemType"];
+  optional uint32 item_num = 3 [json_name = "itemNum"];
+  repeated uint32 args = 4 [json_name = "args"];
+}
+message SCAnnounceSync {
+  repeated .cs.AnnounceNotice notics = 1 [json_name = "notics"];
+  repeated .cs.AnnounceNoticeScrolling scrolling = 2 [json_name = "scrolling"];
+}
+message SCPaomaLightSync {
+  repeated .cs.PaomaLightNotice notics = 1 [json_name = "notics"];
+}
+message CSChangePlayerStatus {
+  optional uint32 status = 1 [json_name = "status"];
+  optional uint64 arg = 2 [json_name = "arg"];
+  optional bool doRecord = 3 [json_name = "doRecord"];
+}
+message CSCookItemCollect {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional bool collect = 2 [json_name = "collect"];
+}
+message CSSetStory {
+  optional uint32 story_id = 1 [json_name = "storyId"];
+  optional bool is_skip = 2 [json_name = "isSkip"];
+  optional uint32 story_type = 3 [json_name = "storyType"];
+  optional uint32 param = 4 [json_name = "param"];
+  optional uint32 tag = 5 [json_name = "tag"];
+}
+message CSChangePhotoGraphTempletName {
+  optional uint32 id = 1 [json_name = "id"];
+  optional bytes name = 2 [json_name = "name"];
+}
+message AllPhotoGraphTempletInfo {
+  repeated .cs.PhotoGraphTempletInfo infos = 1 [json_name = "infos"];
+  repeated uint32 dels = 2 [json_name = "dels"];
+}
+message AllChatEmojiInfo {
+  repeated .cs.ChatEmojiInfo bags = 1 [json_name = "bags"];
+  repeated uint32 collects = 2 [json_name = "collects"];
+  repeated uint32 collect_dels = 3 [json_name = "collectDels"];
+  repeated uint32 lately_collects = 4 [json_name = "latelyCollects"];
+}
+message CSGetQuestionLink {
+  optional string link = 1 [json_name = "link"];
+}
+message AllNoviceTaskInfo {
+  repeated .cs.NoviceTaskGroupInfo groups = 1 [json_name = "groups"];
+}
+message AllRechargeOrderInfo {
+  repeated .cs.RechargeOrderInfo orders = 1 [json_name = "orders"];
+}
+message ProtoNullRsp {
+}
+message AllCollectToolInfo {
+  repeated .cs.CollectToolItem bags = 1 [json_name = "bags"];
+  repeated uint32 dels = 2 [json_name = "dels"];
+}
+message CSHeroRuneEquip {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+  repeated uint32 slot_ids = 2 [json_name = "slotIds"];
+  repeated .cs.TypeItem costItems = 3 [json_name = "costItems"];
+  optional bool useGiftItem = 4 [json_name = "useGiftItem"];
+}
+message CSHeroRuneLevelUp {
+  optional uint64 hero_id = 1 [json_name = "heroId"];
+}
+message RuneAttrChange {
+  optional uint32 attr_id = 1 [json_name = "attrId"];
+  optional uint32 attr_val = 2 [json_name = "attrVal"];
+}
+message RuneSkillLevelChange {
+  optional uint32 skill_id = 1 [json_name = "skillId"];
+  optional uint32 add_level = 2 [json_name = "addLevel"];
+}
+message SCHeroRuneAttrChange {
+  repeated .cs.RuneAttrChange atrrs = 1 [json_name = "atrrs"];
+  repeated .cs.RuneSkillLevelChange skills = 2 [json_name = "skills"];
+}
+message SCProtoGMSystemCloseSync {
+  repeated .cs.GameSystemInfo syslist = 1 [json_name = "syslist"];
+}
+message CSOperateSnackBag {
+  optional uint32 source_bag = 1 [json_name = "sourceBag"];
+  optional uint32 target_bag = 2 [json_name = "targetBag"];
+  optional uint32 operate_type = 3 [json_name = "operateType"];
+  optional uint32 item_id = 4 [json_name = "itemId"];
+  optional uint32 item_num = 5 [json_name = "itemNum"];
+  optional uint32 source_slot = 6 [json_name = "sourceSlot"];
+  optional uint32 target_slot = 7 [json_name = "targetSlot"];
+}
+message CSSetSnackBagNum {
+  message SnackBagNum {
+    optional uint32 bag_type = 1 [json_name = "bagType"];
+    optional uint32 num = 2 [json_name = "num"];
+  }
+  repeated .cs.CSSetSnackBagNum.SnackBagNum info = 1 [json_name = "info"];
+}
+message AllStandPlatesBagInfo {
+  repeated .cs.StandPlatesBagInfo bags = 1 [json_name = "bags"];
+}
+message CSComposeRune {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional uint32 num = 2 [json_name = "num"];
+  optional bool equip = 3 [json_name = "equip"];
+  optional bool oneKey = 4 [json_name = "oneKey"];
+  repeated .cs.TypeItem costItems = 5 [json_name = "costItems"];
+  optional bool useGiftItem = 6 [json_name = "useGiftItem"];
+}
+message SCComposeRuneRsp {
+  optional .cs.Rewards rewards = 1 [json_name = "rewards"];
+  optional bool equip = 2 [json_name = "equip"];
+}
+message CSSendHeroGift {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional uint32 num = 2 [json_name = "num"];
+  optional uint32 heroId = 3 [json_name = "heroId"];
+  optional uint32 item_type = 4 [json_name = "itemType"];
+}
+message SCSendHeroGift {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+  optional uint32 hero_id = 2 [json_name = "heroId"];
+  optional uint32 item_type = 3 [json_name = "itemType"];
+  optional uint32 num = 4 [json_name = "num"];
+}
+message CSFriendRecommend {
+}
+message SCFriendRecommend {
+  repeated .cs.PlayerBasicInfo player_infos = 1 [json_name = "playerInfos"];
+}
+message CSChatSyncNew {
+  repeated uint32 pids = 1 [json_name = "pids"];
+}
+message SCChatSyncNew {
+  repeated .cs.FriendChat chat_infos = 1 [json_name = "chatInfos"];
+}
+message SCChatRoomSync {
+  optional uint32 chat_type = 1 [json_name = "chatType"];
+  optional uint64 sysId = 2 [json_name = "sysId"];
+}
+message CSChatWorldJoin {
+  optional uint64 sysId = 2 [json_name = "sysId"];
+}
+message SCChatWroldJoin {
+}
+message CSChatRoomNum {
+  optional uint32 chat_type = 1 [json_name = "chatType"];
+}
+message SCChatRoomNum {
+  optional uint32 chat_type = 1 [json_name = "chatType"];
+  optional uint32 count = 2 [json_name = "count"];
+}
+message CSFriendShield {
+  optional uint32 friend_id = 1 [json_name = "friendId"];
+  optional bool bShield = 2 [json_name = "bShield"];
+}
+message SCFriendShield {
+  optional uint32 friend_id = 1 [json_name = "friendId"];
+  optional bool bShield = 2 [json_name = "bShield"];
+}
+message SCFriendShieldNtf {
+  optional uint32 friend_id = 1 [json_name = "friendId"];
+  optional bool bShield = 2 [json_name = "bShield"];
+}
+message CSChangeSceneShowcase {
+  optional .cs.SceneShowcase data = 1 [json_name = "data"];
+}
+message CSBytes {
+  optional bytes data = 1 [json_name = "data"];
+}
+message SCChatBubbleInfo {
+  optional uint32 use_bubble = 1 [json_name = "useBubble"];
+  repeated uint32 unlock_bubble = 2 [json_name = "unlockBubble"];
+}
+message SCChatBackgroundInfo {
+  optional uint32 use_background = 1 [json_name = "useBackground"];
+  repeated uint32 unlock_background = 2 [json_name = "unlockBackground"];
+}
+message CSExchangeGiftCode {
+  optional string code = 1 [json_name = "code"];
+}
+message SCExchangeGiftCode {
+  optional uint32 status_code = 1 [json_name = "statusCode"];
+}
+message CSNDayRewardReq {
+  optional uint32 reward_type = 1 [json_name = "rewardType"];
+  optional uint32 reward_param = 2 [json_name = "rewardParam"];
+}
+message CSUpdateSkin {
+  optional uint64 hero_guid = 1 [json_name = "heroGuid"];
+  optional uint32 skin_id = 2 [json_name = "skinId"];
+}
+message SCHeroSkinMessageSync {
+  repeated .cs.HeroSkin hero_skin_info = 1 [json_name = "heroSkinInfo"];
+}
+message SCHeroSkinUnlockSync {
+  optional uint32 skin_id = 1 [json_name = "skinId"];
+}

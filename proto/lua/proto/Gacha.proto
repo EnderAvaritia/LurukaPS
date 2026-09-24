@@ -1,0 +1,86 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+message SCGetGachaInfo {
+  repeated .cs.GachaPoolInfo gacha_pools = 1 [json_name = "gachaPools"];
+}
+message CSDoGachaReq {
+  optional uint32 pool_id = 1 [json_name = "poolId"];
+  optional uint32 draw_count = 2 [json_name = "drawCount"];
+}
+message SCDoGachaRsp {
+  repeated .cs.GachaResult gacha_results = 1 [json_name = "gachaResults"];
+  optional .cs.GachaPoolInfo pool_info = 2 [json_name = "poolInfo"];
+  repeated .cs.GachaPoolInfo other_pool_infos = 3 [json_name = "otherPoolInfos"];
+}
+message CSGacheChooseReq {
+  optional uint32 pool_id = 1 [json_name = "poolId"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+}
+message CSGachaAimTargetReq {
+  optional uint32 pool_id = 1 [json_name = "poolId"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+}
+message SCGachaAimTargetRsp {
+  optional .cs.GachaPool gacha_pool = 1 [json_name = "gachaPool"];
+}
+message SCGachaRewardRsp {
+  optional .cs.Rewards rewards = 1 [json_name = "rewards"];
+  optional .cs.GachaPool gachaPool = 2 [json_name = "gachaPool"];
+}
+message CSGetGachaHistoryReq {
+  optional uint32 gacha_type = 1 [json_name = "gachaType"];
+  optional uint64 cursor = 2 [json_name = "cursor"];
+  optional uint32 select_num = 3 [json_name = "selectNum"];
+}
+message SCGachaHistoryNtf {
+  repeated .cs.GachaHistoryItem items = 1 [json_name = "items"];
+  optional uint64 total_count = 2 [json_name = "totalCount"];
+  optional uint64 next_cursor = 3 [json_name = "nextCursor"];
+  optional bool has_more = 4 [json_name = "hasMore"];
+}
+message GachaPoolInfo {
+  option (msg_to_server) = true;
+  optional .cs.GachaPool gacha_pool = 1 [json_name = "gachaPool"];
+  repeated .cs.GachaPity pity = 2 [json_name = "pity"];
+}
+message GachaPool {
+  optional uint32 pool_id = 1 [json_name = "poolId"];
+  optional uint32 pool_draw_count = 2 [json_name = "poolDrawCount"];
+  optional uint64 last_gacha_time = 3 [json_name = "lastGachaTime"];
+  repeated uint32 triggered_special_rules = 4 [json_name = "triggeredSpecialRules"];
+  optional uint32 received_stage_count = 5 [json_name = "receivedStageCount"];
+  optional uint32 draw_up_hero_count = 6 [json_name = "drawUpHeroCount"];
+  optional uint32 received_up_count = 7 [json_name = "receivedUpCount"];
+  optional bool received_self_choose = 8 [json_name = "receivedSelfChoose"];
+  repeated uint32 aimed_item_ids = 9 [json_name = "aimedItemIds"];
+}
+message GachaPity {
+  option (msg_to_server) = true;
+  optional uint32 pity_id = 1 [json_name = "pityId"];
+  optional uint32 pity_count = 2 [json_name = "pityCount"];
+  optional bool is_completed = 3 [json_name = "isCompleted"];
+}
+message GachaHistoryItem {
+  optional uint64 record_id = 1 [json_name = "recordId"];
+  repeated .cs.RewardItemInfo item = 2 [json_name = "item"];
+  optional uint32 pool_id = 3 [json_name = "poolId"];
+  optional uint64 gacha_time = 4 [json_name = "gachaTime"];
+}
+message GachaResult {
+  required .cs.RewardItemInfo main_item = 1 [json_name = "mainItem"];
+  repeated .cs.RewardItemInfo extra_item = 2 [json_name = "extraItem"];
+  optional .cs.RewardItemInfo transform_item = 3 [json_name = "transformItem"];
+  optional .cs.GachaSurprise gacha_surprise = 4 [json_name = "gachaSurprise"];
+}
+message GachaSurprise {
+  enum SurpriseType {
+    SURPRISE_TYPE_UNSPECIFIED = 0;
+    BLUE_TO_GOLD = 1;
+    PURPLE_TO_GOLD = 2;
+  }
+  required .cs.GachaSurprise.SurpriseType surprise_type = 1 [json_name = "surpriseType"];
+}

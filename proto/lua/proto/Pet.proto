@@ -1,0 +1,436 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "CommonMsg.proto";
+import "Battle.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum OperateSnackBagType {
+  OSBT_SUB = 0;
+  OSBT_ADD = 1;
+  OSBT_CHANGE_LOC = 2;
+}
+enum FavorSourceType {
+  FST_BATTLE = 1;
+  FST_FOOD = 2;
+  FST_FRUIT = 3;
+  FST_CARESS = 4;
+}
+enum DnaPetType {
+  DPT_talent = 1;
+  DPT_freedom = 2;
+}
+enum PetType {
+  PT_NORMAL = 0;
+  PT_TRIAL = 2;
+}
+enum PetSpecialType {
+  PST_NORMAL = 0;
+  PST_COLOR = 1;
+  PST_FLASH = 2;
+  PST_FLASH_COLOR = 3;
+  PST_COLORFUL = 4;
+  PST_FLASH_COLORFUL = 5;
+  PST_NOT_DEFINE = 6;
+}
+enum PetState {
+  PET_NORMAL = 0;
+  PET_HERO = 2;
+  PET_ROULETTE = 3;
+  PET_RIDE = 4;
+  PET_WORKING = 5;
+  PET_RESTING = 6;
+  PET_PUZZLE_ROULETTE = 7;
+  PET_HUB = 8;
+}
+enum PetFSMStateType {
+  PFST_NORMAL = 0;
+  PFST_WORK = 1;
+  PFST_EAT = 2;
+  PFST_PAUSE = 3;
+  PFST_HUB = 4;
+}
+enum PetHandElementType {
+  PHET_SINGLE = 5009;
+  PHET_ALL = 5010;
+}
+enum PetEggRatioType {
+  PERT_PROBABILITY_R1 = 1;
+  PERT_PROBABILITY_R2 = 2;
+  PERT_PROBABILITY_R3 = 3;
+  PERT_PROBABILITY_R4 = 4;
+  PERT_PROBABILITY_R5 = 5;
+  PERT_PROBABILITY_SR = 11;
+  PERT_PROBABILITY_SSR = 21;
+}
+enum PetEggHatchStrategy {
+  PEHS_GUARANTEE = 1;
+  PEHS_UP = 2;
+  PEHS_RANDOM = 3;
+}
+message PetEggBagInfo {
+  repeated .cs.PetEggbaseInfo eggs = 1 [json_name = "eggs"];
+  repeated uint32 guid = 2 [json_name = "guid"];
+  repeated uint32 add_guid = 3 [json_name = "addGuid"];
+  repeated .cs.PetEggGuaranteeInfo guarantees = 4 [json_name = "guarantees"];
+}
+message PetBagInfo {
+  repeated .cs.PetbaseInfo pets = 1 [json_name = "pets"];
+  repeated uint64 guid = 2 [json_name = "guid"];
+  repeated uint64 add_guid = 3 [json_name = "addGuid"];
+  repeated .cs.PetMutationInfo mutation_info = 4 [json_name = "mutationInfo"];
+  repeated .cs.FObjInfo fight_info = 5 [json_name = "fightInfo"];
+}
+message PetMutationInfo {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint32 source_gene_id = 2 [json_name = "sourceGeneId"];
+  optional uint32 mutation_gene_id = 3 [json_name = "mutationGeneId"];
+}
+message PetEggbaseInfo {
+  option (msg_to_server) = true;
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 type = 2 [json_name = "type"];
+  optional uint32 weight = 3 [json_name = "weight"];
+  optional uint32 odor = 4 [json_name = "odor"];
+  optional uint32 configid = 5 [json_name = "configid"];
+  optional uint32 hatch_state = 6 [json_name = "hatchState"];
+  optional .cs.PetSimpleInfo main_parents = 7 [json_name = "mainParents"];
+  optional .cs.PetSimpleInfo secondary_parents = 8 [json_name = "secondaryParents"];
+  optional bool lock_state = 9 [json_name = "lockState"];
+  optional uint32 hatch_build_guid = 10 [json_name = "hatchBuildGuid"];
+  repeated uint32 egg_affix = 11 [json_name = "eggAffix"];
+  optional uint32 pet_id = 12 [json_name = "petId"];
+}
+message PetEggGuaranteeInfo {
+  option (msg_to_server) = true;
+  optional uint32 egg_id = 1 [json_name = "eggId"];
+  repeated .cs.GuaranteeInfo info = 2 [json_name = "info"];
+}
+message GuaranteeInfo {
+  option (msg_to_server) = true;
+  optional uint32 guarantee_id = 1 [json_name = "guaranteeId"];
+  optional uint32 guarantee_num = 2 [json_name = "guaranteeNum"];
+  optional uint64 hatch_times = 3 [json_name = "hatchTimes"];
+}
+message laborInfo {
+  option (msg_to_server) = true;
+  optional uint32 labor_id = 1 [json_name = "laborId"];
+  optional uint32 labor_grade = 2 [json_name = "laborGrade"];
+  optional uint32 upper_labor_grade = 3 [json_name = "upperLaborGrade"];
+  optional uint32 labor_exp = 4 [json_name = "laborExp"];
+}
+message MutationGeneInfo {
+  option (msg_to_server) = true;
+  optional uint32 pos = 1 [json_name = "pos"];
+  optional uint32 gene_id = 2 [json_name = "geneId"];
+}
+message DailyFavorInfo {
+  optional uint32 source_type = 1 [json_name = "sourceType"];
+  optional uint32 favor_val = 2 [json_name = "favorVal"];
+}
+message PetbaseInfo {
+  option (msg_to_server) = true;
+  optional bytes pet_name = 1 [json_name = "petName"];
+  optional uint64 guid = 2 [json_name = "guid"];
+  optional uint32 feature = 3 [json_name = "feature"];
+  repeated .cs.Comprehension comprehension = 4 [json_name = "comprehension"];
+  repeated .cs.PetSkillInfo inherent_skills = 5 [json_name = "inherentSkills"];
+  optional uint32 lv = 6 [json_name = "lv"];
+  optional uint32 config_id = 7 [json_name = "configId"];
+  optional uint32 exp = 8 [json_name = "exp"];
+  optional uint32 rank = 9 [json_name = "rank"];
+  optional uint64 hero_id = 11 [json_name = "heroId"];
+  optional uint32 vitality = 12 [json_name = "vitality"];
+  optional uint32 vitality_time = 13 [json_name = "vitalityTime"];
+  optional uint32 genetic_recombination_times = 14 [json_name = "geneticRecombinationTimes"];
+  optional bool is_lock = 15 [json_name = "isLock"];
+  optional uint32 gene_state = 16 [json_name = "geneState"];
+  repeated .cs.NewGeneInfo gene_infos = 17 [json_name = "geneInfos"];
+  optional uint32 ur_pos = 18 [json_name = "urPos"];
+  optional uint32 speed = 19 [json_name = "speed"];
+  optional uint32 work_status = 21 [json_name = "workStatus"];
+  optional uint32 work_build = 20 [json_name = "workBuild"];
+  repeated uint32 talent_id = 22 [json_name = "talentId"];
+  optional uint32 capacity_id = 23 [json_name = "capacityId"];
+  optional uint32 roulette_pos = 24 [json_name = "roulettePos"];
+  optional uint32 satiety_val = 25 [json_name = "satietyVal"];
+  optional uint32 canteen_id = 26 [json_name = "canteenId"];
+  optional uint32 work_start_time = 27 [json_name = "workStartTime"];
+  optional bool work_pause = 28 [json_name = "workPause"];
+  optional uint32 box_id = 29 [json_name = "boxId"];
+  optional uint32 grade = 30 [json_name = "grade"];
+  optional uint32 special = 32 [json_name = "special"];
+  optional uint32 base_lv = 33 [json_name = "baseLv"];
+  optional uint32 catch_item = 34 [json_name = "catchItem"];
+  optional uint32 auto_state = 35 [json_name = "autoState"];
+  optional uint32 station_time = 36 [json_name = "stationTime"];
+  optional uint32 favor_val = 37 [json_name = "favorVal"];
+  optional uint32 favor_lv = 38 [json_name = "favorLv"];
+  optional uint32 daily_favor_time = 39 [json_name = "dailyFavorTime"];
+  repeated .cs.DailyFavorInfo daily_favor_val = 40 [json_name = "dailyFavorVal"];
+  optional uint32 type = 41 [json_name = "type"];
+  optional uint32 color = 42 [json_name = "color"];
+  repeated .cs.laborInfo labor_infos = 43 [json_name = "laborInfos"];
+  optional .cs.MutationGeneInfo mutation_info = 44 [json_name = "mutationInfo"];
+  optional bool station_lock = 45 [json_name = "stationLock"];
+  optional uint32 customized_id = 46 [json_name = "customizedId"];
+  optional uint32 daily_favor_count = 47 [json_name = "dailyFavorCount"];
+  optional uint32 suppress_lv = 48 [json_name = "suppressLv"];
+  optional uint32 original_type = 49 [json_name = "originalType"];
+  optional uint32 tour_state = 50 [json_name = "tourState"];
+  optional uint32 colorful = 51 [json_name = "colorful"];
+  optional uint32 wear_skin_id = 52 [json_name = "wearSkinId"];
+  optional bool work_hungry = 53 [json_name = "workHungry"];
+  optional uint32 mutation_times = 54 [json_name = "mutationTimes"];
+  optional bool can_not_release = 55 [json_name = "canNotRelease"];
+  optional uint64 soul_link_level = 56 [json_name = "soulLinkLevel"];
+  optional bool is_initial_partner = 57 [json_name = "isInitialPartner"];
+  optional uint32 talent_grade = 58 [json_name = "talentGrade"];
+}
+message PetBoxBaseInfo {
+  optional uint32 id = 1 [json_name = "id"];
+  optional bytes box_name = 2 [json_name = "boxName"];
+}
+message IncubationPoolInfo {
+  option (msg_to_server) = true;
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+  optional uint32 finish_time = 3 [json_name = "finishTime"];
+  optional uint32 use_num = 4 [json_name = "useNum"];
+  optional uint32 last_use_time = 5 [json_name = "lastUseTime"];
+}
+message IncubationInfo {
+  repeated .cs.IncubationPoolInfo incubation_pool_infos = 1 [json_name = "incubationPoolInfos"];
+}
+message CSPetBreedInfo {
+  optional uint32 pid = 1 [json_name = "pid"];
+  optional uint64 guid = 2 [json_name = "guid"];
+}
+message CSHatchPetEgg {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 egg_guid = 2 [json_name = "eggGuid"];
+}
+message CSHatchOutPetEgg {
+  optional uint32 guid = 1 [json_name = "guid"];
+}
+message SCHatchOutPetEggRsp {
+  optional .cs.PetbaseInfo pet = 1 [json_name = "pet"];
+}
+message SCPetInfoSync {
+  optional .cs.PetBagInfo pet_infos = 1 [json_name = "petInfos"];
+  optional uint32 free_reward_num = 2 [json_name = "freeRewardNum"];
+  optional uint32 last_free_time = 3 [json_name = "lastFreeTime"];
+  repeated uint32 record_pets = 5 [json_name = "recordPets"];
+  repeated uint32 lock_box_id = 6 [json_name = "lockBoxId"];
+  optional uint32 w_pet_len = 7 [json_name = "wPetLen"];
+  optional uint32 first_choose_pet = 8 [json_name = "firstChoosePet"];
+}
+message CSPetBoxInfoSync {
+  repeated .cs.PetBoxBaseInfo box_infos = 1 [json_name = "boxInfos"];
+}
+message CSLockPetBox {
+  optional uint32 box_id = 1 [json_name = "boxId"];
+  optional uint32 lock_operate = 2 [json_name = "lockOperate"];
+}
+message SCPetEggInfoSync {
+  optional .cs.PetEggBagInfo egg_infos = 1 [json_name = "eggInfos"];
+  optional uint32 free_reward_num = 2 [json_name = "freeRewardNum"];
+  optional uint32 last_free_time = 3 [json_name = "lastFreeTime"];
+}
+message SCIncubationInfoSync {
+  optional .cs.IncubationInfo incubation_infos = 1 [json_name = "incubationInfos"];
+}
+message CSBreedInfoUp {
+  repeated .cs.CSPetBreedInfo breed_infos = 1 [json_name = "breedInfos"];
+}
+message SCBreedRsp {
+  optional .cs.PetEggbaseInfo egg_info = 1 [json_name = "eggInfo"];
+}
+message CSLockPet {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional bool lock_operate = 2 [json_name = "lockOperate"];
+}
+message CSGeneEdit {
+  repeated .cs.NewGeneInfo gene_infos = 1 [json_name = "geneInfos"];
+  optional uint64 guid = 2 [json_name = "guid"];
+}
+message CSReleasePet {
+  repeated uint64 pet_list = 1 [json_name = "petList"];
+}
+message CSReleasePetEgg {
+  repeated uint32 egg_list = 1 [json_name = "eggList"];
+}
+message CSAccelerateHatch {
+  optional uint32 guid = 1 [json_name = "guid"];
+  optional uint32 itemid = 2 [json_name = "itemid"];
+}
+message CSLvUpPet {
+  optional uint64 pet_id = 1 [json_name = "petId"];
+  repeated .cs.SimpleItem items = 2 [json_name = "items"];
+}
+message CSPetChangeName {
+  optional bytes pet_name = 1 [json_name = "petName"];
+  optional uint64 guid = 2 [json_name = "guid"];
+  optional uint32 cr = 3 [json_name = "cr"];
+}
+message CSPetBoxRename {
+  optional bytes box_name = 1 [json_name = "boxName"];
+  optional uint32 box_id = 2 [json_name = "boxId"];
+}
+message SCRentPetInfo {
+  optional uint32 rent_nums = 1 [json_name = "rentNums"];
+  optional uint32 today_rent_num = 2 [json_name = "todayRentNum"];
+  optional uint32 today_draw_num = 3 [json_name = "todayDrawNum"];
+  optional uint32 receive_num = 4 [json_name = "receiveNum"];
+}
+message CSSetRoulettePos {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint32 pos = 2 [json_name = "pos"];
+}
+message CSSetPetBox {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint32 box_id = 2 [json_name = "boxId"];
+  optional uint32 target_guid = 3 [json_name = "targetGuid"];
+}
+message CSExChangeBoxId {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint64 target_guid = 2 [json_name = "targetGuid"];
+}
+message CSOrderPetBox {
+  optional uint32 box = 1 [json_name = "box"];
+  optional bool is_all = 2 [json_name = "isAll"];
+  optional bool is_seq_order = 3 [json_name = "isSeqOrder"];
+  repeated uint32 order_id = 4 [json_name = "orderId"];
+}
+message SCPetSatietyInfoSync {
+  repeated .cs.PetEatInfo pet_eat_infos = 1 [json_name = "petEatInfos"];
+}
+message CSAddPetFood {
+  repeated .cs.CommonItem items = 1 [json_name = "items"];
+  optional uint32 build_guid = 2 [json_name = "buildGuid"];
+  optional uint32 operate_type = 3 [json_name = "operateType"];
+}
+message TrialPet {
+  option (msg_to_server) = true;
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional bool is_trial = 2 [json_name = "isTrial"];
+  optional uint64 id = 3 [json_name = "id"];
+}
+message Pet2Guids {
+  optional uint32 pet_id = 1 [json_name = "petId"];
+  repeated uint64 pet_guids = 2 [json_name = "petGuids"];
+}
+message PlayerMountInfo {
+  optional uint64 ride_id = 1 [json_name = "rideId"];
+  repeated uint32 mount_saddlerys = 2 [json_name = "mountSaddlerys"];
+  repeated .cs.Pet2Guids pet_2_ids = 3 [json_name = "pet2Ids"];
+  optional uint64 last_fly_ride_id = 4 [json_name = "lastFlyRideId"];
+  optional uint64 last_ride_id = 5 [json_name = "lastRideId"];
+}
+message CSLvUpComprehension {
+  optional uint64 pet_id = 1 [json_name = "petId"];
+  repeated .cs.SimpleItem items = 2 [json_name = "items"];
+}
+message CSUseGeneFruitReq {
+  optional uint64 pet_id = 1 [json_name = "petId"];
+  optional uint32 item_id = 2 [json_name = "itemId"];
+  optional uint32 slot_pos = 3 [json_name = "slotPos"];
+}
+message LvUpPetShowInfo {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 old_lv = 2 [json_name = "oldLv"];
+  optional uint32 old_exp = 3 [json_name = "oldExp"];
+  optional uint32 now_lv = 4 [json_name = "nowLv"];
+  optional uint32 now_exp = 5 [json_name = "nowExp"];
+}
+message CSLvUpPetRsp {
+  repeated .cs.LvUpPetShowInfo infos = 1 [json_name = "infos"];
+}
+message TransformPet {
+  optional .cs.PetbaseInfo pet_data = 1 [json_name = "petData"];
+  optional .cs.HeroAttrInfo pet_attr = 2 [json_name = "petAttr"];
+}
+message CSPetTransformReq {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 pet_transform_configId = 2 [json_name = "petTransformConfigId"];
+  optional bool is_add = 3 [json_name = "isAdd"];
+}
+message CSPetTransformRsq {
+  optional uint32 error_code = 1 [json_name = "errorCode"];
+  repeated .cs.TransformPet transform_pets = 2 [json_name = "transformPets"];
+  repeated uint64 del_transform_pets = 3 [json_name = "delTransformPets"];
+}
+message CSLiZiStoryRecored {
+  optional uint32 cfg_id = 1 [json_name = "cfgId"];
+}
+message SCLiZiStoryRecored {
+  optional uint32 cfg_id = 1 [json_name = "cfgId"];
+}
+message CSChoseMutationReq {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional bool is_accept = 2 [json_name = "isAccept"];
+}
+message CSUseMutationTimes {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+}
+message PetHandbookInvestigate {
+  optional uint32 task_id = 1 [json_name = "taskId"];
+  optional uint32 count = 2 [json_name = "count"];
+  optional bool complete = 3 [json_name = "complete"];
+}
+message PetHandbookInfo {
+  optional uint32 pet_id = 1 [json_name = "petId"];
+  repeated .cs.PetHandbookInvestigate tasks = 2 [json_name = "tasks"];
+  optional uint32 lv = 3 [json_name = "lv"];
+  optional uint32 exp = 4 [json_name = "exp"];
+  repeated uint32 colors = 5 [json_name = "colors"];
+  optional bool had = 6 [json_name = "had"];
+  optional uint32 rewarded_lv = 7 [json_name = "rewardedLv"];
+  repeated uint32 colorfuls = 8 [json_name = "colorfuls"];
+  optional uint32 report_reward_times = 9 [json_name = "reportRewardTimes"];
+  optional uint32 selected_colorful = 10 [json_name = "selectedColorful"];
+}
+message CSPetHandbookRewardReq {
+}
+message SCPetHandbookRewardRsp {
+  optional .cs.Rewards reward = 1 [json_name = "reward"];
+}
+message SCPetHandbookInfoSync {
+  repeated .cs.PetHandbookInfo infos = 1 [json_name = "infos"];
+}
+message SCPetHandbookReportRewardSync {
+  optional uint32 pet_id = 1 [json_name = "petId"];
+  optional .cs.Rewards reward = 2 [json_name = "reward"];
+  optional uint32 report_reward_times = 3 [json_name = "reportRewardTimes"];
+}
+message CSPetHandbookColorfulSelectReq {
+  optional uint32 pet_id = 1 [json_name = "petId"];
+  optional uint32 colorful_id = 2 [json_name = "colorfulId"];
+}
+message SCPetHandbookColorfulSelectRsp {
+  optional uint32 pet_id = 1 [json_name = "petId"];
+  optional uint32 colorful_id = 2 [json_name = "colorfulId"];
+}
+message SCPetFavorAddInfo {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 favor_exp_add = 2 [json_name = "favorExpAdd"];
+  optional uint32 favor_lv_add = 3 [json_name = "favorLvAdd"];
+}
+message CSMovePetLenReq {
+  optional uint32 item_id = 1 [json_name = "itemId"];
+}
+message PetSkinInfo {
+  option (msg_to_server) = true;
+  optional uint32 skin_id = 1 [json_name = "skinId"];
+}
+message SCPetSkinInfoSync {
+  repeated .cs.PetSkinInfo skin_infos = 1 [json_name = "skinInfos"];
+}
+message CSWearPetSkinReq {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 skin_id = 2 [json_name = "skinId"];
+}
+message SCPetWearPetSkinRsp {
+  optional uint64 pet_guid = 1 [json_name = "petGuid"];
+  optional uint32 skin_id = 2 [json_name = "skinId"];
+}

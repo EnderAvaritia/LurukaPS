@@ -1,0 +1,200 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "ExOptions.proto";
+import "KiboDuel.proto";
+import "CommonMsg.proto";
+import "Pet.proto";
+import "WorldMap.proto";
+import "Campaign.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum NestCoopSiteStatus {
+  NCSS_NONE = 0;
+  NCSS_ACTIVE = 1;
+  NCSS_FINISH = 2;
+  NCSS_RUNNING = 3;
+}
+enum NestCoopLimitType {
+  NCLT_ALL = 0;
+  NCLT_CURRENCY = 1;
+  NCLT_CATCH = 2;
+  NCLT_SPECIAL = 3;
+}
+enum NestCoopStatus {
+  NCCS_NONE = 0;
+  NCCS_QUIT = 1;
+  NCCS_READY1 = 2;
+  NCCS_READY2 = 7;
+  NCCS_QUIT_TIMEOUT = 8;
+  NCCS_PRE_START = 9;
+  NCCS_START = 3;
+  NCCS_WIN = 4;
+  NCCS_LOSE = 5;
+}
+enum NestCoopFinReason {
+  NCFR_INVALID = 0;
+  NCFR_KILL_BOSS = 1;
+  NCFR_TIMEOUT = 2;
+  NCFR_KILL_CLAM = 3;
+}
+enum NestCoopSummonType {
+  NCST_NONE = 0;
+  NCST_PLAYER = 1;
+  NCST_NPC = 2;
+  NCST_CLAM = 3;
+  NCST_TOWER = 4;
+}
+enum NestCoopStarlinkStatus {
+  NCSLS_NONE = 0;
+  NCSLS_SUCC = 1;
+  NCSLS_FAIL = 2;
+  NCSLS_ABORT = 3;
+}
+enum NestCoopPlayerState {
+  NCPS_NONE = 0;
+  NCPS_LOAD = 1;
+  NCPS_READY = 2;
+  NCPS_QUIT = 3;
+}
+message NestCoopLevelHistory {
+  optional uint32 level_id = 1 [json_name = "levelId"];
+  optional .cs.OnlineMode mode = 2 [json_name = "mode"];
+}
+message NestCoopSiteInfo {
+  optional uint32 site_id = 1 [json_name = "siteId"];
+  optional uint32 site_level = 2 [json_name = "siteLevel"];
+  optional uint32 status = 3 [json_name = "status"];
+}
+message NestCoopSite {
+  repeated .cs.NestCoopSiteInfo sites = 1 [json_name = "sites"];
+}
+message NestLimitInfo {
+  optional uint32 currency_num = 1 [json_name = "currencyNum"];
+  optional uint32 catch_pet_times = 2 [json_name = "catchPetTimes"];
+  optional uint32 special_pet_times = 3 [json_name = "specialPetTimes"];
+}
+message NestCoopStarCount {
+  message Info {
+    optional uint32 star = 1 [json_name = "star"];
+    optional uint32 count = 2 [json_name = "count"];
+  }
+  repeated .cs.NestCoopStarCount.Info infos = 1 [json_name = "infos"];
+}
+message NestCoopSiteData {
+  repeated .cs.NestCoopSiteInfo sites = 1 [json_name = "sites"];
+  optional bool full = 2 [json_name = "full"];
+  optional .cs.NestLimitInfo limit_info = 3 [json_name = "limitInfo"];
+  repeated uint32 team_heros = 4 [json_name = "teamHeros"];
+  optional uint32 tair_guarantee = 5 [json_name = "tairGuarantee"];
+}
+message NestCoopInfo {
+  option (msg_to_server) = true;
+  optional .cs.NestCoopStatus status = 2 [json_name = "status"];
+  optional .cs.NestCoopFinReason result = 1 [json_name = "result"];
+  optional uint32 start_time = 3 [json_name = "startTime"];
+  optional uint32 end_time = 4 [json_name = "endTime"];
+  optional uint32 state_start_time = 5 [json_name = "stateStartTime"];
+  optional uint32 state_end_time = 6 [json_name = "stateEndTime"];
+}
+message NestCoopDamagRecord {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint64 npc_id = 7 [json_name = "npcId"];
+  optional uint64 uuid = 2 [json_name = "uuid"];
+  optional uint32 damage = 4 [json_name = "damage"];
+  optional uint32 take_damage = 5 [json_name = "takeDamage"];
+  optional uint32 heal = 6 [json_name = "heal"];
+}
+message NestCoopStat {
+  repeated .cs.NestCoopDamagRecord damage_record = 1 [json_name = "damageRecord"];
+}
+message NestCoopSummonReq {
+  optional .cs.NestCoopSummonType type = 1 [json_name = "type"];
+  optional uint64 npc_guid = 3 [json_name = "npcGuid"];
+  optional .cs.Position pos = 4 [json_name = "pos"];
+  optional sint32 angle = 5 [json_name = "angle"];
+  optional uint64 source_pet_guid = 6 [json_name = "sourcePetGuid"];
+  optional uint64 replace_guid = 8 [json_name = "replaceGuid"];
+}
+message NestCoopSummonInfo {
+  optional uint64 guid = 1 [json_name = "guid"];
+  optional uint64 source_pet_guid = 6 [json_name = "sourcePetGuid"];
+}
+message NestCoopNpcInfo {
+  optional uint32 npc_id = 1 [json_name = "npcId"];
+  optional uint64 npc_guid = 2 [json_name = "npcGuid"];
+  optional .cs.PetbaseInfo catch_pet_info = 3 [json_name = "catchPetInfo"];
+}
+message SCNestCoopCampaign {
+  repeated .cs.NestCoopSummonInfo summon_infos = 2 [json_name = "summonInfos"];
+  repeated .cs.NestCoopStarlinkResult starlink_list = 3 [json_name = "starlinkList"];
+  repeated .cs.NestCoopGroup group_list = 4 [json_name = "groupList"];
+  repeated .cs.NestCoopCostInfo cost_list = 5 [json_name = "costList"];
+  repeated .cs.NestCoopCards cards_list = 6 [json_name = "cardsList"];
+  optional uint32 dungeon_id = 7 [json_name = "dungeonId"];
+  optional uint32 dungeon_scene_id = 8 [json_name = "dungeonSceneId"];
+  optional uint32 nestcoop_site_id = 19 [json_name = "nestcoopSiteId"];
+  optional uint32 line_id = 9 [json_name = "lineId"];
+  optional .cs.NestCoopInfo nest_status = 11 [json_name = "nestStatus"];
+  repeated .cs.NestCoopPlayerStateInfo player_states = 12 [json_name = "playerStates"];
+  repeated .cs.NestCoopNpcInfo npc_list = 13 [json_name = "npcList"];
+  repeated .cs.NestCoopKibo kibo_list = 14 [json_name = "kiboList"];
+  optional .cs.NestCoopStat stats = 15 [json_name = "stats"];
+  repeated .cs.MapPlayerWorldBuff buff_list = 16 [json_name = "buffList"];
+  repeated .cs.NestCoopNeutralAreaInfo area_list = 17 [json_name = "areaList"];
+  repeated .cs.MatchTeamMemberData member_list = 18 [json_name = "memberList"];
+}
+message NestCoopGroup {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint64 npc_guid = 4 [json_name = "npcGuid"];
+  optional .cs.KiboDuelAllPetAttrInfo info = 3 [json_name = "info"];
+}
+message NestCoopKibo {
+  optional .cs.NestCoopSummonType type = 1 [json_name = "type"];
+  optional uint32 player_id = 2 [json_name = "playerId"];
+  optional uint64 npc_guid = 3 [json_name = "npcGuid"];
+  optional uint32 camp = 5 [json_name = "camp"];
+  optional .cs.Position pos = 6 [json_name = "pos"];
+  optional sint32 angle = 7 [json_name = "angle"];
+  optional .cs.KiboDuelPetAttrInfo info = 4 [json_name = "info"];
+}
+message SCNestCoopCtrl {
+  optional uint32 player = 1 [json_name = "player"];
+}
+message NestCoopCostInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint64 npc_guid = 2 [json_name = "npcGuid"];
+  optional uint32 cost_value = 3 [json_name = "costValue"];
+  optional uint32 cost_value_max = 4 [json_name = "costValueMax"];
+  optional uint32 cost_recover_speed = 5 [json_name = "costRecoverSpeed"];
+  optional uint32 cost_update_time = 6 [json_name = "costUpdateTime"];
+}
+message NestCoopFormationQueue {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+}
+message NestCoopCards {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional uint64 npc_guid = 2 [json_name = "npcGuid"];
+  repeated uint64 guids = 3 [json_name = "guids"];
+}
+message NestCoopStarlinkResult {
+  optional int32 player_id = 1 [json_name = "playerId"];
+  optional .cs.NestCoopStarlinkStatus result = 2 [json_name = "result"];
+  optional .cs.PetbaseInfo pet_info = 3 [json_name = "petInfo"];
+  optional uint32 pet_catch_item = 4 [json_name = "petCatchItem"];
+}
+message CSNestCoopStarlinkAbortReq {
+}
+message NestCoopPlayerStateInfo {
+  optional uint32 player_id = 1 [json_name = "playerId"];
+  optional .cs.NestCoopPlayerState state = 2 [json_name = "state"];
+}
+message NestCoopNeutralAreaSync {
+  repeated .cs.NestCoopNeutralAreaInfo area_list = 1 [json_name = "areaList"];
+}
+message NestCoopNeutralAreaInfo {
+  optional uint32 area_id = 1 [json_name = "areaId"];
+  optional uint32 blue_progress = 2 [json_name = "blueProgress"];
+  optional uint32 camp = 3 [json_name = "camp"];
+  optional uint32 occupy_camp = 5 [json_name = "occupyCamp"];
+  optional uint64 update_time = 4 [json_name = "updateTime"];
+}

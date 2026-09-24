@@ -1,0 +1,69 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+import "CommonMsg.proto";
+import "ExOptions.proto";
+option go_package = "GmServer/bridge/csproto;csproto";
+enum BattlePassTaskType {
+  BattlePassTaskType_DAY = 1;
+  BattlePassTaskType_WEEK = 2;
+  BattlePassTaskType_FOREVER = 3;
+  BattlePassTaskType_INVALID = 4;
+}
+message BattlePassTaskInfo {
+  enum TaskState {
+    BEGIN = 0;
+    FINISH = 1;
+    REWARD = 2;
+    EXPIRED = 3;
+    INVALID = 4;
+  }
+  optional uint32 task_id = 1 [json_name = "taskId"];
+  optional uint32 curr_count = 2 [json_name = "currCount"];
+  optional .cs.BattlePassTaskInfo.TaskState state = 3 [json_name = "state"];
+  optional uint64 end_time = 4 [json_name = "endTime"];
+}
+message BattlePassInfo {
+  optional uint32 battlepass_id = 1 [json_name = "battlepassId"];
+  optional uint32 level = 2 [json_name = "level"];
+  optional uint32 exp = 3 [json_name = "exp"];
+  optional uint32 curr_week_exp = 4 [json_name = "currWeekExp"];
+  repeated .cs.BattlePassTaskInfo day_task = 5 [json_name = "dayTask"];
+  repeated .cs.BattlePassTaskInfo week_task = 6 [json_name = "weekTask"];
+  repeated .cs.BattlePassTaskInfo forever_task = 7 [json_name = "foreverTask"];
+  optional uint32 pay_state = 8 [json_name = "payState"];
+  repeated uint32 recved_free_rewards = 9 [json_name = "recvedFreeRewards"];
+  repeated uint32 recved_pay_rewards = 10 [json_name = "recvedPayRewards"];
+  optional bool is_refund = 11 [json_name = "isRefund"];
+}
+message SCBattlePassSync {
+  optional .cs.BattlePassInfo info = 1 [json_name = "info"];
+  optional uint64 week_end_time = 2 [json_name = "weekEndTime"];
+  optional uint64 battlepass_end_time = 3 [json_name = "battlepassEndTime"];
+}
+message CSBattlePassGetLevelReward {
+  optional uint32 level = 1 [json_name = "level"];
+  optional bool is_paid = 2 [json_name = "isPaid"];
+}
+message CSBattlePassGetTaskReward {
+  optional uint32 task_id = 1 [json_name = "taskId"];
+}
+message SCBattlePassLevelExpPaySync {
+  optional uint32 battlepass_id = 1 [json_name = "battlepassId"];
+  optional uint32 level = 2 [json_name = "level"];
+  optional uint32 exp = 3 [json_name = "exp"];
+  optional uint32 curr_week_exp = 4 [json_name = "currWeekExp"];
+  optional uint32 pay_state = 5 [json_name = "payState"];
+}
+message SCBattlePassBatchTaskSync {
+  repeated .cs.BattlePassTaskInfo one_task = 1 [json_name = "oneTask"];
+  optional .cs.SCBattlePassLevelExpPaySync info = 2 [json_name = "info"];
+}
+message SCBattlePassLevelRewardSync {
+  repeated uint32 recved_free_rewards = 1 [json_name = "recvedFreeRewards"];
+  repeated uint32 recved_pay_rewards = 2 [json_name = "recvedPayRewards"];
+}
+message SCBattlePassPayRewards {
+  optional .cs.Rewards rewards = 1 [json_name = "rewards"];
+  optional uint32 up_level = 2 [json_name = "upLevel"];
+}

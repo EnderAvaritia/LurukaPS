@@ -1,0 +1,21 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {configuration} from '../src/config.js';import {Tables} from '../src/player.js';import {Protocol} from '../src/protocol.js';import {Store} from '../src/store.js';import {Game} from '../src/game.js';import {TaskGraphs,conditionValue} from '../src/tasks.js';import {grantRewards,parseRewards} from '../src/rewards.js';
+const c=configuration(),tables=new Tables(c.tables),protocol=new Protocol(c.base);
+function setup(){const store=new Store(':memory:'),game=new Game(protocol,store,tables),session={};let seq=1;const call=(name,r)=>{const e=protocol.byName.get('CSProto'+name);return game.dispatch(session,{id:e.id,seq:seq++,pushSeq:0,payload:protocol.encode(e.req,r)});};call('EnterGame',{open_id:'task-test'});return {store,game,session,call};}
+test('real exported task graph: accept, trace, callbacks, blocked world objective, abandon',()=>{const {store,session,call}=setup();try{
+ const graph=new TaskGraphs(tables).get(100020);assert.equal(graph.start,1);assert.equal(graph.end,3);
+ call('TaskAccept',{u32:100020});call('TaskClientTrace',{task_id:100020,is_trace:true});let s=store.load(session.id).state;assert(s.tasks[0].client_trace);assert.equal(s.tasks[0].nodes[0].node_id,1);
+ const before=store.load(session.id);assert.throws(()=>call('TaskClientAfter',{task_id:100020,node_id:1}),/pre-action/);assert.deepEqual(store.load(session.id),before);
+ call('TaskClientBefore',{task_id:100020,node_id:1});call('TaskClientAfter',{task_id:100020,node_id:1});s=store.load(session.id).state;assert.deepEqual(s.tasks[0].finish_nodes,[1]);assert.equal(s.tasks[0].nodes[0].node_id,2);
+ call('TaskClientBefore',{task_id:100020,node_id:2});const waiting=store.load(session.id);assert.throws(()=>call('TaskClientCondAfter',{task_id:100020,node_id:2,indexes:[0]}),/condition/);assert.deepEqual(store.load(session.id),waiting);assert.throws(()=>call('TaskFinish',{u32:100020}),/end node/);
+ const pushes=call('TaskAbandon',{u32:100020});assert.equal(store.load(session.id).state.tasks.length,0);const sync=pushes.find(p=>p.id===9853);assert.deepEqual(protocol.decode('SCTaskSync',sync.payload).del_tasks,[100020]);
+}finally{store.close();}});
+test('task completion consumes acknowledged server state once and records completion',()=>{const {store,session,call}=setup();try{
+ call('TaskAccept',{u32:100020});store.transact(session.id,0,s=>{const task=s.tasks[0];task.nodes=[{node_id:3,node_values:[],client_before:true,client_cond_after:[]}];task.finish_nodes=[1,2];task.final_time=1;});
+ call('TaskFinish',{u32:100020});const done=store.load(session.id);assert.equal(done.state.taskRecords[0].count,1);assert.equal(done.state.tasks.length,0);assert.throws(()=>call('TaskFinish',{u32:100020}));assert.deepEqual(store.load(session.id),done);assert.throws(()=>call('TaskAccept',{u32:100020}),/completed/);
+}finally{store.close();}});
+test('typed rewards update inventory, wallet and account level atomically',()=>{const {store,session}=setup();try{
+ const rewards=parseRewards('3#400000#2|10#2#100|10#1#5|10#10#200');store.transact(session.id,0,s=>grantRewards(tables,s,rewards));const s=store.load(session.id).state;assert.equal(s.player.basic_info.gold,100);assert.equal(s.player.basic_info.diamond,5);assert.equal(s.player.basic_info.lv,2);assert.equal(s.player.basic_info.exp,0);assert.equal(s.player.sbag_infos.items.find(i=>i.itemid===400000).itemnum,2);assert.equal(s.player.attr_infos.attrs.find(a=>a.attr_id===22).attr_val,'1');
+ const before=store.load(session.id);assert.throws(()=>store.transact(session.id,0,s=>grantRewards(tables,s,parseRewards('10#2#50|999#1#1'))));assert.deepEqual(store.load(session.id),before);
+}finally{store.close();}});
+test('task prerequisites use authoritative state, not callback assertions',()=>{const state={player:{basic_info:{lv:2}},taskRecords:[]};const level={conditionId:2004,__type_TaskConditionBaseData:{__type_TaskCondLevelData:{level:3}}};assert.equal(conditionValue(level,state),0);state.player.basic_info.lv=3;assert.equal(conditionValue(level,state),1);assert.equal(conditionValue({conditionId:2525},state),0);assert.throws(()=>new TaskGraphs(tables).get(-1));});

@@ -1,0 +1,34 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package cs;
+option go_package = "GmServer/bridge/csproto;csproto";
+enum EscBgTabType {
+  EscBgTabType_Invalid = 0;
+  EscBgTabType_Default = 1;
+  EscBgTabType_Role = 2;
+  EscBgTabType_Plot = 3;
+  EscBgTabType_Max = 4;
+}
+enum EscBgPlayType {
+  EscBgPlayType_Invalid = 0;
+  EscBgPlayType_Cycle = 1;
+  EscBgPlayType_Random = 2;
+  EscBgPlayType_Max = 3;
+}
+message EscBackgroundSlotInfo {
+  optional uint32 slot_id = 1 [json_name = "slotId"];
+  optional uint32 background_id = 2 [json_name = "backgroundId"];
+}
+message CSSaveEscBackground {
+  optional .cs.EscBgTabType tab_type = 1 [json_name = "tabType"];
+  optional .cs.EscBgPlayType play_type = 2 [json_name = "playType"];
+  repeated .cs.EscBackgroundSlotInfo slots = 3 [json_name = "slots"];
+}
+message EscBackgrounInfo {
+  optional .cs.EscBgTabType tab_type = 1 [json_name = "tabType"];
+  optional .cs.EscBgPlayType play_type = 2 [json_name = "playType"];
+  repeated .cs.EscBackgroundSlotInfo slots = 3 [json_name = "slots"];
+}
+message EscBackgroundUnlockInfo {
+  repeated uint32 unlock_bgs = 1 [json_name = "unlockBgs"];
+}

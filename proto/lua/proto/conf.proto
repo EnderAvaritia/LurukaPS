@@ -1,0 +1,30 @@
+// Reconstructed from FileDescriptorSet. Keep the original .pb for exact options.
+syntax = "proto2";
+package conf;
+message PromethusConf {
+  optional bool enable = 1 [json_name = "enable"];
+  optional string url = 2 [json_name = "url"];
+  optional uint32 interval = 4 [json_name = "interval"];
+  optional bool thread = 5 [json_name = "thread"];
+  optional string user = 6 [json_name = "user"];
+  optional string pwd = 7 [json_name = "pwd"];
+  optional bool sync = 8 [json_name = "sync"];
+}
+message HttpServerConf {
+  optional uint32 port = 1 [json_name = "port"];
+  optional uint32 pool_size = 2 [json_name = "poolSize"];
+  optional uint32 time_out = 3 [json_name = "timeOut"];
+  optional uint32 sleep_time = 4 [json_name = "sleepTime"];
+  optional string sign_key_name = 5 [json_name = "signKeyName"];
+  optional string sign_key_secret = 6 [json_name = "signKeySecret"];
+  optional bool enable = 7 [json_name = "enable"];
+}
+message ServerConfig {
+  optional .conf.PromethusConf metrics = 1 [json_name = "metrics"];
+  optional .conf.HttpServerConf gm = 2 [json_name = "gm"];
+}
+message SvrZooData {
+  optional bool disable = 1 [json_name = "disable"];
+  optional string version = 2 [json_name = "version"];
+  optional uint64 version_no = 3 [json_name = "versionNo"];
+}
