@@ -1,4 +1,5 @@
 import {ProtocolDiagnostics} from './diagnostics.js';
+import {sourceRevision} from './build-info.js';
 import {DelayedCrc} from './wire-crc.js';
 import {randomBytes} from 'node:crypto';
 import {ReplayWindow} from './replay.js';
@@ -22,6 +23,7 @@ function requestInt(value,fallback) { const n=Number(value);return Number.isInte
 function requestString(value,fallback) { return typeof value==='string'&&value.length?value:fallback; }
 
 export async function startServer(config,logger=console) {
+ const runtime={revision:sourceRevision(config.base),startedAt:new Date().toISOString(),offlinePayments:config.offlinePayments??true};
  new DelayedCrc(config.crcDelay??0); // Validate before opening the database/listeners.
  const protocol=new Protocol(config.base),store=new Store(config.database),tables=new Tables(config.tables),game=new Game(protocol,store,tables,{crcDelay:config.crcDelay??0,gmEnabled:config.gmEnabled??true,offlinePayments:config.offlinePayments??true});
  const diagnostics=new ProtocolDiagnostics(config.database===':memory:'&&!config.diagnosticsForTests?null:config.diagnosticsFile,logger);
@@ -37,10 +39,14 @@ export async function startServer(config,logger=console) {
   socket.on('error',err=>logger.warn(`Socket: ${err.code||err.message}`));
   socket.on('close',()=>{sockets.delete(socket);sessions.delete(socket);if(owners.get(session.id)===socket)owners.delete(session.id);});
   socket.on('data',chunk=>{
+   let activeFrame;
+   session.recentFrames??=[];
    try {for(const frame of reader.feed(chunk)) {
+    activeFrame=frame;
+    session.recentFrames.push({message_id:frame.id,sequence:frame.seq,push_sequence:frame.pushSeq});if(session.recentFrames.length>16)session.recentFrames.shift();
     if(socket.writableLength>8*1024*1024)throw Error('Outbound queue limit');
     crc.accept(frame);
-    const cached=replay.find(frame);if(cached){for(const buffer of cached)socket.write(buffer);continue;}
+    const cached=replay.find(frame);if(cached){for(const buffer of cached)socket.write(buffer);activeFrame=undefined;continue;}
     let packets;
     try {
      const entering=!session.entered;
@@ -70,13 +76,14 @@ export async function startServer(config,logger=console) {
     }
     replay.save(frame,encoded);for(const buffer of encoded)socket.write(buffer);
     if(session.close){socket.end();break;}
-   }}catch(err){diagnostics.record({phase:"framing",accountId:session.id,error:err,receivedBytes:chunk.length});logger.warn(`Framing: ${err.message}`);socket.destroy();}
+    activeFrame=undefined;
+   }}catch(err){diagnostics.record({phase:"framing",protocol,frame:activeFrame,replayHigh:replay.high,connection:{revision:runtime.revision,entry:session.entryAttempt,recent_frames:session.recentFrames},accountId:session.id,error:err,receivedBytes:chunk.length});logger.warn(`Framing: ${err.message}`);socket.destroy();}
   });
  });
   const web=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');const timestamp=Math.floor(Date.now()/1000);
   let data,api;
-  if(url.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({status:'ok',target:'CBT3',databaseSchema:store.db.pragma('user_version',{simple:true}),diagnosticsEnabled:!diagnostics.disabled,protocols:protocol.entries.length,handlers:game.handlers.size,missingSchemas:protocol.missing.length}));return;}
+  if(url.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({status:'ok',target:'CBT3',runtime,databaseSchema:store.db.pragma('user_version',{simple:true}),diagnosticsEnabled:!diagnostics.disabled,protocols:protocol.entries.length,handlers:game.handlers.size,missingSchemas:protocol.missing.length}));return;}
   if(!['GET','POST'].includes(req.method)){res.writeHead(405);res.end();return;}
    let requestBody={};
    try { requestBody=await readJsonBody(req); } catch(err) { res.writeHead(400,{'content-type':'application/json'});res.end(JSON.stringify({code:400,message:err.message}));return; }
@@ -100,7 +107,7 @@ export async function startServer(config,logger=console) {
  try {tcp.listen(config.gamePort,config.host);await once(tcp,'listening');web.listen(config.httpPort,config.host);await once(web,'listening');}catch(err){if(tcp.listening)tcp.close();if(web.listening)web.close();store.close();throw err;}
  const productionTimer=setInterval(()=>{for(const [socket,{session,replay}] of sessions){if(!session.entered||owners.get(session.id)!==socket)continue;try{const packets=game.tick(session.id);if(packets.length)replay.invalidate();for(const packet of packets){if(socket.writableLength>8*1024*1024){socket.destroy();break;}session.ntfSeq=((session.ntfSeq||0)+1)>>>0;socket.write(encodeFrame({...packet,pushSeq:session.ntfSeq,flag:session.wireKey?2:0},packet.payload,{encryptionKey:session.wireKey}));}}catch(err){logger.warn(`Production update: ${err.message}`);}}},1000);
  productionTimer.unref();
- return {tcp,web,game,protocol,store,async close(){clearInterval(productionTimer);for(const s of sockets)s.destroy();await Promise.all([new Promise(resolve=>tcp.close(resolve)),new Promise(resolve=>web.close(resolve))]);store.close();}};
+ return {tcp,web,game,protocol,store,runtime,async close(){clearInterval(productionTimer);for(const s of sockets)s.destroy();await Promise.all([new Promise(resolve=>tcp.close(resolve)),new Promise(resolve=>web.close(resolve))]);store.close();}};
 }
 
 

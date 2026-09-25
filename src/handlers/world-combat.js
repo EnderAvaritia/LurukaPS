@@ -12,6 +12,17 @@ function clearHatred(battle,id,isPlayer=false){
 }
 function removeAssociated(battle,id){delete battle.skills[id];delete battle.entities[id];for(const [key,b]of Object.entries(battle.bullets))if(b.unit_id===id)delete battle.bullets[key];for(const [key,e]of Object.entries(battle.elements))if(e.tar_id===id||e.buff?.creator_id===id)delete battle.elements[key];}
 export function registerWorldCombat(on){
+ on('SwitchPetAction',(c,r)=>{
+  const uuid=u64(r.uuid),type=r.type??0;ensure(c.state.pets.some(p=>p.guid===uuid),'Pet not owned');
+  // Remote presentation only. Echoing this to the owner sets remoteSwitch locally.
+  const battle=runtime(c);battle.petPresentation??={};boundedSet(battle.petPresentation,uuid,{type,updated_at:c.now},256);
+  c.broadcast({kind:'map',map:c.state.world.map_id,sender:c.id},'CSProtoSwitchPetActionBC',{uuid,type});
+ });
+ on('KiboDuelBTTreeRunning',(c,r)=>{
+  const guids=r.guids??[];ensure(guids.length<=256,'Too many behavior-tree actors');
+  // Client telemetry only: this does not establish a duel result or grant rewards.
+  runtime(c).kiboDuelTreeReport={guids:[...new Set(guids.map(id=>actor(c,id)))],received_at:c.now};
+ });
  for(const [name,field]of [['ObjHatredIncSync','objects'],['PlayerHatredIncSync','players']])on(name,(c,r)=>{
   ensure(r.info,'Missing hatred data');const id=actor(c,r.info.id),targets=r.info.target_obj_ids??[],players=r.info.player_obj_ids??[];ensure(targets.length<=256&&players.length<=64,'Hatred list too large');
   const targetIds=[...new Set(targets.map(id=>actor(c,id)))],playerIds=[...new Set(players)];ensure(playerIds.every(n=>Number.isInteger(n)&&n>0),'Invalid hatred player');
@@ -23,15 +34,15 @@ export function registerWorldCombat(on){
  on('HatredResetSync',(c,r)=>{const id=actor(c,r.obj_id),battle=runtime(c);clearHatred(battle,id,!!r.is_player);syncHatred(c,battle);return {is_player:!!r.is_player,obj_id:id};});
  on('HatredResetToHomeSync',(c,r)=>{const id=actor(c,r.obj_id),battle=runtime(c);clearHatred(battle,id);syncHatred(c,battle);return {obj_id:id};});
  on('CreateSummon',(c,r)=>{
-  const owner=u64(r.unit_id);if(owner!=='0')actor(c,owner);const info=r.summon_info;ensure(info?.config_id>0&&[1,2,3,4,5].includes(info.summon_type),'Invalid summon data');ensure((info.attrButeInfos??[]).length<=256,'Too many summon attributes');
+  const owner=u64(r.unit_id);if(owner!=='0')actor(c,owner);const info=r.summon_info;ensure(info&&[1,2,3,4,5].includes(info.summon_type),'Invalid summon data');const configId=info.config_id??0;ensure(configId>0||(configId===0&&info.summon_type===3&&u64(info.unit_id)!=='0'&&c.tables.find('skill',info.skill_id)),'Invalid summon data');info.config_id=configId;ensure((info.attrButeInfos??[]).length<=256,'Too many summon attributes');
   const index=u64(r.verify_info?.battle_index);ensure(index!=='0','Missing summon battle index');const battle=runtime(c),requestKey=index,previous=battle.summonRequests[requestKey];
-  if(previous){ensure(previous.owner_id===owner&&previous.config_id===info.config_id&&previous.summon_type===info.summon_type,'Summon index reused for another object');c.push('SCProtoCreateSummon',{unit_id:previous.removed?'0':previous.unit_id,battle_index:index});return;}
+  if(previous){ensure(previous.owner_id===owner&&previous.config_id===info.config_id&&previous.summon_type===info.summon_type&&(previous.skill_id??0)===(info.skill_id??0)&&(u64(info.unit_id)==='0'||u64(info.unit_id)===previous.unit_id),'Summon index reused for another object');c.push('SCProtoCreateSummon',{unit_id:previous.removed?'0':previous.unit_id,battle_index:index});return;}
   ensure(Object.keys(battle.summons).length<256,'Too many active summons');let id=u64(info.unit_id);
   if(id!=='0'){ensure(info.summon_type===3,'Unexpected client summon ID');ensure((BigInt(id)>>56n)===17n&&(BigInt(id)&0xffffffffn)===BigInt(c.id),'Invalid client summon owner');}
   else {const sequence=BigInt(c.state.nextSummonSequence??'0')+1n;ensure(sequence<0x800000n,'Summon identity exhausted');id=((17n<<56n)|((0x800000n+sequence)<<32n)|BigInt(c.id)).toString();c.state.nextSummonSequence=sequence.toString();}
   ensure(!battle.summons[id],'Summon identity already in use');const record={unit_id:id,owner_id:owner,battle_index:index,config_id:info.config_id,summon_type:info.summon_type,info:{...structuredClone(info),unit_id:id},created_at:c.now,request_key:requestKey};
     if(Object.keys(battle.summonRequests).length>=1024){const obsolete=Object.keys(battle.summonRequests).find(key=>battle.summonRequests[key].removed);ensure(obsolete,'Summon request cache full');delete battle.summonRequests[obsolete];}
-  battle.summons[id]=record;battle.summonRequests[requestKey]={unit_id:id,owner_id:owner,config_id:info.config_id,summon_type:info.summon_type};
+  battle.summons[id]=record;battle.summonRequests[requestKey]={unit_id:id,owner_id:owner,config_id:info.config_id,summon_type:info.summon_type,skill_id:info.skill_id??0};
   c.push('SCProtoCreateSummon',{unit_id:id,battle_index:index});
  });
  on('RemoveSummon',(c,r)=>{const id=u64(r.unit_id),battle=runtime(c),record=battle.summons[id];if(!record)return;delete battle.summons[id];if(battle.summonRequests[record.request_key])battle.summonRequests[record.request_key].removed=true;removeAssociated(battle,id);if(clearHatred(battle,id))syncHatred(c,battle);c.push('CSProtoRemoveSummonSync',{unit_id:id,op:r.op??0,op_time:u64(r.op_time)});});

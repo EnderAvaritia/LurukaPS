@@ -1,3 +1,4 @@
+import {soulEssenceGrade} from './equipment.js';
 import {soulSkillsAtGrade} from './skills.js';
 // CBT3 client evidence: ui_configtpl_herotpl.lua:getHeroConfigAtt;
 // ui_store_hero_data_heroattrmoduleinfo.lua:addSub; const.lua:SpecialAttList.
@@ -45,7 +46,7 @@ export function heroModules(tables,state,hero) {
     const rank=tables.get('soulessence_rank').find(r=>r.relatedId===soul.id&&r.rank===soul.rank);
     if(!rank)throw Error(`Missing soul essence rank ${soul.id}:${soul.rank}`);
     for(const field of [value.baseAttribute,rank.rankUpAttributeAll])for(const [id,n] of pairs(field))soulAttributes.set(id,(soulAttributes.get(id)||0)+n*(specialAttributes.has(id)?10000:1));
-    soulSkills.push(...soulSkillsAtGrade(tables,soul.id,soul.advance));
+    soulSkills.push(...soulSkillsAtGrade(tables,soul.id,soulEssenceGrade(soul)));
   }
   // Always replace submodule zero, including after unequip, to clear cached client bonuses.
   modules.push({module_type:1,sub_modules:[{sub_module_id:0,attrs:{attrs:wireAttributes(soulAttributes)},skills:{skills:soulSkills}}]});

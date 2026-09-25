@@ -9,6 +9,8 @@ export function grantRewards(tables,state,rewards,depth=0) {
   ensure([itemtype,itemid,itemnum].every(x=>Number.isSafeInteger(x)&&x>0)&&itemnum<=0xffffffff,'Invalid reward quantity');
   if(itemtype===3){ensure(tables.find('common_item',itemid),'Unknown reward item',1007);addItems(state,[reward]);}
   else if(itemtype===5){const pets=createPets(tables,state,itemid,itemnum);granted.push(...pets.map(p=>({itemtype:5,itemid,itemnum:1,guid:p.guid})));continue;}
+  else if(itemtype===9){ensure(tables.find('soulessence',itemid),'Unknown equipment',1007);const bag=state.player.soulessence_infos.soulessences;ensure(itemnum<=1000&&bag.length+itemnum<=10000,'Equipment bag limit');let next=Math.max(state.nextEssenceGuid??1,...bag.map(e=>e.guid+1));ensure(next+itemnum-1<=0xffffffff,'Equipment identity space exhausted');for(let i=0;i<itemnum;i++){const guid=next++;bag.push({guid,id:itemid,lv:1,rank:1,advance:1,exp:0,lock:true,wear_hero:'0'});granted.push({itemtype,itemid,itemnum:1,guid:String(guid)});}state.nextEssenceGuid=next;continue;}
+  else if(itemtype===28){ensure(tables.find('library_readings',itemid),'Unknown reading',1007);const books=state.readingBooks??={};if(books[itemid])continue;books[itemid]={book_id:itemid,book_state:0};granted.push({itemtype,itemid,itemnum:1});continue;}
   else if(itemtype===13){addHomeBuildings(tables,state,itemid,itemnum);}
   else if(itemtype===14){const eggs=createEggs(tables,state,itemid,itemnum);granted.push(...eggs.map(e=>({itemtype:14,itemid,itemnum:1,guid:String(e.guid)})));continue;}
   else if(itemtype===10){const basic=state.player.basic_info;

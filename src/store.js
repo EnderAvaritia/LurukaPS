@@ -40,6 +40,10 @@ export class Store {
     }).immediate();
   }
   load(id) { const row=this.playerById.get(id); if(!row) throw Error('Player not found'); return {state:JSON.parse(row.state),revision:row.revision}; }
+  maxWorldChatRoom(){return this.db.prepare(`SELECT max(1,coalesce(max(room),1)) AS count FROM (
+    SELECT CAST(json_extract(state,'$.chatWorldRoom') AS INTEGER) AS room FROM players
+    UNION ALL SELECT CAST(target_id AS INTEGER) FROM chat_messages WHERE chat_type=2
+  ) WHERE room BETWEEN 1 AND 4294967295`).get().count;}
   transact(id,messageId,fn) {
     return this.db.transaction(()=>{
       const {state}=this.load(id);

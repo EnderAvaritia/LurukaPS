@@ -22,3 +22,11 @@ test('drop expansion rejects recursive or tactics data instead of rerouting rewa
  const tactical=new WorldObjectCatalog({get:()=>[{id:1,dropId:1,dropGroupId:1,tacticsGroup:1,type:3,itemId:1,minValue:1,maxValue:1,weight:100}]},'no-such-world-test-data');assert.throws(()=>tactical.drops(1,()=>0),/tactics/);
 });
 
+
+test('logged reading pickup 903459 unlocks book10015 before reward response and persists read state',()=>{const f=fixture();try{
+ f.store.transact(f.session.id,0,s=>{s.world.map_id=100;s.world.pos=catalog.object(100,903459).pos;});
+ const packets=f.call('WorldObjInteract',{objs:[request(903459)]}),sync=packets.find(p=>p.id===11025);assert(sync);assert(packets.indexOf(sync)<packets.findIndex(p=>p.id===9133));assert.deepEqual(sync.data.infos,[{book_id:10015,book_state:0}]);assert.equal(sync.data.send_type,1);assert.deepEqual(packets.at(-1).data.objs[0].rewards.rewards.map(({itemtype,itemid,itemnum})=>({itemtype,itemid,itemnum})),[{itemtype:28,itemid:10015,itemnum:1}]);assert.equal(f.state().readingBooks[10015].book_state,0);
+ assert.deepEqual(f.call('ReadHandbookRead',{book_id:[10015]}).at(-1).data.book_id,[10015]);assert.equal(f.state().readingBooks[10015].book_state,1);assert.deepEqual(f.call('WorldObjInteract',{objs:[request(903459)]}).at(-1).data.objs[0].rewards.rewards,[]);
+ const before=f.store.load(f.session.id);assert.throws(()=>f.call('ReadHandbookRead',{book_id:[10015,999999]}));assert.deepEqual(f.store.load(f.session.id),before);
+ const game=new Game(protocol,f.store,tables),session={},entry=protocol.byName.get('CSProtoEnterGame');const login=game.dispatch(session,{id:entry.id,seq:1,payload:protocol.encode(entry.req,{open_id:'world-objects'})});const saved=protocol.decode('SCReadHandbookInfoSync',login.find(p=>p.id===11025).payload);assert.equal(saved.send_type,0);assert.deepEqual(saved.infos,[{book_id:10015,book_state:1}]);
+}finally{f.store.close();}});

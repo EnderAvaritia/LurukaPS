@@ -1,7 +1,9 @@
-import {ensure} from './common.js';import {configTime} from '../shops.js';
+import {ensure,syncPlayer} from './common.js';import {configTime} from '../shops.js';
 const fields={1:'characterStory',2:'characterVoice',3:'characterPlot'};
 function charInfo(id,records){return {hero_id:Number(id),infos:Object.entries(records).map(([type,ids])=>({type_id:Number(type),record_id:ids}))};}
 export function registerProfileQueries(on,tables,store){
+ on('ReadHandbookRead',(c,r)=>{const ids=[...new Set(r.book_id??[])];ensure(ids.length<=256,'Too many readings');for(const id of ids){ensure(c.state.readingBooks?.[id],'Reading not owned');c.state.readingBooks[id].book_state=1;}return {book_id:ids};});
+ on('ChangeShowcaseType',(c,r)=>{const mode=r.u32??0;ensure(mode===0||mode===1,'Invalid showcase type');c.state.player.basic_info.show_case=mode;syncPlayer({...c,push:c.pushBefore},{basic_info:{show_case:mode}});return {};});
  on('CharDataUpdateHero',(c,r)=>{ensure(c.state.player.heros_info.heros.some(h=>h.conf_id===r.hero_id),'Hero not owned');const config=tables.find('char_data',r.hero_id),field=fields[r.type_id];ensure(config&&field,'Unknown hero data category');const ids=r.record_id??[],allowed=new Set(String(config[field]||'').split('|').filter(Boolean).map(Number));ensure(ids.length<=256&&ids.every(id=>allowed.has(id)),'Record does not belong to hero/category');const records=c.state.heroReadRecords??={},hero=records[r.hero_id]??={};hero[r.type_id]=[...new Set([...(hero[r.type_id]??[]),...ids])].sort((a,b)=>a-b);return charInfo(r.hero_id,hero);});
  on('CharDataGetAll',c=>({heros_char_data:Object.entries(c.state.heroReadRecords??{}).map(([id,records])=>charInfo(id,records))}));
  on('FriendRecommend',c=>({player_infos:store.publicProfiles(c.id,20).filter(p=>!(c.state.friends??[]).includes(p.id)&&!(c.state.blockedPlayers??[]).includes(p.id))}));
