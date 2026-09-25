@@ -1,3 +1,4 @@
+import {isPreviousTrialActor} from './trial-groups.js';
 import {syncBattle} from '../battle.js';
 import {ensure,textValue,hero,pet,manager,group,syncPlayer,syncPets} from './common.js';
 export function registerCollection(on) {
@@ -21,7 +22,7 @@ export function registerCollection(on) {
   });
   on('ChangeHeroGroupIndex',(c,r)=>{const old=group(c.state,r.type,r.group?.id);ensure(r.group&&r.group.heros.length>0&&r.group.heros.length<=3,'Invalid group size');const ids=r.group.heros.filter(x=>x.hero_id&&x.hero_id!=='0').map(x=>x.hero_id);ensure(ids.length>0&&new Set(ids).size===ids.length,'Empty or duplicate heroes');ids.forEach(id=>hero(c.state,id));old.heros=r.group.heros;old.control=ids.includes(r.group.control)?r.group.control:ids[0];syncGroups(c);return {};});
   on('SwitchWorldGroup',(c,r)=>{const m=manager(c.state,r.type);group(c.state,r.type,r.group_id);m.last_group=m.cur_group;m.cur_group=r.group_id;syncGroups(c);return {};});
-  on('SwitchWorldGroupControl',(c,r)=>{const g=group(c.state,r.type);ensure(g.heros.some(h=>h.hero_id===r.control),'Control not in group');g.control=r.control;return {};});
+  on('SwitchWorldGroupControl',(c,r)=>{const g=group(c.state,r.type);if(!g.heros.some(h=>h.hero_id===r.control)&&isPreviousTrialActor(c.state,r.control)){manager(c.state,r.type).src=0;c.push('CSProtoSyncPlayerData',{group_mgrs:c.state.player.group_mgrs});return {};}ensure(g.heros.some(h=>h.hero_id===r.control),'Control not in group');g.control=r.control;return {};});
   on('ChangeGroupName',(c,r)=>{group(c.state,r.type,r.group_id).group_name=textValue(r.name,30);syncGroups(c);return {};});
   on('WearPet',(c,r)=>{const h=hero(c.state,r.hero_guid);const p=r.pet_guid&&r.pet_guid!=='0'?pet(c.state,r.pet_guid):null;for(const x of c.state.pets)if(x.hero_id===h.guid)x.hero_id='0';for(const x of c.state.player.heros_info.heros)if(p&&x.pet_id===p.guid)x.pet_id='0';h.pet_id=p?.guid||'0';if(p)p.hero_id=h.guid;syncEquipment(c);return {};});
   on('MoveSoulEssence',(c,r)=>{const h=hero(c.state,r.hero_id);const es=c.state.player.soulessence_infos.soulessences;const e=r.guid?es.find(e=>e.guid===r.guid):null;ensure(!r.guid||e,'Soul essence not owned');for(const x of es)if(x.wear_hero===h.guid)x.wear_hero='0';for(const x of c.state.player.heros_info.heros)if(e&&x.wguid===e.guid)x.wguid=0;h.wguid=e?.guid||0;if(e)e.wear_hero=h.guid;syncEquipment(c);return {};});

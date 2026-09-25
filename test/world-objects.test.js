@@ -3,6 +3,13 @@ import {configuration} from '../src/config.js';import {Protocol} from '../src/pr
 const config=configuration(),protocol=new Protocol(config.base),tables=new Tables(config.tables),catalog=new WorldObjectCatalog(tables);
 function fixture(){const store=new Store(':memory:'),game=new Game(protocol,store,tables,{rng:()=>0}),session={};const call=(name,r={})=>{const e=protocol.byName.get('CSProto'+name);return game.dispatch(session,{id:e.id,seq:123,pushSeq:0,payload:protocol.encode(e.req,r)}).map(p=>({id:p.id,data:protocol.decode(protocol.byId.get(p.id).rsp,p.payload)}));};call('EnterGame',{open_id:'world-objects'});return {store,session,call,state:()=>store.load(session.id).state,near:id=>store.transact(session.id,0,s=>{s.world.map_id=101;s.world.pos=catalog.object(101,id).pos;})};}
 const request=id=>({obj:{obj_id:id,complete:true,state_data:{}},interact_type:0});
+test('logged remote prologue interaction updates rewardless object700191 without granting from a distance',()=>{const f=fixture();try{
+ f.store.transact(f.session.id,0,s=>{s.world.pos={x:0,y:0,z:0};});const pos=catalog.object(102,700191).pos;
+ const remote={obj:{obj_id:700191,complete:true,state_data:{},pos},pos,interact_type:2,element_id:107001009};
+ const before=f.store.load(f.session.id);assert.throws(()=>f.call('WorldObjInteract',{objs:[{...remote,pos:{x:0,y:0,z:0}}]}),/too far/);assert.deepEqual(f.store.load(f.session.id),before);
+ const response=f.call('WorldObjInteract',{objs:[remote]});assert.equal(response.at(-1).data.objs[0].obj.complete,true);assert.deepEqual(response.at(-1).data.objs[0].rewards.rewards,[]);
+ assert.equal(f.state().worldObjects['102:700191'].complete,true);assert.deepEqual(f.state().player.sbag_infos.items,before.state.player.sbag_infos.items);
+ }finally{f.store.close();}});
 test('actual CBT3 collection object grants once and re-entry sync preserves completion',()=>{const f=fixture();try{
  f.near(500171);const response=f.call('WorldObjInteract',{objs:[request(500171)]});const item=response.at(-1).data.objs[0];assert.equal(item.obj.complete,true);assert.deepEqual(item.rewards.rewards.map(({itemtype,itemid,itemnum})=>({itemtype,itemid,itemnum})),[{itemtype:3,itemid:306000,itemnum:1}]);assert.equal(response.at(-1).id,9133);assert(response.slice(0,-1).length>0);
  const count=f.state().player.sbag_infos.items.find(x=>x.itemid===306000).itemnum;const retry=f.call('WorldObjInteract',{objs:[request(500171)]});assert.deepEqual(retry.at(-1).data.objs[0].rewards.rewards,[]);assert.equal(f.state().player.sbag_infos.items.find(x=>x.itemid===306000).itemnum,count);

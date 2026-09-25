@@ -8,9 +8,13 @@ export function registerWorldObjects(on,tables){const catalog=new WorldObjectCat
    const full=!!input.obj.complete,stage=!!incoming.complete,claim=full||stage;const drops=String(row.statusReward||'').split('|').filter(Boolean).map(Number);ensure(drops.every(x=>Number.isInteger(x)&&x>0),'Invalid world reward mapping',1007);
    const record={...old,state_data:{...old.state_data,...incoming},time:old.complete?old.time:c.now,pos,complete:old.complete||full};const stageKey=full?'complete':`step:${step}`;const claims=old.claims??{};let rewards=[],dropIds=[];
    if(claim&&!old.complete&&!claims[stageKey]){
-    const delta=['x','y','z'].reduce((n,axis)=>n+(c.state.world.pos[axis]-pos[axis])**2,0);ensure(delta<=5000**2,'Object is too far away');ensure(!row.appearCond&&!row.disappearCond,'Conditional world interaction needs event validation',1007);
+    const collecting=!drops.length?catalog.get('world_collecting').find(x=>String(x.spawnerId).split('|').map(Number).includes(spawner.id)):null;
+    const delta=['x','y','z'].reduce((n,axis)=>n+(c.state.world.pos[axis]-pos[axis])**2,0);
+    const nearObject=value=>value&&['x','y','z'].every(axis=>Number.isInteger(value[axis])&&Math.abs(value[axis]-pos[axis])<=200);
+    const remoteStateOnly=spawner.objectType===12&&!drops.length&&!collecting&&input.interact_type===2&&input.element_id>0&&nearObject(input.pos)&&nearObject(input.obj?.pos);
+    ensure(delta<=5000**2||remoteStateOnly,'Object is too far away');ensure(!row.appearCond&&!row.disappearCond,'Conditional world interaction needs event validation',1007);
     if(drops.length){const index=full?drops.length-1:Math.max(0,step-1);ensure(index<drops.length,'World reward step outside configuration');if(!claims[`drop:${index}`]){dropIds=[drops[index]];rewards=catalog.drops(drops[index],c.randomInt);claims[`drop:${index}`]=true;}}
-    else {const collecting=catalog.get('world_collecting').find(x=>String(x.spawnerId).split('|').map(Number).includes(spawner.id));if(collecting){ensure(full,'Partial gathering reward needs step configuration',1007);rewards=[{itemtype:collecting.itemType,itemid:collecting.itemId,itemnum:1}];}}
+    else if(collecting){ensure(full,'Partial gathering reward needs step configuration',1007);rewards=[{itemtype:collecting.itemType,itemid:collecting.itemId,itemnum:1}];}
     if(rewards.length){rewards=grantRewards(c.tables,c.state,rewards);awarded=true;}claims[stageKey]=true;record.last_reward_step=Math.max(old.last_reward_step,step);
    }
    record.claims=claims;records[key]=record;const {claims:ignored,...wire}=record;output.push({obj:wire,pos,rewards:{rewards},drop_ids:dropIds,interact_type:input.interact_type??0,tool_type:input.tool_type??0});

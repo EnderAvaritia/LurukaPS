@@ -17,12 +17,8 @@
   ],
   "tables": [
     {
-      "name": "soulessence",
-      "rows": 75
-    },
-    {
-      "name": "soulessence_grade",
-      "rows": 565
+      "name": "hero_interim",
+      "rows": 138
     }
   ]
 }

@@ -1,4 +1,5 @@
 import {ensure} from './handlers/common.js';
+import {syncCurrencyMirrors} from './currency.js';
 export function upgradeInventory(state){
  const items=state.player.sbag_infos.items,used=new Set();let next=BigInt(state.nextItemGuid??'1');
  const allocate=()=>{while(used.has(String(next)))next++;ensure(next<=0xffffffffffffffffn,'Item identity space exhausted');const id=String(next++);used.add(id);return id;};
@@ -17,14 +18,14 @@ export function spend(state,costs,gold=0,now=Math.floor(Date.now()/1000)) {
  const bag=state.player.sbag_infos.items;ensure(state.player.basic_info.gold>=gold,'Insufficient gold');
  const plan=[];
  for(const [id,count] of costs){const stacks=bag.filter(i=>i.itemid===id&&(!i.deadtime||i.deadtime>now)).sort((a,b)=>(a.deadtime||Infinity)-(b.deadtime||Infinity));ensure(stacks.reduce((n,i)=>n+i.itemnum,0)>=count,'Insufficient items');let left=count;for(const stack of stacks){const take=Math.min(left,stack.itemnum);if(take)plan.push([stack,take]);left-=take;if(!left)break;}}
- for(const [stack,n] of plan)stack.itemnum-=n;state.player.basic_info.gold-=gold;
+ for(const [stack,n] of plan)stack.itemnum-=n;state.player.basic_info.gold-=gold;if(gold)syncCurrencyMirrors(state.player);
  // Zero-count entries are retained for delta synchronization; client removes them.
  return plan.map(([stack])=>({...stack}));
 }
 
 export function spendCurrency(state,id,amount){
  ensure(Number.isSafeInteger(amount)&&amount>0,'Invalid currency cost');
- if(id===1||id===2){const key=id===1?'diamond':'gold';ensure(state.player.basic_info[key]>=amount,'Insufficient currency');state.player.basic_info[key]-=amount;return;}
+ if(id===1||id===2){const key=id===1?'diamond':'gold';ensure(state.player.basic_info[key]>=amount,'Insufficient currency');state.player.basic_info[key]-=amount;syncCurrencyMirrors(state.player);return;}
  const attr=state.player.attr_infos.attrs.find(a=>a.attr_id===id);ensure(attr&&BigInt(attr.attr_val)>=BigInt(amount),'Insufficient currency');attr.attr_val=String(BigInt(attr.attr_val)-BigInt(amount));
 }
 export function addItems(state,items) {

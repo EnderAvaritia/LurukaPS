@@ -53,7 +53,7 @@ export function heroModules(tables,state,hero) {
   return {hero_guid:hero.guid,hero_conf_id:hero.conf_id,type:1,modules};
 }
 export function refreshBattleState(tables,state) {
-  const heros=state.player.heros_info.heros.map(hero=>heroModules(tables,state,hero));
+  const heros=[...state.player.heros_info.heros,...(state.trialGroup?.heroes??[])].map(hero=>heroModules(tables,state,hero));
   const previous=new Map((state.player.heros_info.battle_infos||[]).map(x=>[x.hero_id,x]));
   state.player.heros_info.battle_infos=heros.map(h=>{
     const total=id=>h.modules.reduce((sum,m)=>sum+m.sub_modules.reduce((n,s)=>n+s.attrs.attrs.filter(a=>a.attr_id===id).reduce((v,a)=>v+Number(a.attr_val),0),0),0);

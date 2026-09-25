@@ -1,7 +1,7 @@
 import {ensure,textValue,syncPlayer} from './common.js';
 export function registerCore(on) {
   on('SkipGuide',(c,r)=>{c.state.player.basic_info.skip_guide=r.u32??1;syncPlayer(c,{basic_info:c.state.player.basic_info});return {};});
-  on('PlayerCustomData',(c,r)=>{const b=c.state.player.basic_info;if(r.name!==undefined)b.name=textValue(r.name,15);if(r.wardrobe_info){ensure([1,2].includes(r.wardrobe_info.sex),'Invalid sex');b.wardrobe=r.wardrobe_info;b.sex=r.wardrobe_info.sex;}syncPlayer(c,{basic_info:b});return {};});
+  on('PlayerCustomData',(c,r)=>{const b=c.state.player.basic_info;if(r.name!==undefined)b.name=textValue(r.name,15);if(r.wardrobe_info){ensure([1,2].includes(r.wardrobe_info.sex),'Invalid sex');b.wardrobe=r.wardrobe_info;b.sex=r.wardrobe_info.sex;}c.state.characterCustomized=true;syncPlayer(c,{basic_info:b});return {};});
   on('ChangeName',(c,r)=>{c.state.player.basic_info.name=textValue(r.name,15);c.state.player.basic_info.last_change_name_time=c.now;syncPlayer(c,{basic_info:c.state.player.basic_info});return {};});
   on('ChangeSign',(c,r)=>{c.state.player.basic_info.sign=textValue(r.sign,255);syncPlayer(c,{basic_info:c.state.player.basic_info});return {};});
   on('ChangeBirthday',(c,r)=>{ensure(Number.isInteger(r.month)&&r.month>=1&&r.month<=12&&Number.isInteger(r.day)&&r.day>=1&&r.day<=new Date(Date.UTC(2024,r.month,0)).getUTCDate(),'Invalid birthday');c.state.player.basic_info.birthday=r;syncPlayer(c,{basic_info:c.state.player.basic_info});return {};});
