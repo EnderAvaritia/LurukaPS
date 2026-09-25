@@ -1,4 +1,4 @@
-import {initialPetSkills} from './skills.js';
+import {petData} from './pets.js';
 import fs from 'node:fs';
 import path from 'node:path';
 export const bytes = text => Buffer.from(text,'utf8').toString('base64');
@@ -22,7 +22,7 @@ export class Tables {
 export function seedPlayer(tables,id,openId) {
   const heroes=tables.get('hero').filter(h=>h.isUsable===1).map(h=>({guid:((1n<<56n)|(BigInt(h.id)<<32n)|BigInt(id)).toString(),conf_id:h.id,hero_lv:1,hero_exp:0,hero_rank:1,hero_star:0,hero_grade:1,system_skill_levels:[1,1,1,1,1,1],type:0,favorability_lv:1,pet_id:'0',wguid:0}));
   if(!heroes.length) throw Error('No usable heroes in table');
-  const pets=tables.get('pet').filter(p=>p.petStage>0&&p.IsCatch===1&&tables.find('template_value',p.id)).map((p,i)=>({guid:String(p.id),config_id:p.id,feature:1,comprehension:tables.get('pet_learningenum').map(x=>({attr_id:x.attributeEnum,level:1,cur_exp:0,value:100})),inherent_skills:initialPetSkills(p),lv:1,rank:1,exp:0,base_lv:1,favor_lv:1,favor_val:0,is_lock:true,box_id:(Math.floor(i/30)+1)*100+i%30+1,type:1,satiety_val:10000,hero_id:'0',roulette_pos:0}));
+  const pets=tables.get('pet').filter(p=>p.petStage>0&&p.IsCatch===1&&tables.find('template_value',p.id)).map((p,i)=>petData(tables,p.id,String(p.id),(Math.floor(i/30)+1)*100+i%30+1));
   const essences=tables.get('soulessence').map(e=>({guid:e.id,id:e.id,lv:1,rank:1,advance:1,exp:0,lock:true,wear_hero:'0'}));
   const selected=heroes.slice(0,3);
   const groups=Array.from({length:5},(_,i)=>({id:i+1,group_name:bytes(`队伍${i+1}`),heros:selected.map(h=>({hero_id:h.guid})),control:selected[0].guid}));

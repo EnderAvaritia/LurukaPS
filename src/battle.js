@@ -67,7 +67,7 @@ export function refreshBattleState(tables,state) {
 }
 export function syncBattle(c) {
   const heros=refreshBattleState(c.tables,c.state);
-    const pets=c.state.pets.filter(p=>c.tables.find('template_value',p.config_id)).map(p=>petModules(c.tables,c.state,p,heros));
+    const pets=[...c.state.pets,...(c.state.trialGroup?.pets??[])].filter(p=>c.tables.find('template_value',p.config_id)).map(p=>petModules(c.tables,c.state,p,heros));
   c.push('CSProtoHeroAttrInfoSync',{heros:[...heros,...pets]});
   c.push('CSProtoObjBattleInfoSync',{infos:c.state.player.heros_info.battle_infos.map(h=>({uuid:h.hero_id,hp:h.hp,sp:h.sp,alive_state:h.alive_state,reason:1}))});
 }

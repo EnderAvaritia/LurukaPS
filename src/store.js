@@ -3,7 +3,8 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 export class Store {
-  constructor(filename) {
+  constructor(filename,{flushIntervalMs=5000}={}) {
+    if(!Number.isInteger(flushIntervalMs)||flushIntervalMs<1000||flushIntervalMs>60000)throw Error('Invalid deferred flush interval');
     if(filename!==':memory:') fs.mkdirSync(path.dirname(filename),{recursive:true});
     this.db=new Database(filename);
     this.db.pragma('foreign_keys = ON');
@@ -26,6 +27,9 @@ export class Store {
     this.playerById=this.db.prepare('SELECT state,revision FROM players WHERE account_id=?');
     this.savePlayer=this.db.prepare('UPDATE players SET state=?,revision=revision+1,updated_at=? WHERE account_id=?');
     this.log=this.db.prepare('INSERT INTO request_log(account_id,message_id,status,created_at) VALUES(?,?,?,?)');
+    this.pending=new Map();
+    this.flushTimer=setInterval(()=>{try{this.flushPending();}catch(error){console.warn(`Deferred player flush: ${error.message}`);}},flushIntervalMs);
+    this.flushTimer.unref();
   }
   login(openId, factory) {
     if(typeof openId!=='string' || !openId.trim() || Buffer.byteLength(openId)>128) throw Error('Invalid open_id');
@@ -39,13 +43,18 @@ export class Store {
       return {id:account.id,...this.load(account.id)};
     }).immediate();
   }
-  load(id) { const row=this.playerById.get(id); if(!row) throw Error('Player not found'); return {state:JSON.parse(row.state),revision:row.revision}; }
+  load(id) { const pending=this.pending.get(id);if(pending)return {state:structuredClone(pending.state),revision:pending.revision};const row=this.playerById.get(id); if(!row) throw Error('Player not found'); return {state:JSON.parse(row.state),revision:row.revision}; }
   maxWorldChatRoom(){return this.db.prepare(`SELECT max(1,coalesce(max(room),1)) AS count FROM (
     SELECT CAST(json_extract(state,'$.chatWorldRoom') AS INTEGER) AS room FROM players
     UNION ALL SELECT CAST(target_id AS INTEGER) FROM chat_messages WHERE chat_type=2
   ) WHERE room BETWEEN 1 AND 4294967295`).get().count;}
-  transact(id,messageId,fn) {
-    return this.db.transaction(()=>{
+  transact(id,messageId,fn,{defer=false}={}) {
+    if(defer){
+      const {state,revision}=this.load(id),result=fn(state);
+      if(result?.then)throw Error('Asynchronous player transaction is forbidden');
+      this.pending.set(id,{state,revision});return result;
+    }
+    const result=this.db.transaction(()=>{
       const {state}=this.load(id);
       const result=fn(state);
       if(result?.then) throw Error('Asynchronous player transaction is forbidden');
@@ -53,6 +62,7 @@ export class Store {
       this.log.run(id,messageId,'ok',Date.now());
       return result;
     }).immediate();
+    this.pending.delete(id);return result;
   }
   nextSequence(name,max=0xffffffff){
     if(!this.db.inTransaction)throw Error('Sequence allocation requires a transaction');
@@ -76,7 +86,8 @@ export class Store {
   }
   chatPeers(account){return this.db.prepare('SELECT DISTINCT CASE WHEN sender_id=? THEN CAST(target_id AS INTEGER) ELSE sender_id END AS peer FROM chat_messages WHERE chat_type=0 AND (sender_id=? OR target_id=?) ORDER BY peer LIMIT 50').all(account,account,String(account)).map(row=>row.peer);}
   chatUnread(account,peer,readOrder){return this.db.prepare('SELECT count(*) AS n FROM chat_messages WHERE chat_type=0 AND sender_id=? AND target_id=? AND id>?').get(peer,String(account),readOrder).n;}
-  close(){this.db.close();}
+  flushPending(){if(!this.pending.size)return;this.db.transaction(()=>{for(const [id,{state}]of this.pending)this.savePlayer.run(JSON.stringify(state),Date.now(),id);}).immediate();this.pending.clear();}
+  close(){clearInterval(this.flushTimer);this.flushPending();this.db.close();}
 }
 
 

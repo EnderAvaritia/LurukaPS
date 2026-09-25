@@ -1,3 +1,5 @@
+import {registerPetCatch} from './handlers/pet-catch.js';
+import {refundPendingCatchCards} from './handlers/pet-catch.js';
 import {repairCharacterCreationMarker} from './character-creation.js';
 import {syncCurrencyMirrors} from './currency.js';
 import {registerTrialGroups,trialPayload,expireTaskTrialGroup} from './handlers/trial-groups.js';
@@ -19,6 +21,7 @@ import {registerWorldEvents} from './handlers/world-events.js';
 import {registerProfileQueries} from './handlers/profile-queries.js';
 import {registerWorldObjects} from './handlers/world-objects.js';
 import {registerWorldCombat} from './handlers/world-combat.js';
+import {retireCapturedEnemy} from './handlers/world-combat.js';
 import {registerEcology} from './handlers/ecology.js';
 import {registerMall} from './handlers/mall.js';
 import {registerCombat} from './handlers/combat.js';
@@ -42,16 +45,19 @@ import {syncBattle} from './battle.js';
 import {upgradeSkillState} from './skills.js';
 import {randomBytes,randomInt} from 'node:crypto';
 import {seedPlayer} from './player.js';
+import {repairPetProfiles} from './pets.js';
 import {GameError,ensure,textValue} from './handlers/common.js';
 import {registerCore} from './handlers/core.js';
 import {registerCollection} from './handlers/collection.js';
 import {registerWorld} from './handlers/world.js';
 import {registerMail} from './handlers/mail.js';
+const deferredMessages=new Set(['CSProtoBattleInfoReduce','CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoStateUpdate']);
+const fastCombatTelemetry=new Set(['CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel']);
 export class Game {
  constructor(protocol,store,tables,{clock=()=>Math.floor(Date.now()/1000),rng=randomInt,crcDelay=0,gmEnabled=true,offlinePayments=true}={}) { this.clock=clock;this.rng=rng;this.crcDelay=crcDelay;this.releaseResetHour=Number(tables.get('game').find(r=>r.title==='DAILY_REFRESH_TIME')?.value??4);
   this.protocol=protocol;this.store=store;this.tables=tables;this.handlers=new Map();
   const on=(name,handler)=>{const e=protocol.byName.get(name)||protocol.byName.get(`CSProto${name}`);if(!e)throw Error(`Unknown handler ${name}`);if(this.handlers.has(e.id))throw Error(`Duplicate handler ${name}`);this.handlers.set(e.id,handler);};
-  registerTrialGroups(on,tables);registerPlayableSaves(on);registerRoulette(on);registerPetSkill(on);registerPlayableLifecycle(on,tables);
+  registerTrialGroups(on,tables);registerPlayableSaves(on);registerRoulette(on);registerPetSkill(on);registerPetCatch(on);registerPlayableLifecycle(on,tables);
   const runGM=registerGM(on,{enabled:gmEnabled});
   registerCore(on);registerMonthly(on,tables);registerLocalPayments(on,tables,store,{enabled:offlinePayments});registerChat(on,store,{runGM});registerPlayableEnemies(on,tables,store);registerWorldEvents(on,tables);registerProfileQueries(on,tables,store);registerWorldObjects(on,tables);registerWorldCombat(on);registerEcology(on,tables);registerMall(on,tables);registerCombat(on);registerClientState(on);registerCollection(on);registerWorld(on);registerMail(on);registerProgression(on);this.finishPendingCharacterTask=registerTasks(on,tables);registerStory(on);registerItems(on);registerShops(on,tables);registerHome(on,tables);registerBuildingPlacement(on,tables);registerTechnology(on,tables);registerProduction(on,tables);registerHatching(on);registerRelease(on,tables);
  }
@@ -70,7 +76,7 @@ export class Game {
    const a=this.store.login(r.open_id,(id,openId)=>seedPlayer(this.tables,id,openId));
    session.id=a.id;session.openId=r.open_id;session.token=session.token||randomBytes(24).toString('hex');
    if(e.name==='CSProtoLogin'){session.entered=false;return [reply({open_id:r.open_id,pid:a.id,guid:a.id,server_token:session.token})];}
-   const packets=this.store.transact(session.id,e.id,state=>{unlockAutomaticTasks(this.tables,state,now);repairCharacterCreationMarker(state);refreshTaskProgress(this.tables,state);prepareTaskScenes(this.tables,state,{login:true});expireTaskTrialGroup(this.tables,state);repairSoulEssenceStars(state);upgradeInventory(state);syncCurrencyMirrors(state.player);upgradeSkillState(this.tables,state);upgradeEggState(state);ensureHome(this.tables,state);refreshProduction(state,now);const battle=[];syncBattle({state,tables:this.tables,push:(name,value)=>battle.push(this.packet(name,value))});return [...this.loginPackets(state,session,r,frame,e.id),...battle];});
+   const packets=this.store.transact(session.id,e.id,state=>{unlockAutomaticTasks(this.tables,state,now);repairCharacterCreationMarker(state);refreshTaskProgress(this.tables,state);prepareTaskScenes(this.tables,state,{login:true});expireTaskTrialGroup(this.tables,state);repairSoulEssenceStars(state);upgradeInventory(state);refundPendingCatchCards(state);syncCurrencyMirrors(state.player);repairPetProfiles(this.tables,state);upgradeSkillState(this.tables,state);upgradeEggState(state);ensureHome(this.tables,state);refreshProduction(state,now);for(const [id,capture]of Object.entries(state.petCaptureResults??{}))if(capture.map_id===state.world.map_id&&state.combat?.entities?.[id]?.captured!==true)retireCapturedEnemy({state,now,pushBefore:()=>{}},id);const battle=[];syncBattle({state,tables:this.tables,push:(name,value)=>battle.push(this.packet(name,value))});return [...this.loginPackets(state,session,r,frame,e.id),...battle];});
    session.entered=true;return packets;
   }
   ensure(session.id,'Login required',101);
@@ -80,13 +86,18 @@ export class Game {
   if(e.name==='CSProtoLogout'||e.name==='CSProtoOffline'){session.close=true;return [];}
   if(e.name==='CSProtoRecycle')return [reply({})];
   const handler=this.handlers.get(e.id);if(!handler)throw new GameError(`Unsupported ${e.name}`,1021);
+  if(fastCombatTelemetry.has(e.name))return this.store.transact(session.id,e.id,state=>{
+   const before=[],after=[];
+   const context={id:session.id,requestKey:frame.seq?session.token+':'+frame.id+':'+frame.seq:null,state,now,randomInt:this.rng,tables:this.tables,pushBefore:(name,value)=>before.push(this.packet(name,value)),push:(name,value)=>after.push(this.packet(name,value,{pushSeq:frame.pushSeq}))};
+   handler(context,r);return [...before,...after];
+  },{defer:true});
   return this.store.transact(session.id,e.id,state=>{
    const saddlesBefore=JSON.stringify(state.mountSaddles);
    const booksBefore=JSON.stringify(state.readingBooks??{});
    const basicBefore=JSON.stringify(state.player.basic_info),attrsBefore=JSON.stringify(state.player.attr_infos);
    const essenceBefore=JSON.stringify(state.player.soulessence_infos);repairSoulEssenceStars(state);
    const bagBefore=JSON.stringify(state.player.sbag_infos);upgradeInventory(state);
-   const statePacket=(name,value,meta={})=>{if(name==='CSProtoSyncPlayerData'&&value){const {sbag_infos,soulessence_infos,basic_info,attr_infos,...other}=value;value=other;if(!Object.keys(value).length)return null;}return this.packet(name,value,meta);};
+   const statePacket=(name,value,meta={})=>{if(name==='CSProtoSyncPlayerData'&&value){syncCurrencyMirrors(state.player);const {sbag_infos,soulessence_infos,...other}=value;value={...other,...(value.basic_info?{basic_info:state.player.basic_info}:{}),...(value.attr_infos?{attr_infos:state.player.attr_infos}:{})};if(!Object.keys(value).length)return null;}return this.packet(name,value,meta);};
    const emit=(target,name,value,meta)=>{const p=statePacket(name,value,meta);if(p)target.push(p);};
    const petIdsBefore=state.pets.map(p=>p.guid);const eggIdsBefore=(state.petEggs||[]).map(e=>e.guid);const petRevision=state.petRevision||0;const playerLevelBefore=state.player.basic_info.lv;const homeBuildIdsBefore=(state.home?.builds||[]).map(b=>b.guid);const homeWishIdsBefore=(state.home?.wishlist||[]).map(x=>x.uid);const homeRevision=state.homeRevision||0;const eggRevision=state.eggRevision||0;const before=[];const pushes=[];const context={id:session.id,requestKey:frame.seq?session.token+':'+frame.id+':'+frame.seq:null,state,now,randomInt:this.rng,tables:this.tables,pushTo:(recipient,name,value)=>pushes.push(this.packet(name,value,{recipient})),broadcast:(audience,name,value)=>pushes.push(this.packet(name,value,{audience})),pushBefore:(name,value)=>emit(before,name,value),push:(name,value)=>emit(pushes,name,value,{pushSeq:frame.pushSeq})};
    refreshProduction(state,now);const response=handler(context,r);
@@ -107,7 +118,7 @@ export class Game {
    const saddleSync=JSON.stringify(state.mountSaddles)!==saddlesBefore?[this.packet('CSProtoRideMountInfo',{mount_saddlerys:state.mountSaddles})]:[];
    const bookSync=JSON.stringify(state.readingBooks??{})!==booksBefore?[this.packet('CSProtoReadHandbookInfoSync',{infos:Object.values(state.readingBooks??{}),send_type:1})]:[];
    return [...playerSync,...saddleSync,...bookSync,...petSync,...before,...eggSync,...homeSync,...packets,...pushes];
-  });
+  },{defer:deferredMessages.has(e.name)});
  }
  tick(id){const now=this.clock();if(!productionDue(this.store.load(id).state,now))return [];return this.store.transact(id,0,state=>{const eggRevision=state.eggRevision||0;if(!refreshProduction(state,now))return [];return [...((state.eggRevision||0)!==eggRevision?[this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}})]:[]),this.packet('CSProtoHomeSync',homePayload(this.tables,state))];});}
  loginPackets(state,session,r,frame,id) {

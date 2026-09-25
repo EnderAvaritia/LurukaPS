@@ -1,4 +1,5 @@
 // CBT3 native: TDSoulessenceGradeTable.GetExclusiveSkillsByIdAndGrade
+import {initialPetComprehension} from './pet-comprehension.js';
 // RVA 0x37C56D0 selects subSkillId=1 at the highest unlocked grade.
 // GetNormalSkillsByIdAndGrade RVA 0x37C5A60 handles the other sub-skill groups.
 export function soulSkillsAtGrade(tables,id,grade) {
@@ -38,7 +39,7 @@ export function initialPetSkills(config) {
 export function upgradeSkillState(tables,state) {
   for(const pet of state.pets) {
     if(!Object.hasOwn(pet,'feature'))pet.feature=1;
-    if(!Object.hasOwn(pet,'comprehension'))pet.comprehension=tables.get('pet_learningenum').map(x=>({attr_id:x.attributeEnum,level:1,cur_exp:0,value:100}));
+    if(!Object.hasOwn(pet,'comprehension'))pet.comprehension=initialPetComprehension(tables);
     if(Object.hasOwn(pet,'inherent_skills')&&state.petSkillSeedVersion>=2)continue;
     const config=tables.find('pet',pet.config_id);
     if(!config)throw Error(`Missing pet config ${pet.config_id}`);

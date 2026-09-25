@@ -7,6 +7,7 @@ export function worldSync(c,r={},cmd=256) {
  const s=c.state,w=s.world,g=group(s);const ids=g.heros.filter(h=>h.hero_id&&h.hero_id!=='0').map(h=>h.hero_id);
  c.push('CSProtoWorldMapPointSync',{u32s:w.points});
  c.push('CSProtoWorldMapSync',{cmd,creator_id:c.id,map_id:w.map_id,player_id:c.id,notify_id:c.id,zone_id:0,client_trans_data:r.client_trans_data||0,map_info:{creator_id:c.id,map_id:w.map_id,exist:true,area_id:w.area_id,objs:Object.entries(s.worldObjects??{}).filter(([key])=>key.startsWith(w.map_id+':')).map(([,record])=>{const {claims,...obj}=record;return obj;}),players:[{player_id:c.id,move:[{pos:w.pos,angle:w.angle,area_id:w.area_id,move_status:1,timestamp:String(c.now*1000)}],status:0,host:true,name:s.player.basic_info.name,face:s.player.basic_info.wardrobe,group:{heros:ids,hero_mid:ids,control:g.control},mount:w.mount,apparel_info:s.player.basic_info.apparel_info,clothes_info:s.player.basic_info.clothes_info}]}});
+ for(const [id,capture]of Object.entries(s.petCaptureResults??{}))if(capture.map_id===w.map_id)c.push('SCProtoObjDisappearNtf',{agent_uid:id});
 }
 export function rememberMap(c,destination){
  const w=c.state.world;if(w.map_id===destination)return;

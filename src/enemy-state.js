@@ -6,18 +6,18 @@ export function enemyDefinition(tables,state,uuid){
  const id=BigInt(uuid),kind=Number(id>>56n),slot=Number((id>>32n)&0xffffffn),object=Number(id&0xffffffffn);
  if(![3,4,7].includes(kind))return null;
  let cached=catalogs.get(tables);if(!cached){cached={world:new WorldObjectCatalog(tables),graphs:new TaskGraphs(tables)};catalogs.set(tables,cached);}
- let configId,worldRow,taskConfig;
- if(kind===7){for(const [key,entry] of Object.entries(state.playableEnemies??{})){if(!key.startsWith(state.world.map_id+':'))continue;configId=entry.entities.find(e=>e.uuid===uuid)?.config_id;if(configId)break;}}
+ let packId,worldRow,taskConfig;
+ if(kind===7){for(const [key,entry] of Object.entries(state.playableEnemies??{})){if(!key.startsWith(state.world.map_id+':'))continue;packId=entry.entities.find(e=>e.uuid===uuid)?.config_id;if(packId)break;}}
  else {
   let groupId;
   // Task-spawned enemy containers use the configured createNpcId.
   for(const task of state.tasks??[])for(const node of task.nodes){for(const q of nodeConditions(cached.graphs.get(task.task_id).nodes.get(node.node_id))){const base=q.__type_TaskConditionBaseData??{};for(const data of asList(base.__type_TaskCondEnemiesGroupData?.enemiesDatas??base.__type_TaskCondFractalPetCatchData?.enemyData))if(data?.createNpcId===object&&data.sceneId===state.world.map_id){groupId=data.__type_TaskEnemiesOverrideData?.enemiesGroupId;taskConfig=cached.graphs.get(task.task_id).config;}}}
   if(!groupId&&kind===3){let row;try{row=cached.world.find('worldmap_'+state.world.map_id,object);}catch(error){if(error.code!=='ENOENT')throw error;}if(row){worldRow=row;const spawner=cached.world.find('world_spawner',row.spawnerId);if(spawner?.objectType===50)groupId=row.expandId;}}
-  if(groupId){const group=tables.find('world_enemy_group',groupId);configId=String(group?.enemyList??'').split('|').filter(Boolean).map(Number)[slot];}
+  if(groupId){const group=tables.find('world_enemy_group',groupId);packId=String(group?.enemyList??'').split('|').filter(Boolean).map(Number)[slot];}
  }
- if(!configId)return null;
- const enemy=tables.find('enemy',configId);if(!enemy)return null;
- const pack=tables.find('enemy_pack',configId),property=tables.find('unit_property',pack?.propertyId||enemy.propertyId);
+ if(!packId)return null;
+ const pack=tables.find('enemy_pack',packId),enemy=tables.find('enemy',pack?.enemyId||packId);if(!enemy)return null;
+ const property=tables.find('unit_property',pack?.propertyId||enemy.propertyId);
  // EntityLevelUtility0600e009 uses the first worldAreaId override.
  let parameter=pack?.levelParameter??0;
  if(pack?.levelPolicy===1&&worldRow){const area=Number(String(worldRow.worldAreaIds).split('|')[0]);parameter=pairs(pack.levelAreaParameter).get(area)??parameter;}
@@ -28,5 +28,5 @@ export function enemyDefinition(tables,state,uuid){
  const base=tables.find('template_value',property?.baseAttributeId),growth=tables.find('template_value',template);if(!base||!growth)return null;
  const maxHp=Math.floor(Math.fround(Math.fround(pairs(base.baseAttribute).get(5)*pairs(growth.baseAttribute).get(5))/10000));
  if(!Number.isSafeInteger(maxHp)||maxHp<=0||maxHp>0xffffffff)return null;
- return {config_id:configId,level,max_hp:maxHp,object_id:object,slot};
+ return {config_id:enemy.id,pack_id:packId,level,max_hp:maxHp,object_id:object,slot};
 }

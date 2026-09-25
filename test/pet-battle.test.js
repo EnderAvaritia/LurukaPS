@@ -4,6 +4,7 @@ const c=configuration(),t=new Tables(c.tables),p=new Protocol(c.base);
 const get=(module,id)=>module.modules[0].sub_modules[0].attrs.attrs.find(x=>x.attr_id===id)?.attr_val;
 test('pet fixed-point stats and hero inheritance match CBT3 Lua fixtures',()=>{
  const state=seedPlayer(t,1,'inherit'),hero=state.player.heros_info.heros.find(h=>h.conf_id===101003),pet=state.pets.find(p=>p.config_id===500001);
+ pet.comprehension=pet.comprehension.map(c=>({...c,value:100}));
  let result=petModules(t,state,pet,[]);assert.equal(get(result,1),'260800');assert.equal(get(result,5),'8832072');assert.equal(get(result,7),'4019');assert.equal(result.type,2);
  pet.hero_id=hero.guid;result=petModules(t,state,pet,[heroModules(t,state,hero)]);
  assert.equal(get(result,2001),'30000');assert.equal(get(result,2005),'170000');

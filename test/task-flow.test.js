@@ -82,7 +82,7 @@ test('initial main quest runs from entry through NPC and battle reports, customi
   }
   if(conditions.length)t.call('MultiTaskClientCondAfter',{task_params:[{...request,indexes:conditions.map((_,i)=>i)}]});
   const packets=config.nodeType===50?[]:t.call('MultiTaskClientAfter',{task_params:[request]});
-  if(node.node_id===11){const s=t.state(),item=s.player.sbag_infos.items.find(i=>i.itemid===1000001);assert(item?.itemnum>0);const n=item.itemnum;assert(packets.findIndex(p=>p.id===protocol.byName.get('CSProtoSyncPlayerData').id)<packets.findIndex(p=>p.id===9882));t.call('TaskRewardNode',request);assert.equal(t.state().player.sbag_infos.items.find(i=>i.itemid===1000001).itemnum,n);}
+  if(node.node_id===11){const s=t.state(),item=s.player.sbag_infos.items.find(i=>i.itemid===1000001);assert(item?.itemnum>0);const n=item.itemnum;assert(packets.findIndex(p=>p.id===protocol.byName.get('CSProtoSyncPlayerData').id)<packets.findIndex(p=>p.id===9882));const bagPacket=packets.find(p=>p.id===5008&&protocol.decode('PlayerData',p.payload).sbag_infos?.items?.some(x=>x.itemid===1000001));assert(bagPacket);assert(protocol.decode('PlayerData',bagPacket.payload).sbag_infos.items.find(x=>x.itemid===1000001).guid!=='0');t.call('TaskRewardNode',request);assert.equal(t.state().player.sbag_infos.items.find(i=>i.itemid===1000001).itemnum,n);}
   if(config.nodeType===50){assert.equal(t.state().tasks.find(q=>q.task_id===106001).nodes[0].node_id,graph.end);t.call('TaskFinish',{u32:106001});}
  }
  assert(visited<40);assert(t.state().tasks.some(q=>q.task_id===106002));assert.equal(t.state().taskRecords.find(q=>q.task_id===106001).count,1);

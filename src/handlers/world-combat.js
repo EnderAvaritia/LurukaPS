@@ -11,6 +11,13 @@ function clearHatred(battle,id,isPlayer=false){
  return changed;
 }
 function removeAssociated(battle,id){delete battle.skills[id];delete battle.entities[id];for(const [key,b]of Object.entries(battle.bullets))if(b.unit_id===id)delete battle.bullets[key];for(const [key,e]of Object.entries(battle.elements))if(e.tar_id===id||e.buff?.creator_id===id)delete battle.elements[key];}
+export function retireCapturedEnemy(c,id){
+ const battle=runtime(c),previous=battle.entities[id]??{uuid:id};
+ removeAssociated(battle,id);
+ const hatredChanged=clearHatred(battle,id);
+ battle.entities[id]={...previous,uuid:id,hp:0,alive_state:1,captured:true,updated_at:c.now};
+ if(hatredChanged)syncHatred(c,battle);
+}
 export function registerWorldCombat(on){
  on('SwitchPetAction',(c,r)=>{
   const uuid=u64(r.uuid),type=r.type??0;ensure(c.state.pets.some(p=>p.guid===uuid),'Pet not owned');
@@ -25,7 +32,8 @@ export function registerWorldCombat(on){
  });
  for(const [name,field]of [['ObjHatredIncSync','objects'],['PlayerHatredIncSync','players']])on(name,(c,r)=>{
   ensure(r.info,'Missing hatred data');const id=actor(c,r.info.id),targets=r.info.target_obj_ids??[],players=r.info.player_obj_ids??[];ensure(targets.length<=256&&players.length<=64,'Hatred list too large');
-  const targetIds=[...new Set(targets.map(id=>actor(c,id)))],playerIds=[...new Set(players)];ensure(playerIds.every(n=>Number.isInteger(n)&&n>0),'Invalid hatred player');
+  if(c.state.petCaptureResults?.[id])return {inc:!!r.inc,info:{id,target_obj_ids:[],player_obj_ids:[]}};
+  const targetIds=[...new Set(targets.map(id=>actor(c,id)))].filter(id=>!c.state.petCaptureResults?.[id]),playerIds=[...new Set(players)];ensure(playerIds.every(n=>Number.isInteger(n)&&n>0),'Invalid hatred player');
   const battle=runtime(c),table=battle.hatred[field],previous=table[id]??{id,target_obj_ids:[],player_obj_ids:[]};
   const value={id,target_obj_ids:r.inc?[...new Set([...previous.target_obj_ids,...targetIds])]:previous.target_obj_ids.filter(x=>!targetIds.includes(x)),player_obj_ids:r.inc?[...new Set([...previous.player_obj_ids,...playerIds])]:previous.player_obj_ids.filter(x=>!playerIds.includes(x))};
   ensure(value.target_obj_ids.length<=256&&value.player_obj_ids.length<=64,'Hatred list too large');if(!value.target_obj_ids.length&&!value.player_obj_ids.length)delete table[id];else boundedSet(table,id,value,512);
@@ -46,7 +54,7 @@ export function registerWorldCombat(on){
   c.push('SCProtoCreateSummon',{unit_id:id,battle_index:index});
  });
  on('RemoveSummon',(c,r)=>{const id=u64(r.unit_id),battle=runtime(c),record=battle.summons[id];if(!record)return;delete battle.summons[id];if(battle.summonRequests[record.request_key])battle.summonRequests[record.request_key].removed=true;removeAssociated(battle,id);if(clearHatred(battle,id))syncHatred(c,battle);c.push('CSProtoRemoveSummonSync',{unit_id:id,op:r.op??0,op_time:u64(r.op_time)});});
- on('FightBreak',(c,r)=>{const infos=r.infos??[];ensure(infos.length<=256,'Too many break values');const battle=runtime(c);battle.breakValues??={};for(const info of infos){const id=actor(c,info.tarId);ensure(info.val&&Number.isInteger(info.val.val),'Missing break value');boundedSet(battle.breakValues,id,{...info.val,updated_at:c.now},512);}});
+ on('FightBreak',(c,r)=>{const infos=r.infos??[];ensure(infos.length<=256,'Too many break values');const battle=runtime(c);battle.breakValues??={};for(const info of infos){const id=actor(c,info.tarId);if(c.state.petCaptureResults?.[id])continue;ensure(info.val&&Number.isInteger(info.val.val),'Missing break value');boundedSet(battle.breakValues,id,{...info.val,updated_at:c.now},512);}});
 }
 
 

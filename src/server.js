@@ -25,7 +25,7 @@ function requestString(value,fallback) { return typeof value==='string'&&value.l
 export async function startServer(config,logger=console) {
  const runtime={revision:sourceRevision(config.base),startedAt:new Date().toISOString(),offlinePayments:config.offlinePayments??true};
  new DelayedCrc(config.crcDelay??0); // Validate before opening the database/listeners.
- const protocol=new Protocol(config.base),store=new Store(config.database),tables=new Tables(config.tables),game=new Game(protocol,store,tables,{crcDelay:config.crcDelay??0,gmEnabled:config.gmEnabled??true,offlinePayments:config.offlinePayments??true});
+ const protocol=new Protocol(config.base),store=new Store(config.database,{flushIntervalMs:config.stateFlushMs??5000}),tables=new Tables(config.tables),game=new Game(protocol,store,tables,{crcDelay:config.crcDelay??0,gmEnabled:config.gmEnabled??true,offlinePayments:config.offlinePayments??true});
  const diagnostics=new ProtocolDiagnostics(config.database===':memory:'&&!config.diagnosticsForTests?null:config.diagnosticsFile,logger);
  const sockets=new Set(),owners=new Map(),sessions=new Map();
  function deliverTo(id,packet){
