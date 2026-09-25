@@ -1,0 +1,16 @@
+.electron-vue
+.yarn
+node_modules
+static
+package.json
+dist
+.idea
+.vscode
+build
+.github
+*.md
+*.yaml
+*.yml
+*.json
+.husky
+*.ejs
