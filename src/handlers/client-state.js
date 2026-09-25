@@ -1,0 +1,11 @@
+import {ensure,group} from './common.js';
+export function registerClientState(on){
+ on('GamePause',(c,r)=>{const gameTime=String(r.game_time??'0');c.state.world.pause={operate:!!r.operate,game_time:gameTime,updated_at:c.now};return {operate:!!r.operate,game_time:gameTime};});
+ on('WorldTimeSync',(c,r)=>{ensure(Number.isInteger(r.world_time)&&r.world_time>=0,'Invalid world time');c.state.world.world_time=r.world_time;c.state.world.world_time_updated_at=c.now;return {};});
+ on('MultiCampaignPlayerLoaded',c=>{c.state.world.client_loaded=true;c.state.world.loaded_at=c.now;});
+ on('SwitchGroupControlEnd',(c,r)=>{const g=group(c.state);ensure(g.heros.some(h=>h.hero_id===r.uuid),'Control completion not in active group');c.state.world.control_ready=r.uuid;});
+ on('ChatGetIsolateList',c=>({isolates:c.state.chatIsolation?.isolates??[],lists:c.state.chatIsolation?.lists??[]}));
+ on('ClientBehaviourRecord',(c,r)=>{ensure((r.args??[]).length<=64,'Too many telemetry arguments');const records=c.state.clientBehaviour??=[];records.push({key:r.key??0,args:r.args??[],time:c.now});if(records.length>32)records.splice(0,records.length-32);return {};});
+ on('TitleGetList',c=>({preffix_title:c.state.titles?.preffix_title??[],suffix_title:c.state.titles?.suffix_title??[]}));
+ on('GetMaxArealine',(c,r)=>{ensure(Number.isInteger(r.area_id)&&r.area_id>0,'Invalid area');c.push('CSProtoMaxArealineSync',{area_id:r.area_id,max_arealine:1});});
+}

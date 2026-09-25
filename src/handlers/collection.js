@@ -3,6 +3,22 @@ import {ensure,textValue,hero,pet,manager,group,syncPlayer,syncPets} from './com
 export function registerCollection(on) {
   const syncGroups=c=>{syncPlayer(c,{group_mgrs:c.state.player.group_mgrs});syncBattle(c);};
   const syncEquipment=c=>{syncPlayer(c,{heros_info:c.state.player.heros_info,soulessence_infos:c.state.player.soulessence_infos});syncPets(c);syncBattle(c);};
+  on('QuickChangeGroupInfo',(c,r)=>{
+    const g=group(c.state,r.type,r.id),infos=r.infos??[];
+    ensure(infos.length>=1&&infos.length<=3,'Invalid quick formation size');
+    const heroIds=infos.map(x=>x.hero_guid??'0').filter(x=>x!=='0'),petIds=infos.map(x=>x.pet_guid??'0').filter(x=>x!=='0');
+    ensure(heroIds.length>0&&new Set(heroIds).size===heroIds.length,'Empty or duplicate heroes');
+    ensure(new Set(petIds).size===petIds.length,'Duplicate pets');
+    for(const info of infos){if(info.hero_guid&&info.hero_guid!=='0')hero(c.state,info.hero_guid);else ensure(!info.pet_guid||info.pet_guid==='0','Pet assigned to empty slot');if(info.pet_guid&&info.pet_guid!=='0')pet(c.state,info.pet_guid);}
+    // Clear all selected assignments first so simultaneous pet swaps cannot
+    // detach a pet that was already moved earlier in the same batch.
+    for(const h of c.state.player.heros_info.heros)if(heroIds.includes(h.guid)||petIds.includes(h.pet_id))h.pet_id='0';
+    for(const p of c.state.pets)if(heroIds.includes(p.hero_id)||petIds.includes(p.guid))p.hero_id='0';
+    for(const info of infos)if(info.hero_guid&&info.hero_guid!=='0'){const h=hero(c.state,info.hero_guid);h.pet_id=info.pet_guid||'0';if(h.pet_id!=='0')pet(c.state,h.pet_id).hero_id=h.guid;}
+    g.heros=infos.map(info=>({hero_id:info.hero_guid||'0'}));
+    if(!heroIds.includes(g.control))g.control=heroIds[0];
+    const syncContext={...c,push:c.pushBefore};syncPlayer(syncContext,{group_mgrs:c.state.player.group_mgrs,heros_info:c.state.player.heros_info});syncPets(syncContext);syncBattle(syncContext);return {};
+  });
   on('ChangeHeroGroupIndex',(c,r)=>{const old=group(c.state,r.type,r.group?.id);ensure(r.group&&r.group.heros.length>0&&r.group.heros.length<=3,'Invalid group size');const ids=r.group.heros.filter(x=>x.hero_id&&x.hero_id!=='0').map(x=>x.hero_id);ensure(ids.length>0&&new Set(ids).size===ids.length,'Empty or duplicate heroes');ids.forEach(id=>hero(c.state,id));old.heros=r.group.heros;old.control=ids.includes(r.group.control)?r.group.control:ids[0];syncGroups(c);return {};});
   on('SwitchWorldGroup',(c,r)=>{const m=manager(c.state,r.type);group(c.state,r.type,r.group_id);m.last_group=m.cur_group;m.cur_group=r.group_id;syncGroups(c);return {};});
   on('SwitchWorldGroupControl',(c,r)=>{const g=group(c.state,r.type);ensure(g.heros.some(h=>h.hero_id===r.control),'Control not in group');g.control=r.control;syncGroups(c);return {};});
@@ -18,5 +34,7 @@ export function registerCollection(on) {
   on('PetBoxRename',(c,r)=>{const box=c.state.petBoxes.find(b=>b.id===r.box_id);ensure(box,'Unknown pet box');box.box_name=textValue(r.box_name,20);c.push('CSProtoPetBoxInfoSync',{box_infos:c.state.petBoxes});return {};});
   on('ExchangePetBoxId',(c,r)=>{const a=pet(c.state,r.guid),b=pet(c.state,r.target_guid);[a.box_id,b.box_id]=[b.box_id,a.box_id];syncPets(c);return {};});
 }
+
+
 
 

@@ -1,3 +1,19 @@
+import {registerMonthly,monthlyPayload} from './monthly-card.js';
+import {registerLocalPayments} from './handlers/local-payments.js';
+import {registerChat,chatSnapshots} from './handlers/chat.js';
+import {registerPlayableEnemies} from './handlers/playable-enemies.js';
+import {registerGM} from './handlers/gm.js';
+import {registerWorldEvents} from './handlers/world-events.js';
+import {registerProfileQueries} from './handlers/profile-queries.js';
+import {registerWorldObjects} from './handlers/world-objects.js';
+import {registerWorldCombat} from './handlers/world-combat.js';
+import {registerEcology} from './handlers/ecology.js';
+import {registerMall} from './handlers/mall.js';
+import {registerCombat} from './handlers/combat.js';
+import {registerClientState} from './handlers/client-state.js';
+import {registerRelease} from './handlers/release.js';
+import {releaseFields} from './release-ledger.js';
+import {registerHatching} from './handlers/hatching.js';
 import {registerProduction} from './handlers/production.js';
 import {refreshProduction,productionDue} from './production.js';
 import {registerTechnology} from './handlers/technology.js';
@@ -12,7 +28,7 @@ import {registerTasks} from './handlers/tasks.js';
 import {registerProgression} from './handlers/progression.js';
 import {syncBattle} from './battle.js';
 import {upgradeSkillState} from './skills.js';
-import {randomBytes} from 'node:crypto';
+import {randomBytes,randomInt} from 'node:crypto';
 import {seedPlayer} from './player.js';
 import {GameError,ensure,textValue} from './handlers/common.js';
 import {registerCore} from './handlers/core.js';
@@ -20,10 +36,10 @@ import {registerCollection} from './handlers/collection.js';
 import {registerWorld} from './handlers/world.js';
 import {registerMail} from './handlers/mail.js';
 export class Game {
- constructor(protocol,store,tables,{clock=()=>Math.floor(Date.now()/1000)}={}) { this.clock=clock;
+ constructor(protocol,store,tables,{clock=()=>Math.floor(Date.now()/1000),rng=randomInt,crcDelay=0,gmEnabled=true,offlinePayments=true}={}) { this.clock=clock;this.rng=rng;this.crcDelay=crcDelay;this.releaseResetHour=Number(tables.get('game').find(r=>r.title==='DAILY_REFRESH_TIME')?.value??4);
   this.protocol=protocol;this.store=store;this.tables=tables;this.handlers=new Map();
   const on=(name,handler)=>{const e=protocol.byName.get(name)||protocol.byName.get(`CSProto${name}`);if(!e)throw Error(`Unknown handler ${name}`);if(this.handlers.has(e.id))throw Error(`Duplicate handler ${name}`);this.handlers.set(e.id,handler);};
-  registerCore(on);registerCollection(on);registerWorld(on);registerMail(on);registerProgression(on);registerTasks(on,tables);registerStory(on);registerItems(on);registerShops(on,tables);registerHome(on,tables);registerBuildingPlacement(on,tables);registerTechnology(on,tables);registerProduction(on,tables);
+  registerCore(on);registerMonthly(on,tables);registerLocalPayments(on,tables,store,{enabled:offlinePayments});registerChat(on,store);registerPlayableEnemies(on,tables,store);registerGM(on,{enabled:gmEnabled});registerWorldEvents(on,tables);registerProfileQueries(on,tables,store);registerWorldObjects(on,tables);registerWorldCombat(on);registerEcology(on,tables);registerMall(on,tables);registerCombat(on);registerClientState(on);registerCollection(on);registerWorld(on);registerMail(on);registerProgression(on);registerTasks(on,tables);registerStory(on);registerItems(on);registerShops(on,tables);registerHome(on,tables);registerBuildingPlacement(on,tables);registerTechnology(on,tables);registerProduction(on,tables);registerHatching(on);registerRelease(on,tables);
  }
  packet(id,value={},meta={}) {const e=typeof id==='number'?this.protocol.byId.get(id):this.protocol.byName.get(id);if(!e?.rsp)throw Error(`No response schema for ${id}`);return {id:e.id,payload:this.protocol.encode(e.rsp,value),...meta};}
  dispatch(session,frame) {
@@ -50,21 +66,43 @@ export class Game {
   if(e.name==='CSProtoRecycle')return [reply({})];
   const handler=this.handlers.get(e.id);if(!handler)throw new GameError(`Unsupported ${e.name}`,1021);
   return this.store.transact(session.id,e.id,state=>{
-   const playerLevelBefore=state.player.basic_info.lv;const homeBuildIdsBefore=(state.home?.builds||[]).map(b=>b.guid);const homeWishIdsBefore=(state.home?.wishlist||[]).map(x=>x.uid);const homeRevision=state.homeRevision||0;const eggRevision=state.eggRevision||0;const pushes=[];const context={id:session.id,state,now,tables:this.tables,push:(name,value)=>pushes.push(this.packet(name,value,{pushSeq:frame.pushSeq}))};
+   const petIdsBefore=state.pets.map(p=>p.guid);const eggIdsBefore=(state.petEggs||[]).map(e=>e.guid);const petRevision=state.petRevision||0;const playerLevelBefore=state.player.basic_info.lv;const homeBuildIdsBefore=(state.home?.builds||[]).map(b=>b.guid);const homeWishIdsBefore=(state.home?.wishlist||[]).map(x=>x.uid);const homeRevision=state.homeRevision||0;const eggRevision=state.eggRevision||0;const before=[];const pushes=[];const context={id:session.id,requestKey:frame.seq?session.token+':'+frame.id+':'+frame.seq:null,state,now,randomInt:this.rng,tables:this.tables,pushTo:(recipient,name,value)=>pushes.push(this.packet(name,value,{recipient})),broadcast:(audience,name,value)=>pushes.push(this.packet(name,value,{audience})),pushBefore:(name,value)=>before.push(this.packet(name,value)),push:(name,value)=>pushes.push(this.packet(name,value,{pushSeq:frame.pushSeq}))};
    refreshProduction(state,now);const response=handler(context,r);
    if(state.home?.technology&&state.player.basic_info.lv!==playerLevelBefore)state.homeRevision=(state.homeRevision||0)+1;
+   const petSync=(state.petRevision||0)!==petRevision?[this.packet('CSProtoPetInfoSync',{...releaseFields(state,'pet',now,this.releaseResetHour),pet_infos:{pets:state.pets,guid:petIdsBefore.filter(id=>!state.pets.some(p=>p.guid===id))}}),this.packet('CSProtoPetBoxInfoSync',{box_infos:state.petBoxes})]:[];
+   if(petSync.length)syncBattle({...context,push:context.pushBefore});
    const packets=e.rsp?[reply(response||{})]:[];
-   const eggSync=(state.eggRevision||0)!==eggRevision?[this.packet('CSProtoPetEggInfoSync',{egg_infos:{eggs:state.petEggs||[]}})]:[];
+   const eggSync=(state.eggRevision||0)!==eggRevision?[this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[],guid:eggIdsBefore.filter(id=>!(state.petEggs||[]).some(e=>e.guid===id))}})]:[];
    const homeSync=(state.homeRevision||0)!==homeRevision?[this.packet('CSProtoHomeSync',{...homePayload(this.tables,state),del_builds:homeBuildIdsBefore.filter(id=>!state.home.builds.some(b=>b.guid===id)),del_wishlist:homeWishIdsBefore.filter(id=>!state.home.wishlist.some(x=>x.uid===id))})]:[];
-   return [...eggSync,...homeSync,...packets,...pushes];
+   return [...petSync,...before,...eggSync,...homeSync,...packets,...pushes];
   });
  }
- tick(id){const now=this.clock();if(!productionDue(this.store.load(id).state,now))return [];return this.store.transact(id,0,state=>{if(!refreshProduction(state,now))return [];return [this.packet('CSProtoHomeSync',homePayload(this.tables,state))];});}
+ tick(id){const now=this.clock();if(!productionDue(this.store.load(id).state,now))return [];return this.store.transact(id,0,state=>{const eggRevision=state.eggRevision||0;if(!refreshProduction(state,now))return [];return [...((state.eggRevision||0)!==eggRevision?[this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}})]:[]),this.packet('CSProtoHomeSync',homePayload(this.tables,state))];});}
  loginPackets(state,session,r,frame,id) {
   const now=this.clock();
-  return [this.packet('CSProtoEnterGameCallbackStart',{reconnect:!!r.reconnect,player_id:session.id,server_time:String(Date.now()),time_offset:'0'}),this.packet(id,{data:state.player,reconnect:!!r.reconnect,time_zone:8,time:now,time_msec:Date.now()%1000,player_id:session.id,server_token:session.token,rc4_key:'',ntf_seq:r.ntf_seq||0,req_seq:frame.seq,line_id:0,server_id:'azurjs',node_id:'azurjs-0'},{seq:frame.seq,pushSeq:frame.pushSeq}),this.packet('CSProtoPetInfoSync',{pet_infos:{pets:state.pets}}),this.packet('CSProtoPetEggInfoSync',{egg_infos:{eggs:state.petEggs||[]}}),this.packet('CSProtoPetBoxInfoSync',{box_infos:state.petBoxes}),this.packet('CSProtoRideMountInfo',{mount_saddlerys:this.tables.get('mount_saddle').map(s=>s.id)}),this.packet('CSProtoTaskSync',{tasks:state.tasks,task_records:state.taskRecords||[],trace_list:state.tasks.filter(t=>t.client_trace).map(t=>t.task_id)}),this.packet('CSProtoMailSync',{mails:state.mail}),this.packet('CSProtoStorySync',{infos:{infos:state.storyIds||[]}}),this.packet('CSProtoHomeSync',homePayload(this.tables,state))];
+  return [this.packet('CSProtoEnterGameCallbackStart',{reconnect:!!r.reconnect,player_id:session.id,crc_rand_index:this.crcDelay,server_time:String(Date.now()),time_offset:'0'}),this.packet(id,{data:state.player,reconnect:!!r.reconnect,time_zone:8,time:now,time_msec:Date.now()%1000,player_id:session.id,server_token:session.token,rc4_key:'',ntf_seq:r.ntf_seq||0,req_seq:frame.seq,line_id:0,server_id:'azurjs',node_id:'azurjs-0'},{seq:frame.seq,pushSeq:frame.pushSeq}),this.packet('CSProtoPetInfoSync',{...releaseFields(state,'pet',now,this.releaseResetHour),pet_infos:{pets:state.pets}}),this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}}),this.packet('CSProtoPetBoxInfoSync',{box_infos:state.petBoxes}),this.packet('CSProtoRideMountInfo',{mount_saddlerys:this.tables.get('mount_saddle').map(s=>s.id)}),this.packet('CSProtoTaskSync',{tasks:state.tasks,task_records:state.taskRecords||[],trace_list:state.tasks.filter(t=>t.client_trace).map(t=>t.task_id)}),this.packet('CSProtoMailSync',{mails:state.mail}),this.packet('CSProtoStorySync',{infos:{infos:state.storyIds||[]}}),this.packet('CSProtoHomeSync',homePayload(this.tables,state)),this.packet('SCProtoMonthlyCardInfoSync',monthlyPayload(state)),this.packet('CSProtoChatListSync',chatSnapshots(this.store,state,session.id).list),this.packet('CSProtoChatMsgCntSync',chatSnapshots(this.store,state,session.id).counts)];
  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

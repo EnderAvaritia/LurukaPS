@@ -1,3 +1,6 @@
+import {ProtocolDiagnostics} from './diagnostics.js';
+import {DelayedCrc} from './wire-crc.js';
+import {randomBytes} from 'node:crypto';
 import {ReplayWindow} from './replay.js';
 import net from 'node:net';
 import http from 'node:http';
@@ -19,43 +22,61 @@ function requestInt(value,fallback) { const n=Number(value);return Number.isInte
 function requestString(value,fallback) { return typeof value==='string'&&value.length?value:fallback; }
 
 export async function startServer(config,logger=console) {
- const protocol=new Protocol(config.base),store=new Store(config.database),tables=new Tables(config.tables),game=new Game(protocol,store,tables);
+ new DelayedCrc(config.crcDelay??0); // Validate before opening the database/listeners.
+ const protocol=new Protocol(config.base),store=new Store(config.database),tables=new Tables(config.tables),game=new Game(protocol,store,tables,{crcDelay:config.crcDelay??0,gmEnabled:config.gmEnabled??true,offlinePayments:config.offlinePayments??true});
+ const diagnostics=new ProtocolDiagnostics(config.database===':memory:'&&!config.diagnosticsForTests?null:config.diagnosticsFile,logger);
  const sockets=new Set(),owners=new Map(),sessions=new Map();
+ function deliverTo(id,packet){
+  const target=owners.get(id),connection=target&&sessions.get(target);if(!connection?.session.entered||target.destroyed)return;
+  try {if(target.writableLength>8*1024*1024){target.destroy();return;}connection.replay.invalidate();const destination=connection.session;destination.ntfSeq=((destination.ntfSeq??0)+1)>>>0;target.write(encodeFrame({...packet,seq:0,pushSeq:destination.ntfSeq,flag:destination.wireKey?2:0},packet.payload,{encryptionKey:destination.wireKey}));}catch(err){logger.warn(`Push delivery: ${err.message}`);target.destroy();}
+ }
  const tcp=net.createServer(socket=>{
   if(sockets.size>=config.maxConnections){socket.destroy();return;}
   sockets.add(socket);socket.setNoDelay(true);socket.setTimeout(config.idleTimeout,()=>socket.destroy());
-  const reader=new FrameReader(),session={},replay=new ReplayWindow();sessions.set(socket,{session,replay});
+  const reader=new FrameReader(),session={},replay=new ReplayWindow(),crc=new DelayedCrc();sessions.set(socket,{session,replay});
   socket.on('error',err=>logger.warn(`Socket: ${err.code||err.message}`));
   socket.on('close',()=>{sockets.delete(socket);sessions.delete(socket);if(owners.get(session.id)===socket)owners.delete(session.id);});
   socket.on('data',chunk=>{
    try {for(const frame of reader.feed(chunk)) {
     if(socket.writableLength>8*1024*1024)throw Error('Outbound queue limit');
+    crc.accept(frame);
     const cached=replay.find(frame);if(cached){for(const buffer of cached)socket.write(buffer);continue;}
     let packets;
     try {
+     const entering=!session.entered;
      packets=game.dispatch(session,frame);
+     if(entering&&session.entered)crc.setDelay(config.crcDelay??0);
+     if(entering&&session.entered&&config.strongEncryption){
+      const nextKey=randomBytes(32);
+      packets.unshift({...game.packet('CSProtoEnterGameToken',{rc4_key:nextKey.toString('base64')}),installKey:nextKey});
+     }
      if(session.id){const old=owners.get(session.id);if(old&&old!==socket)old.destroy();owners.set(session.id,socket);}
     } catch(err) {
+     diagnostics.record({protocol,frame,accountId:session.id,error:err});
+     try{store.log.run(session.id??null,frame.id,`error:${Number.isInteger(err.code)?err.code:1002}`,Date.now());}catch(logError){logger.warn(`Request error audit: ${logError.message}`);}
      logger.warn(`${protocol.byId.get(frame.id)?.name||frame.id}: ${err.message}`);
      packets=[{id:frame.id,seq:frame.seq,pushSeq:frame.pushSeq,error:err.code&&Number.isInteger(err.code)?err.code:1002}];
     }
     const encoded=[];
     for(const packet of packets) {
+     if(packet.recipient&&packet.recipient!==session.id){deliverTo(packet.recipient,packet);continue;}
+     if(packet.audience){for(const [id,target]of owners){if(id===session.id||!sessions.get(target)?.session.entered)continue;const state=store.load(id).state;if((state.blockedPlayers??[]).includes(packet.audience.sender))continue;const matches=packet.audience.kind==='world'?(state.chatWorldRoom??1)===packet.audience.room:state.world.map_id===packet.audience.map;if(matches)deliverTo(id,packet);}continue;}
      // CBT3 MainChannel.OnReceiveMsg assigns pushSeq on every received message.
      // Unsolicited pushes therefore advance the notification sequence; responses retain it.
      session.ntfSeq ??= frame.pushSeq;
      if (!packet.seq) session.ntfSeq=(session.ntfSeq+1)>>>0;
-     encoded.push(encodeFrame({...packet,pushSeq:session.ntfSeq},packet.payload));
+     encoded.push(encodeFrame({...packet,pushSeq:session.ntfSeq,flag:session.wireKey&&packet.id!==5001&&packet.id!==1001?2:0},packet.payload,{encryptionKey:session.wireKey}));
+     if(packet.installKey){session.wireKey=packet.installKey;reader.setEncryptionKey(packet.installKey);}
     }
     replay.save(frame,encoded);for(const buffer of encoded)socket.write(buffer);
     if(session.close){socket.end();break;}
-   }}catch(err){logger.warn(`Framing: ${err.message}`);socket.destroy();}
+   }}catch(err){diagnostics.record({phase:"framing",accountId:session.id,error:err,receivedBytes:chunk.length});logger.warn(`Framing: ${err.message}`);socket.destroy();}
   });
  });
   const web=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');const timestamp=Math.floor(Date.now()/1000);
   let data,api;
-  if(url.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({status:'ok',target:'CBT3',protocols:protocol.entries.length,handlers:game.handlers.size,missingSchemas:protocol.missing.length}));return;}
+  if(url.pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({status:'ok',target:'CBT3',databaseSchema:store.db.pragma('user_version',{simple:true}),diagnosticsEnabled:!diagnostics.disabled,protocols:protocol.entries.length,handlers:game.handlers.size,missingSchemas:protocol.missing.length}));return;}
   if(!['GET','POST'].includes(req.method)){res.writeHead(405);res.end();return;}
    let requestBody={};
    try { requestBody=await readJsonBody(req); } catch(err) { res.writeHead(400,{'content-type':'application/json'});res.end(JSON.stringify({code:400,message:err.message}));return; }
@@ -77,7 +98,15 @@ export async function startServer(config,logger=console) {
  });
  web.requestTimeout=10000;web.headersTimeout=10000;
  try {tcp.listen(config.gamePort,config.host);await once(tcp,'listening');web.listen(config.httpPort,config.host);await once(web,'listening');}catch(err){if(tcp.listening)tcp.close();if(web.listening)web.close();store.close();throw err;}
- const productionTimer=setInterval(()=>{for(const [socket,{session,replay}] of sessions){if(!session.entered||owners.get(session.id)!==socket)continue;try{const packets=game.tick(session.id);if(packets.length)replay.invalidate();for(const packet of packets){if(socket.writableLength>8*1024*1024){socket.destroy();break;}session.ntfSeq=((session.ntfSeq||0)+1)>>>0;socket.write(encodeFrame({...packet,pushSeq:session.ntfSeq},packet.payload));}}catch(err){logger.warn(`Production update: ${err.message}`);}}},1000);
+ const productionTimer=setInterval(()=>{for(const [socket,{session,replay}] of sessions){if(!session.entered||owners.get(session.id)!==socket)continue;try{const packets=game.tick(session.id);if(packets.length)replay.invalidate();for(const packet of packets){if(socket.writableLength>8*1024*1024){socket.destroy();break;}session.ntfSeq=((session.ntfSeq||0)+1)>>>0;socket.write(encodeFrame({...packet,pushSeq:session.ntfSeq,flag:session.wireKey?2:0},packet.payload,{encryptionKey:session.wireKey}));}}catch(err){logger.warn(`Production update: ${err.message}`);}}},1000);
  productionTimer.unref();
  return {tcp,web,game,protocol,store,async close(){clearInterval(productionTimer);for(const s of sockets)s.destroy();await Promise.all([new Promise(resolve=>tcp.close(resolve)),new Promise(resolve=>web.close(resolve))]);store.close();}};
 }
+
+
+
+
+
+
+
+

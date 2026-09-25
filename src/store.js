@@ -1,3 +1,4 @@
+import {publicProfile} from './public-profile.js';
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,12 +11,16 @@ export class Store {
     // DELETE journal also works on VMware shared folders; use a local disk for production.
     this.db.pragma('journal_mode = DELETE');
     const version=this.db.pragma('user_version',{simple:true});
-    if(version>1) throw Error(`Database schema ${version} is newer than this server`);
+    if(version>3) throw Error(`Database schema ${version} is newer than this server`);
     this.db.transaction(()=>{
       this.db.exec(`CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, open_id TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS players(account_id INTEGER PRIMARY KEY REFERENCES accounts(id), state TEXT NOT NULL CHECK(json_valid(state)), revision INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS request_log(id INTEGER PRIMARY KEY, account_id INTEGER, message_id INTEGER NOT NULL, status TEXT NOT NULL, created_at INTEGER NOT NULL);
-      PRAGMA user_version = 1;`);
+      CREATE TABLE IF NOT EXISTS sequences(name TEXT PRIMARY KEY,value INTEGER NOT NULL CHECK(value>=0));
+      CREATE TABLE IF NOT EXISTS chat_messages(id INTEGER PRIMARY KEY AUTOINCREMENT,sender_id INTEGER NOT NULL REFERENCES accounts(id),chat_type INTEGER NOT NULL,target_id TEXT NOT NULL,scope_map INTEGER NOT NULL DEFAULT 0,payload TEXT NOT NULL CHECK(json_valid(payload)));
+      CREATE INDEX IF NOT EXISTS chat_sender ON chat_messages(chat_type,sender_id,id);
+      CREATE INDEX IF NOT EXISTS chat_target ON chat_messages(chat_type,target_id,id);
+      PRAGMA user_version = 3;`);
     })();
     this.accountByOpen=this.db.prepare('SELECT * FROM accounts WHERE open_id=?');
     this.playerById=this.db.prepare('SELECT state,revision FROM players WHERE account_id=?');
@@ -45,5 +50,30 @@ export class Store {
       return result;
     }).immediate();
   }
+  nextSequence(name,max=0xffffffff){
+    if(!this.db.inTransaction)throw Error('Sequence allocation requires a transaction');
+    this.db.prepare('INSERT OR IGNORE INTO sequences(name,value) VALUES(?,0)').run(name);
+    const row=this.db.prepare('UPDATE sequences SET value=value+1 WHERE name=? AND value<? RETURNING value').get(name,max);
+    if(!row)throw Error('Sequence exhausted');return row.value;
+  }
+  publicProfiles(excludeId,limit=20) {
+    if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid profile limit');
+
+    return this.db.prepare('SELECT state FROM players WHERE account_id<>? ORDER BY updated_at DESC,account_id LIMIT ?').all(excludeId,limit).map(row=>{const state=JSON.parse(row.state),basic=state.player.basic_info;return publicProfile(basic);});
+  }
+  appendChat(sender,type,target,map,payload){
+    if(!this.db.inTransaction)throw Error('Chat insertion requires a transaction');
+    const id=Number(this.db.prepare('INSERT INTO chat_messages(sender_id,chat_type,target_id,scope_map,payload) VALUES(?,?,?,?,?)').run(sender,type,String(target),map,JSON.stringify(payload)).lastInsertRowid);
+    if(id>0xffffffff)throw Error('Chat sequence exhausted');return {...payload,order:id};
+  }
+  chatHistory(account,peer,limit=100){
+    if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid history limit');
+    return this.db.prepare('SELECT id,payload FROM chat_messages WHERE chat_type=0 AND ((sender_id=? AND target_id=?) OR (sender_id=? AND target_id=?)) ORDER BY id DESC LIMIT ?').all(account,String(peer),peer,String(account),limit).reverse().map(row=>({...JSON.parse(row.payload),order:row.id}));
+  }
+  chatPeers(account){return this.db.prepare('SELECT DISTINCT CASE WHEN sender_id=? THEN CAST(target_id AS INTEGER) ELSE sender_id END AS peer FROM chat_messages WHERE chat_type=0 AND (sender_id=? OR target_id=?) ORDER BY peer LIMIT 50').all(account,account,String(account)).map(row=>row.peer);}
+  chatUnread(account,peer,readOrder){return this.db.prepare('SELECT count(*) AS n FROM chat_messages WHERE chat_type=0 AND sender_id=? AND target_id=? AND id>?').get(peer,String(account),readOrder).n;}
   close(){this.db.close();}
 }
+
+
+

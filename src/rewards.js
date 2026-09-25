@@ -1,3 +1,4 @@
+import {createPets} from './pets.js';
 import {addHomeBuildings} from './home.js';
 import {ensure} from './handlers/common.js';import {addItems} from './inventory.js';import {createEggs} from './eggs.js';
 export function parseRewards(value,allowZero=false){if(!value)return [];return String(value).split('|').filter(Boolean).map(token=>{const [itemtype,itemid,itemnum,...rest]=token.split('#').map(Number);ensure(!rest.length&&[itemtype,itemid].every(n=>Number.isSafeInteger(n)&&n>0)&&Number.isSafeInteger(itemnum)&&itemnum>=(allowZero?0:1)&&itemnum<=0xffffffff,'Malformed reward configuration',1007);return {itemtype,itemid,itemnum};});}
@@ -7,6 +8,7 @@ export function grantRewards(tables,state,rewards,depth=0) {
   const {itemtype,itemid,itemnum}=reward;
   ensure([itemtype,itemid,itemnum].every(x=>Number.isSafeInteger(x)&&x>0)&&itemnum<=0xffffffff,'Invalid reward quantity');
   if(itemtype===3){ensure(tables.find('common_item',itemid),'Unknown reward item',1007);addItems(state,[reward]);}
+  else if(itemtype===5){const pets=createPets(tables,state,itemid,itemnum);granted.push(...pets.map(p=>({itemtype:5,itemid,itemnum:1,guid:p.guid})));continue;}
   else if(itemtype===13){addHomeBuildings(tables,state,itemid,itemnum);}
   else if(itemtype===14){const eggs=createEggs(tables,state,itemid,itemnum);granted.push(...eggs.map(e=>({itemtype:14,itemid,itemnum:1,guid:String(e.guid)})));continue;}
   else if(itemtype===10){const basic=state.player.basic_info;
@@ -19,6 +21,7 @@ export function grantRewards(tables,state,rewards,depth=0) {
  }
  return granted;
 }
+
 
 
 
