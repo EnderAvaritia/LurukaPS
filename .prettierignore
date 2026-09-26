@@ -14,3 +14,12 @@ build
 *.json
 .husky
 *.ejs
+*.sqlite
+.env
+*.txt
+*.log
+.analysis-python
+*.cpuprofile
+data
+proto
+docs

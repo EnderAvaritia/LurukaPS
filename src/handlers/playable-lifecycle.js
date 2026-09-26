@@ -1,75 +1,194 @@
-import fs from 'node:fs';
-import {ensure} from './common.js';
-import {WorldObjectCatalog} from '../world-objects.js';
-import {TaskGraphs,nodeConditions} from '../tasks.js';
-import {grantRewards} from '../rewards.js';
-const configs=new Map(JSON.parse(fs.readFileSync(new URL('../../data/playable-tables/playable.json',import.meta.url))).map(r=>[r.id,r]));
-export function playableSnapshot(state){const finish=Object.values(state.playableFinishes??{}).filter(r=>r.map_id===state.world.map_id);return {plays:Object.values(state.playableRuns??{}).filter(r=>r.map_id===state.world.map_id&&r.status!==3).map(({map_id,selected_step,selected_pet_group,selected_pet_guid,rewarded_steps,...r})=>r),finish_plays:finish.map(r=>r.play_id),finish:finish.map(({play_id,score,reward_info})=>({play_id,score,reward_info})),all_sync:true};}
-export function registerPlayableLifecycle(on,tables){const world=new WorldObjectCatalog(tables),graphs=new TaskGraphs(tables);
- const config=id=>{const row=configs.get(id);ensure(row,'Unknown playable');return row;};
- const sync=c=>c.pushBefore('CSProtoPlayableSync',playableSnapshot(c.state));
- const taskForPlayable=(state,playId)=>state.tasks?.find(task=>{
-  const graph=graphs.get(task.task_id);
-  return task.nodes.some(node=>nodeConditions(graph.nodes.get(node.node_id)).some(condition=>{
-   const base=condition.__type_TaskConditionBaseData,d=base?.__type_TaskCondCompletePlayableData;
-   return condition.conditionId===2525&&d?.playableId===playId&&base.mapData?.sceneId===state.world.map_id&&d.playableData?.sceneId===state.world.map_id;
-  }));
- });
- const activeTaskPlayable=(state,playId)=>!!taskForPlayable(state,playId);
- const choiceDrops=new Map(String(configs.get(60001)?.stepRewards??'').split('|').filter(Boolean).map(token=>token.split('#').map(Number)));
- const selectPetChoice=(c,row,run,step,drop)=>{
-  const task=taskForPlayable(c.state,row.id);
-  ensure(task&&tables.get('drop').some(d=>d.dropId===drop&&d.type===30),'Invalid playable pet choice drop',1007);
-  const key=`${task.task_id}:${c.state.taskEpochs?.[task.task_id]??0}:${row.id}`;
-  const receipts=c.state.playableChoiceReceipts??={};
-  let receipt=receipts[key],rewards=[];
-  if(receipt){
-   ensure(receipt.step===step,'Playable pet choice already made');
-   ensure(c.state.pets.some(p=>p.guid===receipt.pet_guid),'Recorded playable pet is missing',1007);
-  }else{
-   rewards=grantRewards(tables,c.state,world.drops(drop,c.randomInt));
-   ensure(rewards.length===1&&rewards[0].itemtype===30,'Playable pet choice must grant one pet',1007);
-   const pet=c.state.pets.find(p=>p.guid===rewards[0].guid);
-   const group=tables.get('pet_rank').find(rank=>rank.petId===pet?.config_id)?.petGroup;
-   ensure(Number.isInteger(group)&&group>0,'Playable pet group unavailable',1007);
-   receipt={step,drop_id:drop,pet_guid:pet.guid,pet_group:group};receipts[key]=receipt;
-  }
-  run.selected_step=receipt.step;run.selected_pet_group=receipt.pet_group;run.selected_pet_guid=receipt.pet_guid;
-  (c.state.taskPetChoices??={})[task.task_id]=receipt.pet_group;
-  return {rewards,dropIds:rewards.length?[drop]:[]};
- };
- on('PlayableStart',(c,r)=>{
-  const row=config(r.u32),runs=c.state.playableRuns??={};
-  // A late Start can race the task's completion callback. Acknowledge the
-  // already-finished run without re-opening its choice or resending all_sync.
-  if(row.id===60001&&runs[row.id]?.status===3&&c.state.playableFinishes?.[row.id]?.map_id===runs[row.id].map_id)return {};
-  ensure(world.get('worldmap_'+c.state.world.map_id).some(o=>o.expandId===row.id)||activeTaskPlayable(c.state,row.id),'Playable is not in current map');
-  ensure(!row.cost,'Playable entry costs are not implemented',1021);
-  if(runs[row.id]?.map_id===c.state.world.map_id)return {};
-  // Client simulator keeps children of the newly started parent, replaces other runs.
-  for(const [id,run]of Object.entries(runs))if(configs.get(run.play_id)?.parentID!==row.id)delete runs[id];
-  runs[row.id]={play_id:row.id,map_id:c.state.world.map_id,finish_step:0,sub_datas:[],status:1,time:c.now};sync(c);return {};
- });
- on('PlayableCancel',(c,r)=>{config(r.playId);delete (c.state.playableRuns??={})[r.playId];sync(c);return {};});
- on('PlayableStep',(c,r)=>{
-  const row=config(r.playId),run=c.state.playableRuns?.[row.id];ensure(run&&run.map_id===c.state.world.map_id,'Playable is not running');
-  ensure(!row.stepRewards||row.id===60001&&activeTaskPlayable(c.state,row.id),'Playable stage reward mapping is not implemented',1021);
-  let rewards=[],dropIds=[];
-  if(r.is_step){const step=r.finish_step??0;ensure(Number.isInteger(step)&&step>=run.finish_step&&step<=row.stepMax,'Invalid playable step');
-   const drop=choiceDrops.get(step);
-   if(row.id===60001&&drop){ensure(!run.selected_step||run.selected_step===step,'Playable pet choice already made');({rewards,dropIds}=selectPetChoice(c,row,run,step,drop));}
-   if(row.id===60001&&step===row.stepMax)ensure(run.selected_step,'Playable pet choice is missing');
-   run.finish_step=step;run.status=step>=row.stepMax?2:1;
-  }
-  else {const subs=r.sub_datas??[];ensure(subs.length<=256,'Too many playable substeps');for(const sub of subs){ensure(Number.isInteger(sub.sub_id)&&sub.sub_id>0,'Invalid playable substep');const existing=run.sub_datas.find(s=>s.sub_id===sub.sub_id);const next={sub_id:sub.sub_id,finish_step:sub.finish_step??0,complete:!!sub.complete};ensure(!existing||next.finish_step>=existing.finish_step,'Playable substep moved backwards');if(existing)Object.assign(existing,next);else {ensure(run.sub_datas.length<256,'Playable substep limit');run.sub_datas.push(next);}}}
-  const {map_id,selected_step,selected_pet_group,selected_pet_guid,...play}=run;return {play,pos:c.state.world.pos,rewards:{rewards},drop_id:dropIds};
- });
- on('PlayableFinish',(c,r)=>{
-  const row=config(r.playId),run=c.state.playableRuns?.[row.id];ensure(run&&run.map_id===c.state.world.map_id,'Playable is not running');
-  const index=r.index??0,score=r.score??0;
-  ensure(Number.isInteger(index)&&index>=0&&Number.isInteger(score)&&score>=0,'Invalid playable finish');
-  const finished=c.state.playableFinishes??={};
-  if(!finished[row.id]){ensure(run.finish_step>=row.stepMax&&run.status===2,'Playable has not completed its steps');if(row.id===60001)ensure(run.selected_pet_group&&run.selected_pet_guid,'Playable pet choice is missing');run.status=3;finished[row.id]={play_id:row.id,map_id:run.map_id,score,reward_info:0,selected_pet_group:run.selected_pet_group,selected_pet_guid:run.selected_pet_guid,finished_at:c.now};}
-  sync(c);return {playId:row.id,reward:{rewards:[]},drop_id:[],pos:c.state.world.pos};
- });
+import fs from 'node:fs'
+import { ensure } from './common.js'
+import { WorldObjectCatalog } from '../world-objects.js'
+import { TaskGraphs, nodeConditions } from '../tasks.js'
+import { grantRewards } from '../rewards.js'
+const configs = new Map(
+    JSON.parse(fs.readFileSync(new URL('../../data/playable-tables/playable.json', import.meta.url))).map((r) => [
+        r.id,
+        r,
+    ]),
+)
+export function playableSnapshot(state) {
+    const finish = Object.values(state.playableFinishes ?? {}).filter((r) => r.map_id === state.world.map_id)
+    return {
+        plays: Object.values(state.playableRuns ?? {})
+            .filter((r) => r.map_id === state.world.map_id && r.status !== 3)
+            .map(({ map_id, selected_step, selected_pet_group, selected_pet_guid, rewarded_steps, ...r }) => r),
+        finish_plays: finish.map((r) => r.play_id),
+        finish: finish.map(({ play_id, score, reward_info }) => ({ play_id, score, reward_info })),
+        all_sync: true,
+    }
+}
+export function registerPlayableLifecycle(on, tables) {
+    const world = new WorldObjectCatalog(tables),
+        graphs = new TaskGraphs(tables)
+    const config = (id) => {
+        const row = configs.get(id)
+        ensure(row, 'Unknown playable')
+        return row
+    }
+    const sync = (c) => c.pushBefore('CSProtoPlayableSync', playableSnapshot(c.state))
+    const taskForPlayable = (state, playId) =>
+        state.tasks?.find((task) => {
+            const graph = graphs.get(task.task_id)
+            return task.nodes.some((node) =>
+                nodeConditions(graph.nodes.get(node.node_id)).some((condition) => {
+                    const base = condition.__type_TaskConditionBaseData,
+                        d = base?.__type_TaskCondCompletePlayableData
+                    return (
+                        condition.conditionId === 2525 &&
+                        d?.playableId === playId &&
+                        base.mapData?.sceneId === state.world.map_id &&
+                        d.playableData?.sceneId === state.world.map_id
+                    )
+                }),
+            )
+        })
+    const activeTaskPlayable = (state, playId) => !!taskForPlayable(state, playId)
+    const choiceDrops = new Map(
+        String(configs.get(60001)?.stepRewards ?? '')
+            .split('|')
+            .filter(Boolean)
+            .map((token) => token.split('#').map(Number)),
+    )
+    const selectPetChoice = (c, row, run, step, drop) => {
+        const task = taskForPlayable(c.state, row.id)
+        ensure(
+            task && tables.get('drop').some((d) => d.dropId === drop && d.type === 30),
+            'Invalid playable pet choice drop',
+            1007,
+        )
+        const key = `${task.task_id}:${c.state.taskEpochs?.[task.task_id] ?? 0}:${row.id}`
+        const receipts = (c.state.playableChoiceReceipts ??= {})
+        let receipt = receipts[key],
+            rewards = []
+        if (receipt) {
+            ensure(receipt.step === step, 'Playable pet choice already made')
+            ensure(
+                c.state.pets.some((p) => p.guid === receipt.pet_guid),
+                'Recorded playable pet is missing',
+                1007,
+            )
+        } else {
+            rewards = grantRewards(tables, c.state, world.drops(drop, c.randomInt))
+            ensure(rewards.length === 1 && rewards[0].itemtype === 30, 'Playable pet choice must grant one pet', 1007)
+            const pet = c.state.pets.find((p) => p.guid === rewards[0].guid)
+            const group = tables.get('pet_rank').find((rank) => rank.petId === pet?.config_id)?.petGroup
+            ensure(Number.isInteger(group) && group > 0, 'Playable pet group unavailable', 1007)
+            receipt = { step, drop_id: drop, pet_guid: pet.guid, pet_group: group }
+            receipts[key] = receipt
+        }
+        run.selected_step = receipt.step
+        run.selected_pet_group = receipt.pet_group
+        run.selected_pet_guid = receipt.pet_guid
+        ;(c.state.taskPetChoices ??= {})[task.task_id] = receipt.pet_group
+        return { rewards, dropIds: rewards.length ? [drop] : [] }
+    }
+    on('PlayableStart', (c, r) => {
+        const row = config(r.u32),
+            runs = (c.state.playableRuns ??= {})
+        // A late Start can race the task's completion callback. Acknowledge the
+        // already-finished run without re-opening its choice or resending all_sync.
+        if (
+            row.id === 60001 &&
+            runs[row.id]?.status === 3 &&
+            c.state.playableFinishes?.[row.id]?.map_id === runs[row.id].map_id
+        )
+            return {}
+        ensure(
+            world.get('worldmap_' + c.state.world.map_id).some((o) => o.expandId === row.id) ||
+                activeTaskPlayable(c.state, row.id),
+            'Playable is not in current map',
+        )
+        ensure(!row.cost, 'Playable entry costs are not implemented', 1021)
+        if (runs[row.id]?.map_id === c.state.world.map_id) return {}
+        // Client simulator keeps children of the newly started parent, replaces other runs.
+        for (const [id, run] of Object.entries(runs)) if (configs.get(run.play_id)?.parentID !== row.id) delete runs[id]
+        runs[row.id] = {
+            play_id: row.id,
+            map_id: c.state.world.map_id,
+            finish_step: 0,
+            sub_datas: [],
+            status: 1,
+            time: c.now,
+        }
+        sync(c)
+        return {}
+    })
+    on('PlayableCancel', (c, r) => {
+        config(r.playId)
+        delete (c.state.playableRuns ??= {})[r.playId]
+        sync(c)
+        return {}
+    })
+    on('PlayableStep', (c, r) => {
+        const row = config(r.playId),
+            run = c.state.playableRuns?.[row.id]
+        ensure(run && run.map_id === c.state.world.map_id, 'Playable is not running')
+        ensure(
+            !row.stepRewards || (row.id === 60001 && activeTaskPlayable(c.state, row.id)),
+            'Playable stage reward mapping is not implemented',
+            1021,
+        )
+        let rewards = [],
+            dropIds = []
+        if (r.is_step) {
+            const step = r.finish_step ?? 0
+            ensure(Number.isInteger(step) && step >= run.finish_step && step <= row.stepMax, 'Invalid playable step')
+            const drop = choiceDrops.get(step)
+            if (row.id === 60001 && drop) {
+                ensure(!run.selected_step || run.selected_step === step, 'Playable pet choice already made')
+                ;({ rewards, dropIds } = selectPetChoice(c, row, run, step, drop))
+            }
+            if (row.id === 60001 && step === row.stepMax) ensure(run.selected_step, 'Playable pet choice is missing')
+            run.finish_step = step
+            run.status = step >= row.stepMax ? 2 : 1
+        } else {
+            const subs = r.sub_datas ?? []
+            ensure(subs.length <= 256, 'Too many playable substeps')
+            for (const sub of subs) {
+                ensure(Number.isInteger(sub.sub_id) && sub.sub_id > 0, 'Invalid playable substep')
+                const existing = run.sub_datas.find((s) => s.sub_id === sub.sub_id)
+                const next = { sub_id: sub.sub_id, finish_step: sub.finish_step ?? 0, complete: !!sub.complete }
+                ensure(!existing || next.finish_step >= existing.finish_step, 'Playable substep moved backwards')
+                if (existing) Object.assign(existing, next)
+                else {
+                    ensure(run.sub_datas.length < 256, 'Playable substep limit')
+                    run.sub_datas.push(next)
+                }
+            }
+        }
+        const { map_id, selected_step, selected_pet_group, selected_pet_guid, ...play } = run
+        return { play, pos: c.state.world.pos, rewards: { rewards }, drop_id: dropIds }
+    })
+    on('PlayableFinish', (c, r) => {
+        const row = config(r.playId),
+            run = c.state.playableRuns?.[row.id]
+        ensure(run && run.map_id === c.state.world.map_id, 'Playable is not running')
+        const index = r.index ?? 0,
+            score = r.score ?? 0
+        ensure(
+            Number.isInteger(index) && index >= 0 && Number.isInteger(score) && score >= 0,
+            'Invalid playable finish',
+        )
+        const finished = (c.state.playableFinishes ??= {})
+        if (!finished[row.id]) {
+            ensure(run.finish_step >= row.stepMax && run.status === 2, 'Playable has not completed its steps')
+            if (row.id === 60001)
+                ensure(run.selected_pet_group && run.selected_pet_guid, 'Playable pet choice is missing')
+            run.status = 3
+            finished[row.id] = {
+                play_id: row.id,
+                map_id: run.map_id,
+                score,
+                reward_info: 0,
+                selected_pet_group: run.selected_pet_group,
+                selected_pet_guid: run.selected_pet_guid,
+                finished_at: c.now,
+            }
+        }
+        sync(c)
+        return { playId: row.id, reward: { rewards: [] }, drop_id: [], pos: c.state.world.pos }
+    })
 }

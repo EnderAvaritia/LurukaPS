@@ -1,24 +1,35 @@
-import {ensure,pet} from './common.js';
-import {isRetiredTrialActor} from '../trial-actors.js';
-export function skillFailureRate(tables,state,p){
- const suppression=p.suppress_lv??0,force=BigInt(state.player.attr_infos.attrs.find(a=>a.attr_id===22)?.attr_val??'0');
- ensure(Number.isInteger(suppression)&&suppression>=0&&force>=0n,'Invalid pet suppression state');
- if(BigInt(suppression)<=force)return 0;
- const difference=Number(BigInt(suppression)-force),row=tables.get('pet_level_decay').find(r=>r.lvDif===difference);
- if(!row)return 0; // Mirrors the client's exact lvDif lookup and missing-row fallback.
- const rate=row[p.original_type===1?'bossSkillFail':p.original_type===2?'eliteSkillFail':'normalSkillFail'];
- ensure(Number.isInteger(rate)&&rate>=0&&rate<=10000,'Invalid pet skill failure rate',1007);return rate;
+import { ensure, pet } from './common.js'
+import { isRetiredTrialActor } from '../trial-actors.js'
+export function skillFailureRate(tables, state, p) {
+    const suppression = p.suppress_lv ?? 0,
+        force = BigInt(state.player.attr_infos.attrs.find((a) => a.attr_id === 22)?.attr_val ?? '0')
+    ensure(Number.isInteger(suppression) && suppression >= 0 && force >= 0n, 'Invalid pet suppression state')
+    if (BigInt(suppression) <= force) return 0
+    const difference = Number(BigInt(suppression) - force),
+        row = tables.get('pet_level_decay').find((r) => r.lvDif === difference)
+    if (!row) return 0 // Mirrors the client's exact lvDif lookup and missing-row fallback.
+    const rate =
+        row[p.original_type === 1 ? 'bossSkillFail' : p.original_type === 2 ? 'eliteSkillFail' : 'normalSkillFail']
+    ensure(Number.isInteger(rate) && rate >= 0 && rate <= 10000, 'Invalid pet skill failure rate', 1007)
+    return rate
 }
-export function registerPetSkill(on){
- on('SkillFailVec',(c,r)=>{
-  if(isRetiredTrialActor(c.state,r.unit_id))return;
-  const p=c.state.trialGroup?.pets?.find(p=>p.guid===r.unit_id)??pet(c.state,r.unit_id),rate=skillFailureRate(c.tables,c.state,p),records=c.state.petSkillRolls??={};
-  let record=records[p.guid];
-  if(!c.requestKey||record?.request_key!==c.requestKey||record.rate!==rate){
-   // The wire format leaves the batch size to the server; 32 is local policy.
-   record={request_key:c.requestKey,rate,success:rate===0,fail_vec:rate===0?[]:Array.from({length:32},()=>c.randomInt(10000)<rate)};
-   records[p.guid]=record;
-  }
-  c.push('SCProtoSkillFailVec',{unit_id:p.guid,success:record.success,fail_vec:record.fail_vec});
- });
+export function registerPetSkill(on) {
+    on('SkillFailVec', (c, r) => {
+        if (isRetiredTrialActor(c.state, r.unit_id)) return
+        const p = c.state.trialGroup?.pets?.find((p) => p.guid === r.unit_id) ?? pet(c.state, r.unit_id),
+            rate = skillFailureRate(c.tables, c.state, p),
+            records = (c.state.petSkillRolls ??= {})
+        let record = records[p.guid]
+        if (!c.requestKey || record?.request_key !== c.requestKey || record.rate !== rate) {
+            // The wire format leaves the batch size to the server; 32 is local policy.
+            record = {
+                request_key: c.requestKey,
+                rate,
+                success: rate === 0,
+                fail_vec: rate === 0 ? [] : Array.from({ length: 32 }, () => c.randomInt(10000) < rate),
+            }
+            records[p.guid] = record
+        }
+        c.push('SCProtoSkillFailVec', { unit_id: p.guid, success: record.success, fail_vec: record.fail_vec })
+    })
 }

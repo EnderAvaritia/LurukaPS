@@ -1,7 +1,84 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {configuration} from '../src/config.js';import {Protocol} from '../src/protocol.js';import {Tables} from '../src/player.js';import {Store} from '../src/store.js';import {Game} from '../src/game.js';
-const config=configuration(),protocol=new Protocol(config.base),tables=new Tables(config.tables);
-function fixture(file=':memory:',account='archives'){const store=new Store(file),game=new Game(protocol,store,tables),session={};let seq=1;const call=(name,r={})=>{const e=protocol.byName.get('CSProto'+name);return game.dispatch(session,{id:e.id,seq:seq++,payload:protocol.encode(e.req,r)}).map(p=>({id:p.id,data:protocol.decode(protocol.byId.get(p.id).rsp,p.payload)}));};call('EnterGame',{open_id:account});return {store,session,call};}
-const row=(play_id,sub_id,save_data)=>({play_id,sub_id,save_data});
-test('absent archives return a completion sentinel for every requested playable',()=>{const f=fixture();try{assert.deepEqual(f.call('PlayableGetSaveData',{play_ids:[123,456,123]})[0].data.save_data,[row(123,0,''),row(456,0,'')]);}finally{f.store.close();}});
-test('archives preserve binary data, merge subrecords, persist across reopen and isolate accounts',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'azur-archives-')),file=path.join(dir,'test.sqlite');let f=fixture(file);try{const binary=Buffer.from([0,255,128,1,0,32]).toString('base64');assert.equal(f.call('PlayableUploadSaveData',{key_id:4294967295,save_data:[row(123,1,binary),row(123,2,'AQ==')]})[0].data.key_id,4294967295);f.call('PlayableUploadSaveData',{key_id:2,save_data:[row(123,2,'Ag==')]});f.store.close();f=fixture(file);assert.deepEqual(f.call('PlayableGetSaveData',{play_ids:[123]})[0].data.save_data,[row(123,1,binary),row(123,2,'Ag==')]);f.store.close();f=fixture(file,'other');assert.deepEqual(f.call('PlayableGetSaveData',{play_ids:[123]})[0].data.save_data,[row(123,0,'')]);}finally{f.store.close();assert(dir.startsWith(path.join(os.tmpdir(),'azur-archives-')));fs.rmSync(dir,{recursive:true,force:true});}});
-test('invalid archive batches and excessive payloads roll back earlier entries',()=>{const f=fixture();try{for(const rows of [[row(123,1,'AQ=='),row(123,0,'Ag==')],[row(123,1,'AQ=='),row(123,1,'Ag==')],[row(123,1,'AQ=='),row(123,2,Buffer.alloc(65537).toString('base64'))]]){const before=f.store.load(f.session.id);assert.throws(()=>f.call('PlayableUploadSaveData',{key_id:7,save_data:rows}));assert.deepEqual(f.store.load(f.session.id),before);}}finally{f.store.close();}});
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { configuration } from '../src/config.js'
+import { Protocol } from '../src/protocol.js'
+import { Tables } from '../src/player.js'
+import { Store } from '../src/store.js'
+import { Game } from '../src/game.js'
+const config = configuration(),
+    protocol = new Protocol(config.base),
+    tables = new Tables(config.tables)
+function fixture(file = ':memory:', account = 'archives') {
+    const store = new Store(file),
+        game = new Game(protocol, store, tables),
+        session = {}
+    let seq = 1
+    const call = (name, r = {}) => {
+        const e = protocol.byName.get('CSProto' + name)
+        return game
+            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
+            .map((p) => ({ id: p.id, data: protocol.decode(protocol.byId.get(p.id).rsp, p.payload) }))
+    }
+    call('EnterGame', { open_id: account })
+    return { store, session, call }
+}
+const row = (play_id, sub_id, save_data) => ({ play_id, sub_id, save_data })
+test('absent archives return a completion sentinel for every requested playable', () => {
+    const f = fixture()
+    try {
+        assert.deepEqual(f.call('PlayableGetSaveData', { play_ids: [123, 456, 123] })[0].data.save_data, [
+            row(123, 0, ''),
+            row(456, 0, ''),
+        ])
+    } finally {
+        f.store.close()
+    }
+})
+test('archives preserve binary data, merge subrecords, persist across reopen and isolate accounts', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azur-archives-')),
+        file = path.join(dir, 'test.sqlite')
+    let f = fixture(file)
+    try {
+        const binary = Buffer.from([0, 255, 128, 1, 0, 32]).toString('base64')
+        assert.equal(
+            f.call('PlayableUploadSaveData', {
+                key_id: 4294967295,
+                save_data: [row(123, 1, binary), row(123, 2, 'AQ==')],
+            })[0].data.key_id,
+            4294967295,
+        )
+        f.call('PlayableUploadSaveData', { key_id: 2, save_data: [row(123, 2, 'Ag==')] })
+        f.store.close()
+        f = fixture(file)
+        assert.deepEqual(f.call('PlayableGetSaveData', { play_ids: [123] })[0].data.save_data, [
+            row(123, 1, binary),
+            row(123, 2, 'Ag=='),
+        ])
+        f.store.close()
+        f = fixture(file, 'other')
+        assert.deepEqual(f.call('PlayableGetSaveData', { play_ids: [123] })[0].data.save_data, [row(123, 0, '')])
+    } finally {
+        f.store.close()
+        assert(dir.startsWith(path.join(os.tmpdir(), 'azur-archives-')))
+        fs.rmSync(dir, { recursive: true, force: true })
+    }
+})
+test('invalid archive batches and excessive payloads roll back earlier entries', () => {
+    const f = fixture()
+    try {
+        for (const rows of [
+            [row(123, 1, 'AQ=='), row(123, 0, 'Ag==')],
+            [row(123, 1, 'AQ=='), row(123, 1, 'Ag==')],
+            [row(123, 1, 'AQ=='), row(123, 2, Buffer.alloc(65537).toString('base64'))],
+        ]) {
+            const before = f.store.load(f.session.id)
+            assert.throws(() => f.call('PlayableUploadSaveData', { key_id: 7, save_data: rows }))
+            assert.deepEqual(f.store.load(f.session.id), before)
+        }
+    } finally {
+        f.store.close()
+    }
+})

@@ -1,16 +1,98 @@
-import {ensure} from './handlers/common.js';
-export function gridPosition(anchor){ensure(Number.isInteger(anchor)&&anchor>=0&&anchor<=0xffffffff,'Invalid home anchor');const x=anchor>>>16,y=anchor&65535;return {x:(x>>>1)^-(x&1),y:(y>>>1)^-(y&1)};}
-export function gridAnchor(x,y){ensure([x,y].every(n=>Number.isInteger(n)&&n>=-32768&&n<=32767),'Home coordinate outside signed 16-bit range');return ((((x<<1)^(x>>31))<<16)|(((y<<1)^(y>>31))&65535))>>>0;}
-export function homeCondition(text,state){if(!text)return true;const terms=String(text).includes('#')?String(text).split('|').map(s=>s.split('#').map(Number)):[String(text).split('|').map(Number)];return terms.every(([id,n,level])=>id===2004?state.player.basic_info.lv>=n:id===11009?(state.home?.level||1)>=n:id===11012?(state.home?.technology?.levels[n]?.level||0)>=(level||1):false);}
-export function buildingRect(tables,buildId,locate){const config=tables.find('home_building',buildId),object=config&&tables.find('home_object',config.objId);ensure(object,'Missing building footprint',1007);let size=String(object.homeItemSize).split('|').map(Number);ensure(size.length===2&&size.every(n=>Number.isInteger(n)&&n>0),'Invalid building footprint',1007);ensure(locate&&Number.isInteger(locate.direction)&&locate.direction>=0&&locate.direction<=3,'Invalid home rotation');if(locate.direction&1)size.reverse();const pos=gridPosition(locate.anchor);return {x:pos.x,y:pos.y,w:size[0],h:size[1]};}
-export function validatePlacement(tables,state,buildId,locate,ignoreGuid=0){
- ensure(locate&&!locate.position&&!locate.rotation&&!locate.scale&&!locate.center,'Only grid placement is supported',1021);const block=tables.find('home_block',locate.block_id);ensure(block,'Unknown home block');ensure(block.groupType===1,'This home block placement category is not implemented',1021);ensure(homeCondition(block.unlockCondi,state),'Home block is locked');
- const start=String(block.blockStartPos).split('|').map(Number),end=String(block.blockEndPos).split('|').map(Number);ensure(start.length===2&&end.length===2&&[...start,...end].every(Number.isFinite),'Missing home block bounds',1007);
- const rect=buildingRect(tables,buildId,locate);ensure(rect.x>=Math.min(start[0],end[0])&&rect.y>=Math.min(start[1],end[1])&&rect.x+rect.w<=Math.max(start[0],end[0])&&rect.y+rect.h<=Math.max(start[1],end[1]),'Building lies outside home block');
- for(const other of state.home.builds){if(other.guid===ignoreGuid||other.locate.block_id!==locate.block_id)continue;const r=buildingRect(tables,other.build_id,other.locate);ensure(!(rect.x<r.x+r.w&&rect.x+rect.w>r.x&&rect.y<r.y+r.h&&rect.y+rect.h>r.y),'Building overlaps another building');}
- const config=tables.find('home_building',buildId),group=tables.get('home_building_group').find(g=>g.groupId===config.groupId);ensure(group,'Missing building group',1007);ensure(homeCondition(group.unlockCondi,state),'Building group is locked');
- const rows=tables.get('home_building_num').filter(r=>r.groupId===group.groupId).sort((a,b)=>a.id-b.id);let limit=0;for(const row of rows){if(!homeCondition(row.unlockCondition,state))break;ensure(Number.isInteger(row.addNum)&&row.addNum>=0,'Invalid building limit',1007);limit+=row.addNum;}
- const used=state.home.builds.filter(b=>b.guid!==ignoreGuid&&tables.find('home_building',b.build_id)?.groupId===group.groupId).length;ensure(used<limit,'Building group limit reached');return group;
+import { ensure } from './handlers/common.js'
+export function gridPosition(anchor) {
+    ensure(Number.isInteger(anchor) && anchor >= 0 && anchor <= 0xffffffff, 'Invalid home anchor')
+    const x = anchor >>> 16,
+        y = anchor & 65535
+    return { x: (x >>> 1) ^ -(x & 1), y: (y >>> 1) ^ -(y & 1) }
 }
-
-
+export function gridAnchor(x, y) {
+    ensure(
+        [x, y].every((n) => Number.isInteger(n) && n >= -32768 && n <= 32767),
+        'Home coordinate outside signed 16-bit range',
+    )
+    return ((((x << 1) ^ (x >> 31)) << 16) | (((y << 1) ^ (y >> 31)) & 65535)) >>> 0
+}
+export function homeCondition(text, state) {
+    if (!text) return true
+    const terms = String(text).includes('#')
+        ? String(text)
+              .split('|')
+              .map((s) => s.split('#').map(Number))
+        : [String(text).split('|').map(Number)]
+    return terms.every(([id, n, level]) =>
+        id === 2004
+            ? state.player.basic_info.lv >= n
+            : id === 11009
+              ? (state.home?.level || 1) >= n
+              : id === 11012
+                ? (state.home?.technology?.levels[n]?.level || 0) >= (level || 1)
+                : false,
+    )
+}
+export function buildingRect(tables, buildId, locate) {
+    const config = tables.find('home_building', buildId),
+        object = config && tables.find('home_object', config.objId)
+    ensure(object, 'Missing building footprint', 1007)
+    let size = String(object.homeItemSize).split('|').map(Number)
+    ensure(size.length === 2 && size.every((n) => Number.isInteger(n) && n > 0), 'Invalid building footprint', 1007)
+    ensure(
+        locate && Number.isInteger(locate.direction) && locate.direction >= 0 && locate.direction <= 3,
+        'Invalid home rotation',
+    )
+    if (locate.direction & 1) size.reverse()
+    const pos = gridPosition(locate.anchor)
+    return { x: pos.x, y: pos.y, w: size[0], h: size[1] }
+}
+export function validatePlacement(tables, state, buildId, locate, ignoreGuid = 0) {
+    ensure(
+        locate && !locate.position && !locate.rotation && !locate.scale && !locate.center,
+        'Only grid placement is supported',
+        1021,
+    )
+    const block = tables.find('home_block', locate.block_id)
+    ensure(block, 'Unknown home block')
+    ensure(block.groupType === 1, 'This home block placement category is not implemented', 1021)
+    ensure(homeCondition(block.unlockCondi, state), 'Home block is locked')
+    const start = String(block.blockStartPos).split('|').map(Number),
+        end = String(block.blockEndPos).split('|').map(Number)
+    ensure(
+        start.length === 2 && end.length === 2 && [...start, ...end].every(Number.isFinite),
+        'Missing home block bounds',
+        1007,
+    )
+    const rect = buildingRect(tables, buildId, locate)
+    ensure(
+        rect.x >= Math.min(start[0], end[0]) &&
+            rect.y >= Math.min(start[1], end[1]) &&
+            rect.x + rect.w <= Math.max(start[0], end[0]) &&
+            rect.y + rect.h <= Math.max(start[1], end[1]),
+        'Building lies outside home block',
+    )
+    for (const other of state.home.builds) {
+        if (other.guid === ignoreGuid || other.locate.block_id !== locate.block_id) continue
+        const r = buildingRect(tables, other.build_id, other.locate)
+        ensure(
+            !(rect.x < r.x + r.w && rect.x + rect.w > r.x && rect.y < r.y + r.h && rect.y + rect.h > r.y),
+            'Building overlaps another building',
+        )
+    }
+    const config = tables.find('home_building', buildId),
+        group = tables.get('home_building_group').find((g) => g.groupId === config.groupId)
+    ensure(group, 'Missing building group', 1007)
+    ensure(homeCondition(group.unlockCondi, state), 'Building group is locked')
+    const rows = tables
+        .get('home_building_num')
+        .filter((r) => r.groupId === group.groupId)
+        .sort((a, b) => a.id - b.id)
+    let limit = 0
+    for (const row of rows) {
+        if (!homeCondition(row.unlockCondition, state)) break
+        ensure(Number.isInteger(row.addNum) && row.addNum >= 0, 'Invalid building limit', 1007)
+        limit += row.addNum
+    }
+    const used = state.home.builds.filter(
+        (b) => b.guid !== ignoreGuid && tables.find('home_building', b.build_id)?.groupId === group.groupId,
+    ).length
+    ensure(used < limit, 'Building group limit reached')
+    return group
+}

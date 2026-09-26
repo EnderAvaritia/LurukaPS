@@ -1,12 +1,12 @@
-// .prettierrc.js
+// .prettierrc.cjs
 module.exports = {
     // 一行最多 120 字符
     printWidth: 120,
-    // 使用 2 个空格缩进
+    // 使用 4 个空格缩进
     tabWidth: 4,
     // 不使用缩进符，而使用空格
     useTabs: false,
-    // 行尾需要有分号
+    // 行尾不使用分号
     semi: false,
     // 使用单引号
     singleQuote: true,
@@ -14,7 +14,7 @@ module.exports = {
     quoteProps: 'as-needed',
     // jsx 标签内不使用单引号，而使用双引号
     jsxSingleQuote: false,
-    // 末尾需要有逗号
+    // 在支持的位置都添加末尾逗号
     trailingComma: 'all',
     // 大括号内的首尾需要空格
     bracketSpacing: true,
@@ -27,13 +27,13 @@ module.exports = {
     requirePragma: false,
     // 不需要自动在文件开头插入 @prettier
     insertPragma: false,
-    // 使用默认的折行标准
+    // 保持 Markdown 等纯文本原有的换行方式
     proseWrap: 'preserve',
-    // 根据显示样式决定 html 要不要折行
+    // 根据 CSS display 样式决定 HTML 空白和换行的处理方式
     htmlWhitespaceSensitivity: 'css',
     // vue 文件中的 script 和 style 内不用缩进
     vueIndentScriptAndStyle: false,
-    // 换行符
+    // 自动沿用文件现有的换行符
     endOfLine: 'auto',
     // 格式化嵌入的内容
     embeddedLanguageFormatting: 'auto',

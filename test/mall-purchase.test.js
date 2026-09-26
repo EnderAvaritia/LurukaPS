@@ -1,14 +1,130 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {configuration} from '../src/config.js';import {Protocol} from '../src/protocol.js';import {Tables} from '../src/player.js';import {Store} from '../src/store.js';import {Game} from '../src/game.js';
-const config=configuration(),protocol=new Protocol(config.base),tables=new Tables(config.tables);
-function fixture(draw=0){let now=1800000000,seq=1;const store=new Store(':memory:'),game=new Game(protocol,store,tables,{clock:()=>now,rng:n=>Math.min(draw,n-1)}),session={};const call=(name,r={})=>{const e=protocol.byName.get('CSProto'+name);return game.dispatch(session,{id:e.id,seq:seq++,payload:protocol.encode(e.req,r)}).map(p=>({id:p.id,data:protocol.decode(protocol.byId.get(p.id).rsp,p.payload)}));};call('EnterGame',{open_id:'mall-buy'});return {store,game,session,call,state:()=>store.load(session.id).state,time:t=>{now=t;}};}
-const daily={diamond_shop_id:203,diamond_goods_id:20301,buy_count:1};
-test('soul exchange40104 spends tickets and synchronizes a distinct owned soul before reply',()=>{const f=fixture();try{
- f.store.transact(f.session.id,0,s=>{s.player.sbag_infos.items.push({itemid:502001,itemnum:240,itemtype:3,guid:'500001'});});
- const initial=f.state(),guids=new Set(initial.player.soulessence_infos.soulessences.map(x=>x.guid));const packets=f.call('PlayerMallBuyDiamondGoods',{diamond_shop_id:401,diamond_goods_id:40104,buy_count:1});
- const state=f.state(),created=state.player.soulessence_infos.soulessences.filter(x=>!guids.has(x.guid));assert.equal(created.length,1);assert.equal(created[0].id,10037);assert.equal(created[0].advance,1);assert.equal(state.player.sbag_infos.items.find(x=>x.itemid===502001).itemnum,0);
- const replyIndex=packets.findIndex(x=>x.id===protocol.byName.get('CSProtoPlayerMallBuyDiamondGoods').id),equipSync=packets.findIndex(x=>x.id===protocol.byName.get('CSProtoSyncPlayerData').id&&x.data.soulessence_infos?.soulessences?.some(e=>e.guid===created[0].guid));assert(equipSync>=0&&equipSync<replyIndex);
- assert.equal(packets[replyIndex].data.diamond_rewards.rewards[0].guid,String(created[0].guid));
- const again={};const e=protocol.byName.get('CSProtoEnterGame'),login=f.game.dispatch(again,{id:e.id,seq:1,payload:protocol.encode(e.req,{open_id:'mall-buy'})});const entry=protocol.decode(e.rsp,login.find(x=>x.id===e.id).payload);assert(entry.data.soulessence_infos.soulessences.some(x=>x.guid===created[0].guid));
- }finally{f.store.close();}});
-test('logged daily gift opens one configured reward, enforces quota, and resets at next window',()=>{for(const draw of [0,100,200]){const f=fixture(draw);try{const packets=f.call('PlayerMallBuyDiamondGoods',daily),reply=packets.at(-1).data;assert.equal(reply.diamond_goods.curr_purchase_num,1);assert.equal(reply.diamond_rewards.rewards.length,1);assert.equal(reply.diamond_rewards.rewards[0].itemid,[2,1520001,400001][draw/100]);assert(!f.state().player.sbag_infos.items.some(x=>x.itemid===9001));assert.equal(packets[0].id,protocol.byName.get('CSProtoSyncPlayerData').id);const before=f.store.load(f.session.id);assert.throws(()=>f.call('PlayerMallBuyDiamondGoods',daily),/limit/);assert.deepEqual(f.store.load(f.session.id),before);f.time(Number(reply.diamond_goods.reset_time));assert.equal(f.call('PlayerMallBuyDiamondGoods',daily).at(-1).data.diamond_goods.curr_purchase_num,1);}finally{f.store.close();}}});
-test('mall purchase validates membership, level, quantity and funds with atomic rollback',()=>{const f=fixture();try{const paid={diamond_shop_id:201,diamond_goods_id:20502,buy_count:1};for(const r of [{...daily,diamond_shop_id:201},{...daily,buy_count:0},{...daily,buy_count:2},paid]){const before=f.store.load(f.session.id);assert.throws(()=>f.call('PlayerMallBuyDiamondGoods',r));assert.deepEqual(f.store.load(f.session.id),before);}f.store.transact(f.session.id,0,s=>{s.player.basic_info.lv=10;});const before=f.store.load(f.session.id);assert.throws(()=>f.call('PlayerMallBuyDiamondGoods',paid),/currency/);assert.deepEqual(f.store.load(f.session.id),before);f.store.transact(f.session.id,0,s=>{s.player.attr_infos.attrs.push({attr_id:901,attr_val:'50'},{attr_id:902,attr_val:'20'});});f.call('PlayerMallBuyDiamondGoods',paid);assert.equal(f.state().player.attr_infos.attrs.find(a=>a.attr_id===901).attr_val,'10');assert.equal(f.state().player.attr_infos.attrs.find(a=>a.attr_id===902).attr_val,'0');assert.equal(f.state().player.basic_info.gold,5000);assert.equal(f.state().mall.purchases['diamond:20502'].count,1);}finally{f.store.close();}});
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { configuration } from '../src/config.js'
+import { Protocol } from '../src/protocol.js'
+import { Tables } from '../src/player.js'
+import { Store } from '../src/store.js'
+import { Game } from '../src/game.js'
+const config = configuration(),
+    protocol = new Protocol(config.base),
+    tables = new Tables(config.tables)
+function fixture(draw = 0) {
+    let now = 1800000000,
+        seq = 1
+    const store = new Store(':memory:'),
+        game = new Game(protocol, store, tables, { clock: () => now, rng: (n) => Math.min(draw, n - 1) }),
+        session = {}
+    const call = (name, r = {}) => {
+        const e = protocol.byName.get('CSProto' + name)
+        return game
+            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
+            .map((p) => ({ id: p.id, data: protocol.decode(protocol.byId.get(p.id).rsp, p.payload) }))
+    }
+    call('EnterGame', { open_id: 'mall-buy' })
+    return {
+        store,
+        game,
+        session,
+        call,
+        state: () => store.load(session.id).state,
+        time: (t) => {
+            now = t
+        },
+    }
+}
+const daily = { diamond_shop_id: 203, diamond_goods_id: 20301, buy_count: 1 }
+test('soul exchange40104 spends tickets and synchronizes a distinct owned soul before reply', () => {
+    const f = fixture()
+    try {
+        f.store.transact(f.session.id, 0, (s) => {
+            s.player.sbag_infos.items.push({ itemid: 502001, itemnum: 240, itemtype: 3, guid: '500001' })
+        })
+        const initial = f.state(),
+            guids = new Set(initial.player.soulessence_infos.soulessences.map((x) => x.guid))
+        const packets = f.call('PlayerMallBuyDiamondGoods', {
+            diamond_shop_id: 401,
+            diamond_goods_id: 40104,
+            buy_count: 1,
+        })
+        const state = f.state(),
+            created = state.player.soulessence_infos.soulessences.filter((x) => !guids.has(x.guid))
+        assert.equal(created.length, 1)
+        assert.equal(created[0].id, 10037)
+        assert.equal(created[0].advance, 1)
+        assert.equal(state.player.sbag_infos.items.find((x) => x.itemid === 502001).itemnum, 0)
+        const replyIndex = packets.findIndex(
+                (x) => x.id === protocol.byName.get('CSProtoPlayerMallBuyDiamondGoods').id,
+            ),
+            equipSync = packets.findIndex(
+                (x) =>
+                    x.id === protocol.byName.get('CSProtoSyncPlayerData').id &&
+                    x.data.soulessence_infos?.soulessences?.some((e) => e.guid === created[0].guid),
+            )
+        assert(equipSync >= 0 && equipSync < replyIndex)
+        assert.equal(packets[replyIndex].data.diamond_rewards.rewards[0].guid, String(created[0].guid))
+        const again = {}
+        const e = protocol.byName.get('CSProtoEnterGame'),
+            login = f.game.dispatch(again, {
+                id: e.id,
+                seq: 1,
+                payload: protocol.encode(e.req, { open_id: 'mall-buy' }),
+            })
+        const entry = protocol.decode(e.rsp, login.find((x) => x.id === e.id).payload)
+        assert(entry.data.soulessence_infos.soulessences.some((x) => x.guid === created[0].guid))
+    } finally {
+        f.store.close()
+    }
+})
+test('logged daily gift opens one configured reward, enforces quota, and resets at next window', () => {
+    for (const draw of [0, 100, 200]) {
+        const f = fixture(draw)
+        try {
+            const packets = f.call('PlayerMallBuyDiamondGoods', daily),
+                reply = packets.at(-1).data
+            assert.equal(reply.diamond_goods.curr_purchase_num, 1)
+            assert.equal(reply.diamond_rewards.rewards.length, 1)
+            assert.equal(reply.diamond_rewards.rewards[0].itemid, [2, 1520001, 400001][draw / 100])
+            assert(!f.state().player.sbag_infos.items.some((x) => x.itemid === 9001))
+            assert.equal(packets[0].id, protocol.byName.get('CSProtoSyncPlayerData').id)
+            const before = f.store.load(f.session.id)
+            assert.throws(() => f.call('PlayerMallBuyDiamondGoods', daily), /limit/)
+            assert.deepEqual(f.store.load(f.session.id), before)
+            f.time(Number(reply.diamond_goods.reset_time))
+            assert.equal(f.call('PlayerMallBuyDiamondGoods', daily).at(-1).data.diamond_goods.curr_purchase_num, 1)
+        } finally {
+            f.store.close()
+        }
+    }
+})
+test('mall purchase validates membership, level, quantity and funds with atomic rollback', () => {
+    const f = fixture()
+    try {
+        const paid = { diamond_shop_id: 201, diamond_goods_id: 20502, buy_count: 1 }
+        for (const r of [
+            { ...daily, diamond_shop_id: 201 },
+            { ...daily, buy_count: 0 },
+            { ...daily, buy_count: 2 },
+            paid,
+        ]) {
+            const before = f.store.load(f.session.id)
+            assert.throws(() => f.call('PlayerMallBuyDiamondGoods', r))
+            assert.deepEqual(f.store.load(f.session.id), before)
+        }
+        f.store.transact(f.session.id, 0, (s) => {
+            s.player.basic_info.lv = 10
+        })
+        const before = f.store.load(f.session.id)
+        assert.throws(() => f.call('PlayerMallBuyDiamondGoods', paid), /currency/)
+        assert.deepEqual(f.store.load(f.session.id), before)
+        f.store.transact(f.session.id, 0, (s) => {
+            s.player.attr_infos.attrs.push({ attr_id: 901, attr_val: '50' }, { attr_id: 902, attr_val: '20' })
+        })
+        f.call('PlayerMallBuyDiamondGoods', paid)
+        assert.equal(f.state().player.attr_infos.attrs.find((a) => a.attr_id === 901).attr_val, '10')
+        assert.equal(f.state().player.attr_infos.attrs.find((a) => a.attr_id === 902).attr_val, '0')
+        assert.equal(f.state().player.basic_info.gold, 5000)
+        assert.equal(f.state().mall.purchases['diamond:20502'].count, 1)
+    } finally {
+        f.store.close()
+    }
+})
