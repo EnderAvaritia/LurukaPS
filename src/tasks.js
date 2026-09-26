@@ -16,6 +16,10 @@ export class TaskGraphs {
 }
 export function conditionValue(condition,state,context) {
  const base=condition.__type_TaskConditionBaseData||{};
+ if(context?.taskId!==undefined&&context.nodeId!==undefined&&context.index!==undefined){
+  const override=state.taskGoalOverrides?.[deliveryKey(state,context.taskId,context.nodeId,context.index)];
+  if(override!==undefined)return override;
+ }
  if(condition.conditionId===2004){const level=base.__type_TaskCondLevelData?.level;ensure(Number.isInteger(level),'Invalid level condition',1007);return state.player.basic_info.lv>=level?1:0;}
  if(condition.conditionId===2007){const id=base.__type_TaskCondCompleteTaskData?.taskId;ensure(Number.isInteger(id),'Invalid task prerequisite',1007);return (state.taskRecords||[]).some(r=>r.task_id===id&&r.count>0)?1:0;}
  if(condition.conditionId===2521){const d=base.__type_TaskCondEntityStatusData;if(!d||d.status!==1)return 0;const obj=state.worldObjects?.[`${d.sceneId}:${d.npcId}`];return obj&&(obj.complete||obj.state_data?.step===d.status)?1:0;}
@@ -33,7 +37,8 @@ export function conditionValue(condition,state,context) {
  return 0;
 }
 export function nodeConditions(node){return asList((node.__type_TaskConditionNodeData??node.__type_TaskConditonBranchNodeData)?.conditionList);}
-export function conditionSatisfied(condition,value){const required=condition.conditionId===2526?2:condition.conditionId===2518?guidedRequirement(condition.__type_TaskConditionBaseData?.__type_TaskCondGuidedAchievementsData?.achievId):1;return condition.__type_TaskConditionBaseData?.unneedCompleted===1||value>=required;}
+export function conditionTargetValue(condition){return condition.conditionId===2526?2:condition.conditionId===2518?guidedRequirement(condition.__type_TaskConditionBaseData?.__type_TaskCondGuidedAchievementsData?.achievId):1;}
+export function conditionSatisfied(condition,value){return condition.__type_TaskConditionBaseData?.unneedCompleted===1||value>=conditionTargetValue(condition);}
 export function activeTask(state,id){const task=state.tasks.find(t=>t.task_id===id);ensure(task,'Task is not active');return task;}
 export function activeNode(task,id){const node=task.nodes.find(n=>n.node_id===id);ensure(node,'Task node is not active');return node;}
 export function makeNode(graph,id,state){const n=graph.nodes.get(id);ensure(n,'Dangling task graph edge',1007);const conditions=nodeConditions(n);return {node_id:id,node_values:conditions.map((c,index)=>conditionValue(c,state,{taskId:graph.config.id,nodeId:id,index})),client_before:false,client_cond_after:conditions.map(()=>false)};}
@@ -85,7 +90,15 @@ export function unlockAutomaticTasks(tables,state,now){
 }
 export function taskSnapshot(tables,state){
  const main=state.tasks.find(t=>tables.find('task',t.task_id)?.type===1);
- return {tasks:state.tasks,task_records:state.taskRecords??[],trace_list:state.tasks.filter(t=>t.client_trace).map(t=>t.task_id),next_main_id:main?.task_id??0};
+ const taskRecords=(state.taskRecords??[]).map(record=>({...record}));
+ if(state.world?.unlockAllMaps){
+  const unlockTaskIds=new Set();
+  for(const area of tables.get('area'))for(const rule of String(area.unlockCondition??'').split('|').filter(Boolean)){
+   const [kind,taskId]=rule.split('#').map(Number);if([2007,12045].includes(kind)&&Number.isInteger(taskId)&&taskId>0)unlockTaskIds.add(taskId);
+  }
+  for(const taskId of unlockTaskIds){const record=taskRecords.find(item=>item.task_id===taskId);if(record){record.count=Math.max(1,Number(record.count)||0);record.time??=0;}else taskRecords.push({task_id:taskId,count:1,time:0});}
+ }
+ return {tasks:state.tasks,task_records:taskRecords,trace_list:state.tasks.filter(t=>t.client_trace).map(t=>t.task_id),next_main_id:main?.task_id??0};
 }
 export function reconcileTaskBefore(tables,graph,task,node,state){
  if(node.client_before)return false;

@@ -21,4 +21,11 @@ test('client-forced final step on event203 settles once and stays stable until c
  const saved=f.store.load(f.session.id);assert.throws(()=>f.call('WorldEventStep',{...req,step:1}),/cooldown/);assert.deepEqual(f.store.load(f.session.id),saved);
  f.setTime(record.next_trigger_time);assert.equal(f.call('WorldEventTrigger',{cfg_id:203})[0].data.infos[0].step,1);
 }finally{f.store.close();}});
+test('old-world event polls during arena loading are empty acknowledgements with no immediate SQLite write',()=>{const f=fixture();try{
+ f.store.transact(f.session.id,0,s=>{s.world.map_id=1054;s.multiCampaign={dungeon_id:40007,map_id:1054,status:2};});
+ const revision=f.store.db.prepare('select revision from players where account_id=?').get(f.session.id).revision;
+ assert.deepEqual(f.call('WorldEventTrigger',{cfg_id:203})[0].data.infos,[]);
+ assert.equal(f.state().worldEvents,undefined);
+ assert.equal(f.store.db.prepare('select revision from players where account_id=?').get(f.session.id).revision,revision);
+}finally{f.store.close();}});
 

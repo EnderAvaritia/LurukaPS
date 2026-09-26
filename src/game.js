@@ -20,7 +20,7 @@ import {registerChat,chatSnapshots} from './handlers/chat.js';
 import {registerPlayableEnemies} from './handlers/playable-enemies.js';
 import {registerGM} from './handlers/gm.js';
 import {registerWorldEvents} from './handlers/world-events.js';
-import {registerKiboDuel,ensureArenaFormationManager} from './handlers/kibo-duel.js';
+import {registerKiboDuel,ensureArenaFormationManager,repairPendingDuelEntry,arenaAttributePayload} from './handlers/kibo-duel.js';
 import {registerProfileQueries} from './handlers/profile-queries.js';
 import {registerWorldObjects} from './handlers/world-objects.js';
 import {registerWorldCombat} from './handlers/world-combat.js';
@@ -57,7 +57,7 @@ import {registerCore} from './handlers/core.js';
 import {registerCollection} from './handlers/collection.js';
 import {registerWorld,repairLegacyMountState} from './handlers/world.js';
 import {registerMail} from './handlers/mail.js';
-const deferredMessages=new Set(['CSProtoBattleInfoReduce','CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoPerfectDefense','CSProtoCombineAttackBegin','CSProtoCombineAttackEnd','CSProtoStateUpdate','CSProtoPlayableStart']);
+const deferredMessages=new Set(['CSProtoBattleInfoReduce','CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoPerfectDefense','CSProtoCombineAttackBegin','CSProtoCombineAttackEnd','CSProtoStateUpdate','CSProtoPlayableStart','CSProtoWorldEventTrigger']);
 const fastCombatTelemetry=new Set(['CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoPerfectDefense']);
 function forkWithoutPets(base){const {pets,...other}=base;return {...structuredClone(other),pets};}
 function forkMovement(base){return {...base,world:{...base.world,pos:{...base.world.pos}}};}
@@ -131,8 +131,29 @@ export class Game {
    const a=this.store.login(r.open_id,(id,openId)=>seedPlayer(this.tables,id,openId));
    session.id=a.id;session.openId=r.open_id;session.token=session.token||randomBytes(24).toString('hex');
    if(e.name==='CSProtoLogin'){session.entered=false;return [reply({open_id:r.open_id,pid:a.id,guid:a.id,server_token:session.token})];}
-   const packets=this.store.transact(session.id,e.id,state=>{unlockAutomaticTasks(this.tables,state,now);repairCharacterCreationMarker(state);initializeCharacterFormation(this.tables,state);ensureArenaFormationManager(state);reconcileFormationPets(state);upgradeInventory(state);repairLegacyMountState(state);this.recoverFailedPetChoice(state,session.id,now);this.recoverClosedPetPageAfterChoice(state,session.id);settleSimpleProducts(this.tables,state,now);refreshTaskProgress(this.tables,state);prepareTaskScenes(this.tables,state,{login:true});expireTaskTrialGroup(this.tables,state);restoreMixedTrialGroup(this.tables,state);repairSoulEssenceStars(state);refundPendingCatchCards(state);syncCurrencyMirrors(state.player);repairPetProfiles(this.tables,state);repairMountSelection(this.tables,state);upgradeSkillState(this.tables,state);upgradeEggState(state);ensureHome(this.tables,state);refreshProduction(state,now);for(const [id,capture]of Object.entries(state.petCaptureResults??{}))if(capture.map_id===state.world.map_id&&state.combat?.entities?.[id]?.captured!==true)retireCapturedEnemy({state,now,pushBefore:()=>{}},id);const battle=[];syncBattle({state,tables:this.tables,push:(name,value)=>battle.push(this.packet(name,value))});return [...this.loginPackets(state,session,r,frame,e.id),...battle];});
-   session.entered=true;return packets;
+   const packets=this.store.transact(session.id,e.id,state=>{repairPendingDuelEntry(state);unlockAutomaticTasks(this.tables,state,now);repairCharacterCreationMarker(state);initializeCharacterFormation(this.tables,state);ensureArenaFormationManager(state);reconcileFormationPets(state);upgradeInventory(state);repairLegacyMountState(state);this.recoverFailedPetChoice(state,session.id,now);this.recoverClosedPetPageAfterChoice(state,session.id);settleSimpleProducts(this.tables,state,now);refreshTaskProgress(this.tables,state);prepareTaskScenes(this.tables,state,{login:true});expireTaskTrialGroup(this.tables,state);restoreMixedTrialGroup(this.tables,state);repairSoulEssenceStars(state);refundPendingCatchCards(state);syncCurrencyMirrors(state.player);repairPetProfiles(this.tables,state);repairMountSelection(this.tables,state);upgradeSkillState(this.tables,state);upgradeEggState(state);ensureHome(this.tables,state);refreshProduction(state,now);for(const [id,capture]of Object.entries(state.petCaptureResults??{}))if(capture.map_id===state.world.map_id&&state.combat?.entities?.[id]?.captured!==true)retireCapturedEnemy({state,now,pushBefore:()=>{}},id);const battle=[];syncBattle({state,tables:this.tables,push:(name,value)=>battle.push(this.packet(name,value))});return [...this.loginPackets(state,session,r,frame,e.id),...battle];});
+   session.entered=true;
+   const activeState=this.store.load(session.id).state,campaign=activeState.multiCampaign;
+   if(campaign?.arena_status){
+    const {duel_id,arena_status,...wire}=campaign;
+    const hero=activeState.player.heros_info.heros.find(h=>h.guid===activeState.kiboDuelGroups?.[0]?.hero);
+    const name=Buffer.from(activeState.player.basic_info.name,'base64').toString('utf8');
+    packets.push(this.packet('CSProtoKiboDuelFightingInfoSync',{id:duel_id,status:2,start_time:Number(wire.start_time)}));
+    packets.push(this.packet('CSProtoMultiCampaignInfoSync',{camp:[wire]}));
+    packets.push(this.packet('CSProtoCurMultiCampaignInfoSync',wire));
+    if(hero){
+     packets.push(this.packet('CSProtoMultiCampaignBaseInfoSync',{dungeon_id:wire.dungeon_id,dungeon_scene_id:wire.dungeon_scene_id,player_list:[{player_id:session.id,hero_id:hero.conf_id,name,lv:activeState.player.basic_info.lv,heros:[{hero_id:hero.conf_id}]}],team_option_list:[{player_id:session.id,stay:true}],player_status_list:[{player_id:session.id,status:1}]}));
+     packets.push(this.packet('CSProtoKiboDuelArenaPlayerBaseInfo',{infos:[{player_id:session.id,name,player_camp:1,hero_guid:hero.guid,hero_conf_id:hero.conf_id}]}));
+     const formation=activeState.kiboDuelGroups?.[0],guids=formation?.pet_guids?.filter(p=>p.id!=='0').map(p=>p.guid);
+     if(guids?.length&&guids.every(Boolean)){
+      packets.push(this.packet('CSProtoKiboDuelAttrInfoSync',arenaAttributePayload(this.tables,activeState)));
+      packets.push(this.packet('SCProtoKiboDuelArenaCardInfoSync',{pet_guids:guids}));
+      if(activeState.kiboDuelFirstGuid)packets.push(this.packet('SCProtoKiboDuelArenaFirstInfoSync',{id:session.id,pet_guid:activeState.kiboDuelFirstGuid}));
+     }
+    }
+    packets.push(this.packet('SCProtoKiboDuelArenaInfoSync',{status:arena_status,status_endtime:String(now+300),enter_type:0}));
+   }
+   return packets;
   }
   ensure(session.id,'Login required',101);
   if(e.name==='CSProtoCreatePlayer') {

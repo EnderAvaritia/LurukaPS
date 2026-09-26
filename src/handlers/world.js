@@ -71,12 +71,9 @@ export function registerWorld(on) {
  on('WorldMapPlayerPlayerAction',(c,r)=>{
   ensure([1,2,3].includes(r.action),'Invalid mount action');const w=c.state.world;
   ensure(w.status===1&&w.mount&&w.mount!=='0','Player is not mounted');
-  const mount=pet(c.state,w.mount),config=c.tables.find('mount',mount.config_id);
-  ensure(config,'Mount configuration unavailable',1007);
-  const rate=Number(r.action===1?config.jumpCost:r.action===2?config.dashCost:config.skillCost);
-  ensure(Number.isFinite(rate)&&rate>=0&&rate<=1,'Invalid mount action cost',1007);
-  const cost=Math.round(rate*10000);ensure((mount.satiety_val??0)>=cost,'Insufficient mount satiety');
-  if(cost){mount.satiety_val-=cost;c.state.petRevision=(c.state.petRevision||0)+1;}
+  pet(c.state,w.mount);
+  // TODO: Reconstruct official mount satiety drain/recovery and sync semantics.
+  // Until then satiety is intentionally not part of local action validation.
   w.last_mount_action={action:r.action,time:c.now};return {};
  });
 }

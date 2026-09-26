@@ -26,6 +26,7 @@ test('CBT3 seed and capture pets have table-backed grades and valid gene skills'
  const state=seedPlayer(tables,1,'pet-profile');
  assert.equal(state.pets.length,204);
  assert(state.pets.every(p=>p.grade>0&&p.grade<=99999));
+ assert(state.pets.every(p=>p.color===0));
  const target=state.pets.find(p=>p.config_id===500297);
  assert.equal(target.comprehension.reduce((sum,c)=>sum+c.level,0),25);
  assert(target.comprehension.every(c=>c.init_level===c.level&&tables.get('pet_talent_upgrade').some(row=>row.attrId===c.attr_id&&row.level===c.level&&c.value>=row.InterA&&c.value<=row.InterB)));
@@ -85,12 +86,13 @@ test('legacy saved pet profiles are repaired and encoded during normal login',()
  const login=()=>game.dispatch({}, {id:enter.id,seq:1,payload:protocol.encode(enter.req,{open_id:'legacy-pet-profile'})});
  try{
   login();const account=store.db.prepare('select id from accounts where open_id=?').get('legacy-pet-profile');
-  store.transact(account.id,0,state=>{for(const pet of state.pets){delete pet.grade;delete pet.gene_infos;delete pet.gene_state;delete pet.labor_infos;delete pet.talent_id;pet.comprehension=pet.comprehension.map(({init_level,...c})=>({...c,level:1,value:100}));}});
+  store.transact(account.id,0,state=>{for(const pet of state.pets){delete pet.grade;delete pet.color;delete pet.gene_infos;delete pet.gene_state;delete pet.labor_infos;delete pet.talent_id;pet.comprehension=pet.comprehension.map(({init_level,...c})=>({...c,level:1,value:100}));}});
   const packets=login(),sync=packets.find(x=>x.id===6517);
   assert(sync);
   const data=protocol.decode(protocol.byId.get(sync.id).rsp,sync.payload);
   assert.equal(data.pet_infos.pets.length,204);
   assert(data.pet_infos.pets.every(p=>p.grade>0));
+  assert(data.pet_infos.pets.every(p=>p.color===0));
   assert(data.pet_infos.pets.every(p=>p.comprehension.length===6&&p.comprehension.reduce((sum,c)=>sum+c.level,0)===25&&p.comprehension.every(c=>c.init_level===c.level)));
   const saved=store.load(account.id).state.pets.find(p=>p.config_id===500297);
   assert.equal(saved.gene_infos.length,8);assert.equal(saved.labor_infos[0].labor_id,5);

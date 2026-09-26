@@ -7,7 +7,13 @@ export function registerWorldEvents(on,tables){const drops=new WorldObjectCatalo
   if(!event||((event.completed||event.expired)&&c.now>=event.next_trigger_time)){event={cfg_id:row.id,step:1,begin_time:c.now,next_trigger_time:c.now+Math.max(0,row.refreshCD),generation:(event?.generation??0)+1,completed:false,expired:false,rewarded:false};events[key]=event;}
   return event;
  };
- on('WorldEventTrigger',(c,r)=>({infos:[wire(trigger(c,config(c,r.cfg_id)))]}));
+ on('WorldEventTrigger',(c,r)=>{
+  const row=tables.find('world_event',r.cfg_id);
+  // The old world can keep polling nearby events while a dungeon scene is
+  // loading. Acknowledge them without starting that event in the dungeon.
+  if(c.state.multiCampaign&&row&&row.worldMapID!==c.state.world.map_id)return {infos:[]};
+  return {infos:[wire(trigger(c,config(c,r.cfg_id)))]};
+ });
  on('WorldEventStep',(c,r)=>{const row=config(c,r.cfg_id),key=`${row.worldMapID}:${row.id}`,event=c.state.worldEvents?.[key];ensure(event,'Event not started');const step=r.step;ensure(Number.isInteger(step)&&step>=1&&step<row.stepCount,'Invalid event transition');
   if(event.completed){ensure(step===event.step,'Event restart must follow cooldown');c.pushBefore('CSProtoWorldEventInfo',{infos:[wire(event)]});return {rewards:[]};}
   if(event.expired){ensure(r.reset_start&&step===event.step,'Event expired');c.pushBefore('CSProtoWorldEventInfo',{infos:[wire(event)]});return {rewards:[]};}

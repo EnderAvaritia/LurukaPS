@@ -1,11 +1,14 @@
 import {purchaseMonthly,monthlyPayload} from '../monthly-card.js';
 import {giveAllRewards} from '../give-all.js';
 import {ensure,syncPlayer} from './common.js';import {grantRewards} from '../rewards.js';import {heroModules,heroBattleLimits,syncBattle} from '../battle.js';import {rememberMap,worldSync} from './world.js';
-const help='help | giveall | item <id> <count> | give <type> <id> <count> | gold <count> | diamond <count> | level <level> | monthcard <count> | heal | tp <birth-point-id>';
+import {deliveryKey} from '../task-delivery.js';import {TaskGraphs,conditionSatisfied,conditionTargetValue,conditionValue,nodeConditions,taskSnapshot} from '../tasks.js';
+const help='help | giveall | item <id> <count> | give <type> <id> <count> | gold <count> | diamond <count> | level <level> | monthcard <count> | heal | tp <birth-point-id> | taskgoal | unlockmaps';
 const decoder=new TextDecoder('utf-8',{fatal:true});
 function string(value){const bytes=Buffer.from(value??'','base64');ensure(bytes.length<=512,'GM argument is too long');try{return decoder.decode(bytes);}catch{ensure(false,'GM command is not UTF-8');}}
 function integer(value,max=1000000){ensure(/^\d+$/.test(value??''),'Expected positive integer');const n=Number(value);ensure(Number.isSafeInteger(n)&&n>0&&n<=max,'GM number outside allowed range');return n;}
+function currentTask(tables,state){const tasks=state.tasks??[],main=t=>tables.find('task',t.task_id)?.type===1;return tasks.find(t=>t.client_trace&&main(t))??tasks.find(main)??tasks.find(t=>t.client_trace)??tasks[0];}
 export function registerGM(on,{enabled=true}={}){
+ let graphs;
  const execute=(c,request)=>{ensure(enabled,'Local GM commands are disabled');const text=string(request.command).trim();ensure(text&&text.length<=512,'Empty GM command');const parts=text.split(/\s+/),name=parts.shift().toLowerCase(),args=[...parts,...(request.args??[]).map(string)];ensure(args.length<=8,'Too many GM arguments');let result;
   const count=n=>ensure(args.length===n,'Usage: '+help);
   if(name==='help'){count(0);result=help;}
@@ -19,6 +22,8 @@ export function registerGM(on,{enabled=true}={}){
   }else if(name==='level'){count(1);const level=integer(args[0],Math.max(...c.tables.get('player_level').map(x=>x.id)));ensure(c.tables.find('player_level',level),'Unknown player level');c.state.player.basic_info.lv=level;c.state.player.basic_info.exp=0;syncPlayer({...c,push:c.pushBefore},{basic_info:c.state.player.basic_info});result=`Player level ${level}`;
   }else if(name==='heal'){count(0);for(const hero of c.state.player.heros_info.heros){const max=heroBattleLimits(heroModules(c.tables,c.state,hero));const battle=c.state.player.heros_info.battle_infos.find(b=>b.hero_id===hero.guid);if(battle)Object.assign(battle,{hp:max.hp,sp:max.sp,alive_state:0});}syncBattle({...c,push:c.pushBefore});result='Owned heroes healed';
   }else if(name==='tp'||name==='teleport'){count(1);const point=c.tables.find('world_borthpos',integer(args[0],0xffffffff));ensure(point,'Unknown birth point');rememberMap(c,point.cityId);Object.assign(c.state.world,c.tables.position(point));worldSync({...c,push:c.pushBefore});syncBattle({...c,push:c.pushBefore});result=`Teleported to ${point.id}`;
+  }else if(name==='taskgoal'){count(0);graphs??=new TaskGraphs(c.tables);const task=currentTask(c.tables,c.state);ensure(task,'No active task');const graph=graphs.get(task.task_id),node=task.nodes?.[0];ensure(node,'Current task has no active flow');const config=graph.nodes.get(node.node_id);ensure(config,'Current task node is unavailable',1007);const conditions=nodeConditions(config),index=conditions.findIndex((condition,i)=>!conditionSatisfied(condition,conditionValue(condition,c.state,{taskId:task.task_id,nodeId:node.node_id,index:i})));ensure(index>=0,'Current task flow has no incomplete objective');const value=conditionTargetValue(conditions[index]),key=deliveryKey(c.state,task.task_id,node.node_id,index);c.state.taskGoalOverrides??={};c.state.taskGoalOverrides[key]=value;node.node_values??=[];node.node_values[index]=value;c.pushBefore('CSProtoTaskSync',taskSnapshot(c.tables,c.state));result=`Completed task goal ${task.task_id}/${node.node_id}/${index}`;
+  }else if(name==='unlockmaps'){count(0);const points=[...new Set(c.tables.get('world_borthpos').map(point=>Number(point.id)).filter(id=>Number.isInteger(id)&&id>0))].sort((a,b)=>a-b);c.state.world.points=points;c.state.world.unlockAllMaps=true;c.pushBefore('CSProtoTaskSync',taskSnapshot(c.tables,c.state));c.pushBefore('CSProtoWorldMapPointSync',{u32s:points});result=`Unlocked all world maps and ${points.length} transfer points`;
   }else ensure(false,'Unknown GM command. '+help);
   const history=c.state.gmHistory??=[];history.push({command:name,args,time:c.now});if(history.length>32)history.splice(0,history.length-32);return result;
  };

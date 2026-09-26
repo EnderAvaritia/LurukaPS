@@ -16,12 +16,12 @@ test('mount speed uses weighted CBT3 ranges and login repairs missing speed and 
  assert.equal(ride.ride_id,wolf.guid);assert.equal(f.state().mountRideId,wolf.guid);assert(f.state().pets.find(p=>p.guid===wolf.guid).speed>=9000);assert(f.state().pets.find(p=>p.guid===wolf.guid).speed<12000);assert(petInfo.pet_infos.pets.find(p=>p.guid===wolf.guid).speed>0);
 }finally{f.close();}});
 
-test('mount roulette selection supplies short-press ride ID and mount actions consume configured satiety',()=>{const f=fixture();try{const wolf=f.state().pets.find(p=>p.config_id===500022),cloud=f.state().pets.find(p=>p.config_id===500820);assert.equal(f.state().mountRideId,'0');
+test('mount roulette selection supplies short-press ride ID and mount actions ignore unfinished satiety',()=>{const f=fixture();try{const wolf=f.state().pets.find(p=>p.config_id===500022),cloud=f.state().pets.find(p=>p.config_id===500820);assert.equal(f.state().mountRideId,'0');
  const set=f.call('PetSetRoulettePos',{guid:wolf.guid,pos:1});assert.equal(set.find(x=>x.id===6565).data.ride_id,wolf.guid);
  f.call('PetSetRoulettePos',{guid:cloud.guid,pos:2});const mounted=f.call('WorldMapPlayerStatus',{status:1,arg:cloud.guid,doRecord:true});assert.equal(mounted.find(x=>x.id===6565).data.ride_id,cloud.guid);assert.equal(mounted.filter(x=>x.id===9103)[0].data.map_info.players[0].group,undefined);
- const before=f.state().pets.find(p=>p.guid===cloud.guid).satiety_val,dash=Math.round(Number(tables.find('mount',cloud.config_id).dashCost)*10000),skill=Math.round(Number(tables.find('mount',cloud.config_id).skillCost)*10000);
- const action=f.call('WorldMapPlayerPlayerAction',{action:2});assert(action.some(x=>x.id===6517));assert.equal(f.state().pets.find(p=>p.guid===cloud.guid).satiety_val,before-dash);
- f.call('WorldMapPlayerPlayerAction',{action:3});assert.equal(f.state().pets.find(p=>p.guid===cloud.guid).satiety_val,before-dash-skill);
+ const before=f.state().pets.find(p=>p.guid===cloud.guid).satiety_val;
+ const action=f.call('WorldMapPlayerPlayerAction',{action:2});assert(action.some(x=>x.id===9120));assert(!action.some(x=>x.id===6517));assert.equal(f.state().pets.find(p=>p.guid===cloud.guid).satiety_val,before);
+ const skill=f.call('WorldMapPlayerPlayerAction',{action:3});assert(skill.some(x=>x.id===9120));assert(!skill.some(x=>x.id===6517));assert.equal(f.state().pets.find(p=>p.guid===cloud.guid).satiety_val,before);
  f.call('WorldMapPlayerStatus',{status:0,arg:'0',doRecord:true});const snapshot=f.store.load(f.session.id);assert.throws(()=>f.call('WorldMapPlayerPlayerAction',{action:3}),/not mounted/);assert.deepEqual(f.store.load(f.session.id),snapshot);
  const remove=f.call('PetRemoveRoulettePos',{u32:2});assert.equal(remove.find(x=>x.id===6565).data.ride_id,wolf.guid);
 }finally{f.close();}});
