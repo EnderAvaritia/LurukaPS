@@ -50,19 +50,27 @@ export function heroModules(tables,state,hero) {
   }
   // Always replace submodule zero, including after unequip, to clear cached client bonuses.
   modules.push({module_type:1,sub_modules:[{sub_module_id:0,attrs:{attrs:wireAttributes(soulAttributes)},skills:{skills:soulSkills}}]});
-  return {hero_guid:hero.guid,hero_conf_id:hero.conf_id,type:1,modules};
+  return {hero_guid:hero.guid,hero_conf_id:hero.conf_id,type:hero.trail?5:1,modules};
+}
+// HeroUtility.PackAttrInfoValue divides SpecialAttList values by 10000.
+// Attribute modules retain fixed-point values; battle HP uses whole points.
+export function heroBattleLimits(info){
+ const attrs=new Map();for(const module of info.modules)for(const sub of module.sub_modules)for(const attr of sub.attrs.attrs)attrs.set(attr.attr_id,(attrs.get(attr.attr_id)||0)+Number(attr.attr_val));
+ const hp=Math.floor((attrs.get(5)||0)/10000*(1+(attrs.get(1005)||0)/10000)+(attrs.get(2005)||0)),sp=Math.floor(attrs.get(6)||0);
+ if(!Number.isSafeInteger(hp)||hp<=0||hp>0xffffffff||!Number.isSafeInteger(sp)||sp<0||sp>0xffffffff)throw Error(`Invalid battle limits for ${info.hero_conf_id}`);
+ return {hp,sp};
 }
 export function refreshBattleState(tables,state) {
   const heros=[...state.player.heros_info.heros,...(state.trialGroup?.heroes??[])].map(hero=>heroModules(tables,state,hero));
   const previous=new Map((state.player.heros_info.battle_infos||[]).map(x=>[x.hero_id,x]));
   state.player.heros_info.battle_infos=heros.map(h=>{
-    const total=id=>h.modules.reduce((sum,m)=>sum+m.sub_modules.reduce((n,s)=>n+s.attrs.attrs.filter(a=>a.attr_id===id).reduce((v,a)=>v+Number(a.attr_val),0),0),0);
-    const maxhp=total(5),maxsp=total(6);
-    if(maxhp<=0||maxhp>0xffffffff||maxsp<0||maxsp>0xffffffff)throw Error(`Invalid battle limits for ${h.hero_conf_id}`);
+    const {hp:maxhp,sp:maxsp}=heroBattleLimits(h);
     const old=previous.get(h.hero_guid);
-    const hp=old?Math.min(old.hp,maxhp):maxhp,sp=old?Math.min(old.sp,maxsp):maxsp;
+    const oldHp=old&&!state.battleHpUnitsVersion&&old.hp>maxhp?Math.max(1,Math.floor(old.hp/10000)):old?.hp;
+    const hp=old?Math.min(oldHp,maxhp):maxhp,sp=old?Math.min(old.sp,maxsp):maxsp;
     return {...old,hero_id:h.hero_guid,hp,sp,alive_state:hp>0?0:1};
   });
+  state.battleHpUnitsVersion=1;
   return heros;
 }
 export function syncBattle(c) {
@@ -103,6 +111,6 @@ export function petModules(tables,state,pet,heroes) {
       attrs.set(row.petAttrVal,(attrs.get(row.petAttrVal)||0)+inherited);
     }
   }
-  return {hero_guid:pet.guid,hero_conf_id:pet.config_id,type:2,modules:[{module_type:4,sub_modules:[{sub_module_id:0,attrs:{attrs:wireAttributes(attrs)},skills:{skills:pet.inherent_skills||[]}}]},{module_type:5,sub_modules:[{sub_module_id:0,attrs:{attrs:[]},skills:{skills:[]}}]}]};
+  return {hero_guid:pet.guid,hero_conf_id:pet.config_id,type:pet.type===2?9:2,modules:[{module_type:4,sub_modules:[{sub_module_id:0,attrs:{attrs:wireAttributes(attrs)},skills:{skills:pet.inherent_skills||[]}}]},{module_type:5,sub_modules:[{sub_module_id:0,attrs:{attrs:[]},skills:{skills:[]}}]}]};
 }
 

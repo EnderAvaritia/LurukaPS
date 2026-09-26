@@ -1,0 +1,17 @@
+{
+  "profiles": [
+    {
+      "battleFsmType": 102,
+      "sourceGraph": "ast_fsm_prologue_boss",
+      "sourceSha256": "acf47412b6e114d5ce0752989389061b1b9b3a7bd8a493e18521776179bc93f9",
+      "rules": [
+        {
+          "fsmNode": "24",
+          "stories": [
+            100603
+          ]
+        }
+      ]
+    }
+  ]
+}

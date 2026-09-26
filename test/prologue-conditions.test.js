@@ -38,8 +38,46 @@ test('prologue saddle pickup commits reward and satisfies configured object30000
  }finally{f.store.close();}});
 test('configured scene104 battle objective completes only after its own enemy group dies',()=>{const f=fixture(106002,59,104);try{
  const hero=f.state().player.heros_info.heros[0].guid,enemy=((3n<<56n)|600003n).toString();assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
+ f.call('PerfectDefense',{uuid:hero,target_uuid:enemy});assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
+ f.call('CombineAttackEnd',{attack_id:hero,target_id:enemy});assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
  f.call('BattleInfoReduce',{uint64_dic:[hero,enemy],battle_info:[{hurt_info:{from_id:'1',tar_id:'2',hp_change:-2147483647}}]});assert.equal(f.state().combat.entities[enemy].config_id,400068);assert.equal(f.state().combat.entities[enemy].hp,0);assert.equal(f.state().tasks[0].nodes[0].node_values[0],1);
  f.call('TaskClientCondAfter',{task_id:106002,node_id:59,indexes:[0]});f.call('TaskClientAfter',{task_id:106002,node_id:59});assert.equal(f.state().tasks[0].nodes[0].node_id,f.graph.nodes.get(59).nextNodeIdList);
+ }finally{f.store.close();}});
+test('low-HP zero-damage reports do not invent a battle completion threshold',()=>{const f=fixture(106002,59,104);try{
+ const hero=f.state().player.heros_info.heros[0].guid,enemy=((3n<<56n)|600003n).toString();
+ f.edit(s=>{s.combat={map_id:104,skills:{},bullets:{},elements:{},entities:{[enemy]:{uuid:enemy,config_id:400068,pack_id:400068,object_id:600003,slot:0,level:50,max_hp:3911,hp:200,alive_state:0,updated_at:1}},report_count:0};});
+ const report={uint64_dic:[hero,enemy],battle_info:[{hurt_info:{from_id:'1',tar_id:'2',hp_change:0,skill_id:0}}]};
+ for(let i=0;i<3;i++)f.call('BattleInfoReduce',report);
+ assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
+ f.edit(s=>{s.combat.entities[enemy].hp=69;s.combat.nearDeathReports=[];});
+ f.call('BattleInfoReduce',report);assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
+ f.call('BattleInfoReduce',report);assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
+ const packets=f.call('BattleInfoReduce',report);assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);assert.equal(f.state().combat.entities[enemy].hp,69);assert(!packets.some(p=>p.id===9853));
+ assert.throws(()=>f.call('TaskClientCondAfter',{task_id:106002,node_id:59,indexes:[0]}),/not complete/);
+ }finally{f.store.close();}});
+test('boss-to-hero reports retain bounded evidence without altering task rules or leaking failed batches',()=>{const f=fixture(106002,59,104);try{
+ const hero=f.state().player.heros_info.heros[0].guid,enemy=((3n<<56n)|600003n).toString();
+ f.edit(s=>{s.combat={map_id:104,skills:{},bullets:{},elements:{},entities:{[enemy]:{uuid:enemy,config_id:400068,object_id:600003,slot:0,max_hp:3911,hp:200,alive_state:0}},report_count:0};});
+ const hp=f.state().player.heros_info.battle_infos.find(x=>x.hero_id===hero).hp;
+ f.call('BattleInfoReduce',{uint64_dic:[enemy,hero],battle_info:[{hurt_info:{from_id:'1',tar_id:'2',hp_change:-10,cur_hp:3,cur_phase:2}}]});
+ const trace=f.state().bossBattleTrace;assert.equal(trace.length,1);assert.equal(trace[0].client_hp,3);assert.equal(trace[0].server_hp,hp-10);assert.equal(trace[0].cur_phase,2);assert.equal(f.state().tasks[0].nodes[0].node_values[0],0);
+ const before=f.state();assert.throws(()=>f.call('BattleInfoReduce',{uint64_dic:[enemy,hero],battle_info:[{hurt_info:{from_id:'1',tar_id:'2',hp_change:-10}},{hurt_info:{from_id:'1',tar_id:'3',hp_change:-1}}]}));assert.deepEqual(f.state(),before);
+ }finally{f.store.close();}});
+test('late duplicate story-package event after node64 advances is acknowledged without changing task progress',()=>{const f=fixture(106002,64,104);try{
+ const event={key:2519,args:[0xffffffff,106002,64,0,1]};f.call('ClientBehaviourRecord',event);
+ f.call('TaskClientCondAfter',{task_id:106002,node_id:64,indexes:[0]});f.call('TaskClientAfter',{task_id:106002,node_id:64});
+ const before=f.state();assert.equal(before.tasks[0].nodes[0].node_id,60);
+ f.call('ClientBehaviourRecord',event);assert.deepEqual(f.state(),before);
+ }finally{f.store.close();}});
+test('configured prologue StoryKill follows story100603 and completes the enemy objective once',()=>{const f=fixture(106002,59,104);try{
+ const enemy=((3n<<56n)|600003n).toString(),request={guid:[enemy]};
+ assert.throws(()=>f.call('StoryKill',request),/story has not played/);
+ f.call('SetStoryId',{story_id:100603,story_type:0});
+ const before=f.state().player,packets=f.call('StoryKill',request);
+ assert.equal(f.state().combat.entities[enemy].hp,0);assert.equal(f.state().tasks[0].nodes[0].node_values[0],1);assert(packets.some(x=>x.id===10009));assert(packets.some(x=>x.id===9853));
+ assert.deepEqual(f.state().player,before);f.call('TaskClientCondAfter',{task_id:106002,node_id:59,indexes:[0]});f.call('TaskClientAfter',{task_id:106002,node_id:59});
+ assert.equal(f.state().tasks[0].nodes[0].node_id,64);f.call('StoryKill',request);assert.equal(f.state().tasks[0].nodes[0].node_id,64);
+ const saved=f.state();assert.throws(()=>f.call('StoryKill',{guid:[enemy,'216172782114383812']}));assert.deepEqual(f.state(),saved);
  }finally{f.store.close();}});
 test('second prologue quest follows actual configured nodes through capture, page, chest, saddle and battle to106009',()=>{const f=fixture(106002,56,102);try{
  const visited=[];while(f.state().tasks.some(t=>t.task_id===106002)&&visited.length<20){

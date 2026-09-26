@@ -1,6 +1,7 @@
 import {ensure} from './common.js';
 import {actor} from './combat.js';
 import {u64,combatState,boundedSet} from '../combat-state.js';
+import {isRetiredTrialActor} from '../trial-actors.js';
 function runtime(c){const state=combatState(c.state,c.now);state.summons??={};state.summonRequests??={};state.hatred??={objects:{},players:{}};return state;}
 function syncHatred(c,battle){c.pushBefore('SCProtoWorldHatredSync',{obj_info:Object.values(battle.hatred.objects),player_info:Object.values(battle.hatred.players)});}
 function clearHatred(battle,id,isPlayer=false){
@@ -20,7 +21,7 @@ export function retireCapturedEnemy(c,id){
 }
 export function registerWorldCombat(on){
  on('SwitchPetAction',(c,r)=>{
-  const uuid=u64(r.uuid),type=r.type??0;ensure(c.state.pets.some(p=>p.guid===uuid),'Pet not owned');
+  const uuid=u64(r.uuid),type=r.type??0;if(isRetiredTrialActor(c.state,uuid))return;ensure(c.state.pets.some(p=>p.guid===uuid)||c.state.trialGroup?.pets?.some(p=>p.guid===uuid),'Pet not owned');
   // Remote presentation only. Echoing this to the owner sets remoteSwitch locally.
   const battle=runtime(c);battle.petPresentation??={};boundedSet(battle.petPresentation,uuid,{type,updated_at:c.now},256);
   c.broadcast({kind:'map',map:c.state.world.map_id,sender:c.id},'CSProtoSwitchPetActionBC',{uuid,type});
@@ -43,7 +44,11 @@ export function registerWorldCombat(on){
  on('HatredResetToHomeSync',(c,r)=>{const id=actor(c,r.obj_id),battle=runtime(c);clearHatred(battle,id);syncHatred(c,battle);return {obj_id:id};});
  on('CreateSummon',(c,r)=>{
   const owner=u64(r.unit_id);if(owner!=='0')actor(c,owner);const info=r.summon_info;ensure(info&&[1,2,3,4,5].includes(info.summon_type),'Invalid summon data');const configId=info.config_id??0;ensure(configId>0||(configId===0&&info.summon_type===3&&u64(info.unit_id)!=='0'&&c.tables.find('skill',info.skill_id)),'Invalid summon data');info.config_id=configId;ensure((info.attrButeInfos??[]).length<=256,'Too many summon attributes');
-  const index=u64(r.verify_info?.battle_index);ensure(index!=='0','Missing summon battle index');const battle=runtime(c),requestKey=index,previous=battle.summonRequests[requestKey];
+  const index=u64(r.verify_info?.battle_index);ensure(index!=='0','Missing summon battle index');const battle=runtime(c);
+  // Client battle indices restart with a new connection. Old session receipts
+  // cannot establish a retry in this one; retire their transient summons only.
+  if(c.combatSessionId&&battle.summonSession!==c.combatSessionId){for(const id of Object.keys(battle.summons)){removeAssociated(battle,id);clearHatred(battle,id);}battle.summons={};battle.summonRequests={};battle.summonSession=c.combatSessionId;}
+  const requestKey=index,previous=battle.summonRequests[requestKey];
   if(previous){ensure(previous.owner_id===owner&&previous.config_id===info.config_id&&previous.summon_type===info.summon_type&&(previous.skill_id??0)===(info.skill_id??0)&&(u64(info.unit_id)==='0'||u64(info.unit_id)===previous.unit_id),'Summon index reused for another object');c.push('SCProtoCreateSummon',{unit_id:previous.removed?'0':previous.unit_id,battle_index:index});return;}
   ensure(Object.keys(battle.summons).length<256,'Too many active summons');let id=u64(info.unit_id);
   if(id!=='0'){ensure(info.summon_type===3,'Unexpected client summon ID');ensure((BigInt(id)>>56n)===17n&&(BigInt(id)&0xffffffffn)===BigInt(c.id),'Invalid client summon owner');}

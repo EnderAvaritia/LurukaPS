@@ -5,7 +5,7 @@ const graphsByTables=new WeakMap();
 let points;
 function catalog(tables){let graphs=graphsByTables.get(tables);if(!graphs){graphs=new TaskGraphs(tables);graphsByTables.set(tables,graphs);}return graphs;}
 export function taskActions(node,phase='before'){
- const data=node.__type_TaskConditionNodeData??node.__type_TaskConditonBranchNodeData??node.__type_TaskActionNodeData??{};
+ const data=node.__type_TaskConditionNodeData??node.__type_TaskConditonBranchNodeData??node.__type_TaskActionNodeData??node.__type_TaskEndExportData??{};
  return asList(phase==='before'?(data.beforActionList??data.actionList):data.afterActionList).map(a=>a.dataType??{});
 }
 export function taskBirthPoint(tables,id,map){

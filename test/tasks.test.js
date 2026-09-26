@@ -18,4 +18,12 @@ test('typed rewards update inventory, wallet and account level atomically',()=>{
  const rewards=parseRewards('3#400000#2|10#2#100|10#1#5|10#10#200');store.transact(session.id,0,s=>grantRewards(tables,s,rewards));const s=store.load(session.id).state;assert.equal(s.player.basic_info.gold,100);assert.equal(s.player.basic_info.diamond,5);assert.equal(s.player.basic_info.lv,2);assert.equal(s.player.basic_info.exp,0);assert.equal(s.player.sbag_infos.items.find(i=>i.itemid===400000).itemnum,2);assert.equal(s.player.attr_infos.attrs.find(a=>a.attr_id===22).attr_val,'1');
  const before=store.load(session.id);assert.throws(()=>store.transact(session.id,0,s=>grantRewards(tables,s,parseRewards('10#2#50|999#1#1'))));assert.deepEqual(store.load(session.id),before);
 }finally{store.close();}});
+test('configured hero reward reuses an owned actor and creates the same identity when absent',()=>{const {store,session}=setup();try{
+ const before=store.load(session.id).state.player.heros_info.heros.find(h=>h.conf_id===108001);assert(before);
+ const owned=store.transact(session.id,0,s=>grantRewards(tables,s,[{itemtype:1,itemid:108001,itemnum:1}]));
+ assert.equal(owned[0].guid,before.guid);assert.equal(store.load(session.id).state.player.heros_info.heros.filter(h=>h.conf_id===108001).length,1);
+ store.transact(session.id,0,s=>{s.player.heros_info.heros=s.player.heros_info.heros.filter(h=>h.conf_id!==108001);});
+ const created=store.transact(session.id,0,s=>grantRewards(tables,s,[{itemtype:1,itemid:108001,itemnum:1}]));
+ assert.equal(created[0].guid,before.guid);assert.equal(store.load(session.id).state.player.heros_info.heros.filter(h=>h.conf_id===108001).length,1);
+}finally{store.close();}});
 test('task prerequisites use authoritative state, not callback assertions',()=>{const state={player:{basic_info:{lv:2}},taskRecords:[]};const level={conditionId:2004,__type_TaskConditionBaseData:{__type_TaskCondLevelData:{level:3}}};assert.equal(conditionValue(level,state),0);state.player.basic_info.lv=3;assert.equal(conditionValue(level,state),1);assert.equal(conditionValue({conditionId:2525},state),0);assert.throws(()=>new TaskGraphs(tables).get(-1));});

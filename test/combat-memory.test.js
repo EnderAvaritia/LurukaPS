@@ -1,3 +1,4 @@
+import {populateParty} from "./party-fixture.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -17,7 +18,7 @@ test('high-frequency combat reports stay in memory until a critical request or s
  const call=(name,value={})=>{const e=protocol.byName.get('CSProto'+name);return game.dispatch(session,{id:e.id,seq:seq++,payload:protocol.encode(e.req,value)});};
  const database=()=>store.db.prepare('select state,revision from players where account_id=?').get(session.id);
  try{
-  call('EnterGame',{open_id:'combat-memory'});
+  call('EnterGame',{open_id:'combat-memory'});store.transact(session.id,0,populateParty);
   call('EnterWorldMap',{map_id:100,point_id:10045});
   const id='216172782118283809',hero=store.load(session.id).state.player.heros_info.heros[0].guid;
   const before=database(),count=store.db.prepare('select count(*) n from request_log').get().n;

@@ -1,4 +1,5 @@
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import {populateParty} from './party-fixture.js';
 import test from 'node:test';import assert from 'node:assert/strict';import net from 'node:net';import {once} from 'node:events';
 import {configuration} from '../src/config.js';import {startServer} from '../src/server.js';import {FrameReader,encodeFrame} from '../src/wire.js';
 test('real TCP login, fragmented requests, heartbeat, HTTP discovery, error isolation',async()=>{
@@ -15,7 +16,7 @@ test('real TCP login, fragmented requests, heartbeat, HTTP discovery, error isol
  socket.write(encodeFrame({id:65500,seq:90002}));assert.equal((await response(65500)).error,1021);
  socket.write(send('Ping',{client_ts:'123456789012345678'},90003));assert.equal(server.protocol.decode('SCPing',(await response(503)).payload).client_ts,'123456789012345678');
  const pid=server.protocol.decode('SCEnterGame',result.payload).player_id;
- server.store.transact(pid,0,s=>{s.player.basic_info.gold=100;s.player.sbag_infos.items=[{itemid:400000,itemnum:2}];});
+ server.store.transact(pid,0,s=>{populateParty(s);s.player.basic_info.gold=100;s.player.sbag_infos.items=[{itemid:400000,itemnum:2}];});
  const hero=server.store.load(pid).state.player.heros_info.heros[0];const upgrade=send('LvUpHero',{hero_id:hero.guid,items:[{item_id:400000,item_num:1}]},90004);
  socket.write(upgrade);const first=await response(6001);assert.equal(first.error,0);const after=server.store.load(pid);
  socket.write(upgrade);const repeated=await response(6001);assert.deepEqual(repeated,first);assert.deepEqual(server.store.load(pid),after);

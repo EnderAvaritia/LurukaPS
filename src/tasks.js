@@ -22,6 +22,7 @@ export function conditionValue(condition,state,context) {
  if(condition.conditionId===2504){const id=base.__type_TaskCondGuideData?.guideId;return state.player.guide_infos?.infos?.some(g=>g.id===id&&g.complete)?1:0;}
  if([2508,2526].includes(condition.conditionId)&&context)return state.taskEvents?.[deliveryKey(state,context.taskId,context.nodeId,context.index)]??0;
  if([2501,2513,2514].includes(condition.conditionId))return deliveryComplete(state,condition,context)?1:0;
+ if(condition.conditionId===2519&&base.__type_TaskCondInSceneData){const scene=base.__type_TaskCondInSceneData.sceneId;return Number.isInteger(scene)&&scene>0&&state.world.map_id===scene?1:0;}
  if([1001,2500,2519,2520,2512].includes(condition.conditionId)&&context){const data=base.__type_TaskCondNPCTriggerData??base.__type_TaskCondActiveNPCTriggerData??base.__type_TaskCondEnemiesGroupData??base.__type_TaskCondPhotoSceneData??base.__type_TaskCondPackageDownloadCompleteData;return (state.taskEvents?.[deliveryKey(state,context.taskId,context.nodeId,context.index)]??0)>=Math.max(1,Number(data?.count)||1)?1:0;}
  if(condition.conditionId===2506){const d=base.__type_TaskCondComplateStoryData;return d&&Object.values(state.storyWatches??{}).some(w=>w.story_id===d.storyId&&w.tag===(d.storyTag??0))?1:0;}
  // Server-owned event counters are not accepted from a TaskClientAfter request.
@@ -78,7 +79,6 @@ export function reconcileTaskBefore(tables,graph,task,node,state){
  node.client_before=true;return true;
 }
 
-
 export function refreshTaskProgress(tables,state){
  let graphs=automaticGraphs.get(tables);if(!graphs){graphs=new TaskGraphs(tables);automaticGraphs.set(tables,graphs);}
  const changed=[];
@@ -89,7 +89,7 @@ export function refreshTaskProgress(tables,state){
     if(!d||d.checkNameType!==5||d.count!==1||base.mapData?.sceneId!==state.world.map_id||state.combat?.map_id!==state.world.map_id)return;
     let world=worldCatalogs.get(tables);if(!world){world=new WorldObjectCatalog(tables);worldCatalogs.set(tables,world);}
     const row=world.find('worldmap_'+state.world.map_id,d.npcId),group=row&&tables.find('world_enemy_group',row.expandId),enemies=String(group?.enemyList??'').split('|').filter(Boolean);
-    if(enemies.length&&enemies.every((_,slot)=>{const e=state.combat.entities[((3n<<56n)|(BigInt(slot)<<32n)|BigInt(d.npcId)).toString()];return e?.object_id===d.npcId&&e.slot===slot&&e.hp===0;})){state.taskEvents??={};state.taskEvents[deliveryKey(state,task.task_id,node.node_id,index)]=1;}
+    if(enemies.length&&enemies.every((_,slot)=>{const uuid=((3n<<56n)|(BigInt(slot)<<32n)|BigInt(d.npcId)).toString(),e=state.combat.entities[uuid];return e?.object_id===d.npcId&&e.slot===slot&&e.hp===0;})){state.taskEvents??={};state.taskEvents[deliveryKey(state,task.task_id,node.node_id,index)]=1;}
     return;
    }
    if(q.conditionId!==2520||!node.client_before)return;

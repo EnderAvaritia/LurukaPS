@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {randomInt} from 'node:crypto';
 import {initialPetSkills} from './skills.js';import {ensure} from './handlers/common.js';
 import {pairs} from './battle.js';
 import {initialPetComprehension,repairPetComprehension} from './pet-comprehension.js';
@@ -79,4 +80,29 @@ export function createPets(tables,state,configId,count,builderRuleId=1001){const
  let sequence=state.nextPetSequence||1;for(const pet of state.pets){const id=BigInt(pet.guid);if((id>>56n)===2n)sequence=Math.max(sequence,Number(id&0xffffffffn)+1);}ensure(Number.isSafeInteger(sequence)&&sequence+count-1<=0xffffffff,'Pet identity space exhausted');
  const created=[];for(let i=0;i<count;i++){const guid=((2n<<56n)|(BigInt(configId)<<32n)|BigInt(sequence++)).toString();const pet=petData(tables,configId,guid,slots[i],builderRuleId);created.push(pet);const box=Math.floor(slots[i]/100);if(!state.petBoxes.some(b=>b.id===box))state.petBoxes.push({id:box,box_name:Buffer.from(`奇波小屋${box}`).toString('base64')});}
  state.pets.push(...created);state.nextPetSequence=sequence;state.petRevision=(state.petRevision||0)+1;return created;
+}
+export function createCustomizedPets(tables,state,customizedId,count){
+ const config=tables.find('pet_customized',customizedId);
+ ensure(config&&tables.find('pet',config.petId)&&Number.isInteger(config.level)&&config.level>0&&config.skillType===0&&config.skillCountType===0&&[0,1].includes(config.talentDnaType)&&[0,1].includes(config.dnaType),'Unsupported customized pet configuration',1007);
+ const levels=new Map(String(config.petAttr||'').split('|').filter(Boolean).map(token=>token.split('#').map(Number)));
+ const attributes=tables.get('pet_learningenum').map(row=>row.attributeEnum);
+ ensure(levels.size===attributes.length&&attributes.every(id=>Number.isInteger(levels.get(id))),'Invalid customized pet aptitudes',1007);
+ const upgrades=tables.get('pet_talent_upgrade');
+ const comprehension=attributes.map(attr_id=>{
+  const level=levels.get(attr_id),row=upgrades.find(x=>x.attrId===attr_id&&x.level===level);
+  ensure(row&&Number.isInteger(row.InterA)&&Number.isInteger(row.InterB)&&row.InterA<=row.InterB,'Invalid customized pet aptitude value',1007);
+  const value=row.InterA===row.InterB?row.InterA:randomInt(row.InterA,row.InterB+1);
+  return {attr_id,value,level,init_level:level,cur_exp:0};
+ });
+ const fixedGenes=[...(config.talentDnaType===1?[config.talentDna]:[]),...(config.dnaType===1?String(config.dna||'').split('|').filter(Boolean).map(Number):[])];
+ const maxGenes=Number(tables.get('game').find(row=>row.title==='PET_DNA_MAX_NUM')?.value)||8;
+ ensure(new Set(fixedGenes).size===fixedGenes.length&&fixedGenes.length<=maxGenes&&fixedGenes.every(id=>Number.isInteger(id)&&tables.find('pet_dna',id)&&tables.find('skill',id)),'Invalid customized pet genes',1007);
+ const pets=createPets(tables,state,config.petId,count,config.builderRule||1001);
+ for(const pet of pets){
+  pet.customized_id=config.id;pet.lv=config.level;pet.comprehension=comprehension.map(row=>({...row}));
+  if(config.talentDnaType===1||config.dnaType===1){const ids=config.dnaType===1?fixedGenes:[...new Set([...fixedGenes,...pet.gene_infos.map(g=>g.gene_id)])].slice(0,maxGenes);pet.gene_infos=ids.map((gene_id,index)=>({pos:index+1,gene_id,gene_lv:1}));pet.gene_state=Math.ceil(ids.length/2);}
+  pet.can_not_release=config.isRelease===0;
+  pet.grade=petGrade(tables,pet);
+ }
+ return pets;
 }

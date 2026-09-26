@@ -4,3 +4,4 @@ data/*.sqlite*
 data/*.txt
 data/*.log
 .analysis-python/
+*.cpuprofile

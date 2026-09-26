@@ -1,0 +1,2292 @@
+{
+  "type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSM",
+  "nodes": [
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.EnterBattle"
+          },
+          {
+            "storyID": {
+              "_value": "100601 "
+            },
+            "isContinuous": {},
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          },
+          {
+            "bgmStageEventName": {
+              "_value": "Boss"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayBgm"
+          },
+          {
+            "bgmStageEventName": {
+              "_value": "A"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayBgm"
+          },
+          {
+            "isEnterBattle": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ServerPlayerBattleStateChange"
+          },
+          {
+            "isBattle": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PetToBattle"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.StaticFieldCenterGenerator"
+          },
+          {
+            "boardMountStatus": {
+              "_name": "(set)进战坐骑状态",
+              "_targetVariableID": "113192aa-3219-43d6-b9a8-38e7343fe467"
+            },
+            "boardLeaveWall": {
+              "_name": "(set)是否可以逃离战斗",
+              "_targetVariableID": "76ad81c6-9dd4-486c-af9b-e6ba886d8b3b"
+            },
+            "existEnterTimeline": {
+              "_name": "是否存在进战timeline",
+              "_targetVariableID": "abb26959-3ac7-43ed-a05c-1f054abe7f4e"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBoradEnemyGroupConfig"
+          },
+          {
+            "boardMountStatus": {
+              "_name": "(set)进战坐骑状态",
+              "_targetVariableID": "113192aa-3219-43d6-b9a8-38e7343fe467"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetPlayerMountStatus"
+          },
+          {
+            "boradWallGo": {
+              "_name": "空气墙",
+              "_targetVariableID": "707045e0-0505-4ab8-bdc8-fbbf52f167db"
+            },
+            "boradStaticColliderId": {
+              "_name": "静态地块id",
+              "_targetVariableID": "75f6eb34-cc38-4328-ac2d-84cd0ef2ed7e"
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CreateBattleFieldWall"
+          }
+        ]
+      },
+      "_transitionEvaluation": 1,
+      "_UID": "19da13bc-a3b6-49f0-a2f3-ecf11ccc2f8b",
+      "_position": {
+        "x": -2020.0,
+        "y": -1080.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "0"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "buffId": {
+              "_value": 107001250
+            },
+            "eEntityTypeData": {
+              "_value": [
+                1
+              ]
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffByEntityType"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1660.0,
+        "y": -940.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "1"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "state": 2,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.StartBattle"
+          },
+          {
+            "monsterEntityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CollectMonsterOrder"
+          },
+          {
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.HideBossHPBar"
+          },
+          {
+            "buffId": {
+              "_value": 107001228
+            },
+            "eEntityTypeData": {
+              "_value": [
+                1
+              ]
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffByEntityType"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.OperateMonsterAI"
+          },
+          {
+            "buffId": {
+              "_value": 107001250
+            },
+            "eEntityTypeData": {
+              "_value": [
+                1
+              ]
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffByEntityType"
+          },
+          {
+            "HeroIndex": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ForceSwitchHero"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1580.0,
+        "y": -780.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "2"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "intValue": {},
+            "floatValue": {
+              "_name": "DialogueId",
+              "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ReadBehaviorTreeBlackValue"
+          }
+        ]
+      },
+      "_repeatStateActions": true,
+      "_position": {
+        "x": -1240.0,
+        "y": -460.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "3"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100621"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -880.0,
+        "y": -800.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "4"
+    },
+    {
+      "_position": {
+        "x": 400.0,
+        "y": -340.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.EmptyState",
+      "$id": "5"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "valueA": {
+              "_name": "DialogueId",
+              "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetFloat"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1040.0,
+        "y": -240.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "6"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100622"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -720.0,
+        "y": -740.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "7"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100623"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -560.0,
+        "y": -700.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "8"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100624"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -420.0,
+        "y": -640.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "9"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "paramList": [
+              {
+                "paramId": 61009,
+                "paramValue": [
+                  3003
+                ]
+              }
+            ],
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.TaskGuideSeverAction"
+          },
+          {
+            "storyID": {
+              "_value": "100625"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -260.0,
+        "y": -580.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "10"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100626"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -50.0,
+        "y": -564.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "11"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "sign": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "buffId": {
+              "_value": 400011172
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffBySign"
+          },
+          {
+            "sign": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "buffId": {
+              "_value": 400011178
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffBySign"
+          },
+          {
+            "paramList": [
+              {
+                "paramId": 61009,
+                "paramValue": [
+                  3003
+                ]
+              }
+            ],
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.TaskGuideSeverAction"
+          }
+        ]
+      },
+      "_transitionEvaluation": 1,
+      "_position": {
+        "x": -140.0,
+        "y": 140.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "12"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "storyID": {
+              "_value": "100602"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": 20.0,
+        "y": 321.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "13"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "HeroIndex": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ForceSwitchHero"
+          },
+          {
+            "config": {
+              "changeType": 1,
+              "heroesData": [],
+              "petsData": [
+                {
+                  "pos": 1,
+                  "trialsId": 102
+                }
+              ],
+              "heroes": [
+                {}
+              ],
+              "pets": [
+                {}
+              ]
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ChangeTrialFormation"
+          }
+        ]
+      },
+      "_position": {
+        "x": 220.0,
+        "y": 180.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "14"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "waitTime": {
+              "_value": 1.0
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.Wait"
+          },
+          {
+            "buffId": {
+              "_value": 400011204
+            },
+            "eEntityTypeData": {
+              "_value": [
+                11
+              ]
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffByEntityType"
+          },
+          {
+            "guideId": {
+              "_value": 30117
+            },
+            "guideParams": [],
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.DoGuide"
+          }
+        ]
+      },
+      "_transitionEvaluation": 1,
+      "_position": {
+        "x": 473.0,
+        "y": 89.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "15"
+    },
+    {
+      "_position": {
+        "x": 180.0,
+        "y": 400.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.EmptyState",
+      "$id": "16"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100628"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -220.0,
+        "y": -120.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "17"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100629"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -380.0,
+        "y": -60.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "18"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100630"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -540.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "19"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100631"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -680.0,
+        "y": 80.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "20"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100632"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -840.0,
+        "y": 140.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "21"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100633"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -980.0,
+        "y": 200.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "22"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "sign": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "buffId": {
+              "_value": 400011169
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffBySign"
+          },
+          {
+            "storyID": {
+              "_value": "100634"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          },
+          {
+            "sign": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "buffId": {
+              "_value": 400011168
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffBySign"
+          },
+          {
+            "storyID": {
+              "_value": "100603"
+            },
+            "isContinuous": {},
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_transitionEvaluation": 1,
+      "_position": {
+        "x": -1160.0,
+        "y": 240.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "23"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "storyID": {
+              "_value": "100603"
+            },
+            "isContinuous": {
+              "_value": true
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          },
+          {
+            "boolVariable": {
+              "_name": "是否为结束剧情",
+              "_targetVariableID": "9ed3376b-de68-42f9-bbfb-a179b5745937"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.StoryKillReq"
+          }
+        ]
+      },
+      "_transitionEvaluation": 1,
+      "_position": {
+        "x": -1520.0,
+        "y": 400.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "24"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "overEntityId": {
+              "_name": "击杀目标id",
+              "_targetVariableID": "9ae0ef87-c9a8-4892-9ce2-2229a687df58"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetFightOverEntityId"
+          },
+          {
+            "boolVariable": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          }
+        ]
+      },
+      "_position": {
+        "x": -2360.0,
+        "y": -580.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "25"
+    },
+    {
+      "_position": {
+        "x": -2160.0,
+        "y": -400.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.EmptyState",
+      "$id": "26"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "bgmStageEventName": {
+              "_value": "Win"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayBgm"
+          },
+          {
+            "boradFinishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetGameFinishType"
+          }
+        ]
+      },
+      "_position": {
+        "x": -2460.0,
+        "y": -260.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "27"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "buffId": {
+              "_value": 400011171
+            },
+            "eEntityTypeData": {
+              "_value": [
+                1
+              ]
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.AddBuffByEntityType"
+          },
+          {
+            "state": 4,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          },
+          {
+            "bgmStageEventName": {
+              "_value": "None"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayBgm"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PetToBattle"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.RevertWorldTeam"
+          },
+          {
+            "finishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ExitBattle"
+          },
+          {
+            "state": 5,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          }
+        ]
+      },
+      "_position": {
+        "x": -2240.0,
+        "y": 100.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "28"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ServerPlayerBattleStateChange"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1920.0,
+        "y": 40.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "29"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          },
+          {
+            "config": {
+              "changeType": 3,
+              "heroesData": [],
+              "petsData": [
+                {
+                  "pos": 1
+                }
+              ],
+              "heroes": [],
+              "pets": []
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ChangeTrialFormation"
+          },
+          {
+            "boolVariable": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "setTo": 0,
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          },
+          {
+            "boolVariable": {
+              "_name": "是否人物死亡",
+              "_targetVariableID": "d28669cc-41bb-45ea-977c-d2e2800bfda2"
+            },
+            "setTo": 0,
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CallShutdown"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.DestroyThis"
+          }
+        ]
+      },
+      "_position": {
+        "x": -2160.0,
+        "y": 520.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "30"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "finishType": -1,
+            "boradFinishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetGameFinishType"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1960.0,
+        "y": -300.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "31"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "storyID": {
+              "_value": "100627"
+            },
+            "isContinuous": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayStory"
+          }
+        ]
+      },
+      "_position": {
+        "x": -80.0,
+        "y": -180.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "32"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "HeroIndex": 1,
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ForceSwitchHero"
+          },
+          {
+            "guideId": {
+              "_value": 30012
+            },
+            "guideParams": [],
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.DoGuide"
+          }
+        ]
+      },
+      "_position": {
+        "x": 81.57806,
+        "y": -240.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "33"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "entityId": {
+              "_name": "EntityId",
+              "_targetVariableID": "1dee2494-eea0-4576-9ade-d3ee309e991d"
+            },
+            "blackBoardName": "Dialogue",
+            "valueType": 1,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBehaviorTreeBlackValue"
+          },
+          {
+            "paramList": [
+              {
+                "paramId": 61009,
+                "paramValue": [
+                  3002
+                ]
+              }
+            ],
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.TaskGuideSeverAction"
+          },
+          {
+            "guideId": {
+              "_value": 30016
+            },
+            "guideParams": [],
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.DoGuide"
+          }
+        ]
+      },
+      "_position": {
+        "x": 113.0,
+        "y": -440.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "34"
+    },
+    {
+      "_position": {
+        "x": -2540.0,
+        "y": -300.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.EmptyState",
+      "$id": "35"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "overEntityId": {
+              "_name": "击杀目标id",
+              "_targetVariableID": "9ae0ef87-c9a8-4892-9ce2-2229a687df58"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetFightOverEntityId"
+          },
+          {
+            "pauseInput": {
+              "_value": true
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.BattlePauseInput"
+          },
+          {
+            "overEnttiyId": {
+              "_name": "击杀目标id",
+              "_targetVariableID": "9ae0ef87-c9a8-4892-9ce2-2229a687df58"
+            },
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.FinalKillEffectPlay"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.BattleEndTimelinePlay"
+          },
+          {
+            "bgmStageEventName": {
+              "_value": "Win"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayBgm"
+          },
+          {
+            "pauseInput": {},
+            "_isDisabled": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.BattlePauseInput"
+          },
+          {
+            "boradFinishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetGameFinishType"
+          }
+        ]
+      },
+      "_position": {
+        "x": -2640.0,
+        "y": -200.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "36"
+    },
+    {
+      "_position": {
+        "x": -2340.0,
+        "y": -780.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.AnyState",
+      "$id": "37"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "boolVariable": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1900.0,
+        "y": -520.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "38"
+    },
+    {
+      "_actionList": {
+        "executionMode": 1,
+        "actions": [
+          {
+            "boolVariable": {
+              "_name": "是否人物死亡",
+              "_targetVariableID": "d28669cc-41bb-45ea-977c-d2e2800bfda2"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1780.0,
+        "y": -400.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "39"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "state": 4,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          },
+          {
+            "bgmStageEventName": {
+              "_value": "A"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PlayBgm"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.PetToBattle"
+          },
+          {
+            "finishType": 1,
+            "boradFinishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetGameFinishType"
+          },
+          {
+            "finishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ExitBattle"
+          },
+          {
+            "state": 5,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1700.0,
+        "y": -220.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "40"
+    },
+    {
+      "_actionList": {
+        "actions": [
+          {
+            "boolVariable": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Actions.SetBoolean"
+          },
+          {
+            "finishType": 2,
+            "boradFinishType": {
+              "_name": "结束方式",
+              "_targetVariableID": "d9be5bf7-c255-42e9-bc29-585b1e93987f"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetGameFinishType"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.ServerBattleEscape"
+          }
+        ]
+      },
+      "_position": {
+        "x": -2840.0,
+        "y": -20.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.ActionState",
+      "$id": "41"
+    },
+    {
+      "_conditionList": {
+        "conditions": [
+          {
+            "state": 5,
+            "_invert": true,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckBattleFieldState"
+          }
+        ]
+      },
+      "_actionList": {
+        "actions": [
+          {
+            "state": 6,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.SetBattleFieldFsmState"
+          }
+        ]
+      },
+      "_position": {
+        "x": -1380.0,
+        "y": -180.0
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.OnFSMExit"
+    }
+  ],
+  "connections": [
+    {
+      "_condition": {
+        "configId": 107001,
+        "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckHeroIsInTeam"
+      },
+      "_sourceNode": {
+        "$ref": "0"
+      },
+      "_targetNode": {
+        "$ref": "1"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckAllMonsterToBattle"
+      },
+      "_sourceNode": {
+        "$ref": "1"
+      },
+      "_targetNode": {
+        "$ref": "2"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "2"
+      },
+      "_targetNode": {
+        "$ref": "3"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 100.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "4"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 200.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "7"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 300.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "8"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 400.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "9"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 500.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "10"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1200.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "11"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1600.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "12"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 600.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "17"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 700.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "18"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 800.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "19"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 900.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "20"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1000.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "21"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1100.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "22"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1400.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "23"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1300.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "32"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 1700.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "33"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "DialogueId",
+          "_targetVariableID": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87"
+        },
+        "valueB": {
+          "_value": 2000.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckFloat"
+      },
+      "_sourceNode": {
+        "$ref": "3"
+      },
+      "_targetNode": {
+        "$ref": "34"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "4"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "5"
+      },
+      "_targetNode": {
+        "$ref": "6"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "6"
+      },
+      "_targetNode": {
+        "$ref": "3"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "7"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "8"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "9"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "10"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "11"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "12"
+      },
+      "_targetNode": {
+        "$ref": "13"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "timeout": {
+          "_value": 5.0
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.Timeout"
+      },
+      "_sourceNode": {
+        "$ref": "13"
+      },
+      "_targetNode": {
+        "$ref": "14"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "13"
+      },
+      "_targetNode": {
+        "$ref": "16"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "14"
+      },
+      "_targetNode": {
+        "$ref": "15"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "15"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "16"
+      },
+      "_targetNode": {
+        "$ref": "14"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "17"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "18"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "19"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "20"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "21"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "22"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "23"
+      },
+      "_targetNode": {
+        "$ref": "24"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "24"
+      },
+      "_targetNode": {
+        "$ref": "25"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "25"
+      },
+      "_targetNode": {
+        "$ref": "26"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "是否为怪物死亡的退出",
+          "_targetVariableID": "60dc9e27-5b0c-4fc9-a239-5234b37e812a"
+        },
+        "valueB": {
+          "_value": true
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+      },
+      "_sourceNode": {
+        "$ref": "26"
+      },
+      "_targetNode": {
+        "$ref": "27"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "是否为怪物死亡的退出",
+          "_targetVariableID": "60dc9e27-5b0c-4fc9-a239-5234b37e812a"
+        },
+        "valueB": {},
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+      },
+      "_sourceNode": {
+        "$ref": "26"
+      },
+      "_targetNode": {
+        "$ref": "31"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "27"
+      },
+      "_targetNode": {
+        "$ref": "28"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "28"
+      },
+      "_targetNode": {
+        "$ref": "29"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "29"
+      },
+      "_targetNode": {
+        "$ref": "30"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "31"
+      },
+      "_targetNode": {
+        "$ref": "28"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "32"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "33"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "34"
+      },
+      "_targetNode": {
+        "$ref": "5"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "需要战斗退出动效",
+          "_targetVariableID": "d5412738-b4a3-4c26-85ab-1239daa4f092"
+        },
+        "valueB": {
+          "_value": true
+        },
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+      },
+      "_sourceNode": {
+        "$ref": "35"
+      },
+      "_targetNode": {
+        "$ref": "36"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "valueA": {
+          "_name": "需要战斗退出动效",
+          "_targetVariableID": "d5412738-b4a3-4c26-85ab-1239daa4f092"
+        },
+        "valueB": {},
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+      },
+      "_sourceNode": {
+        "$ref": "35"
+      },
+      "_targetNode": {
+        "$ref": "27"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "36"
+      },
+      "_targetNode": {
+        "$ref": "28"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "conditions": [
+          {
+            "state": 2,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckBattleFieldState"
+          },
+          {
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckAllHeroDead"
+          },
+          {
+            "valueA": {
+              "_name": "是否人物死亡",
+              "_targetVariableID": "d28669cc-41bb-45ea-977c-d2e2800bfda2"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+          },
+          {
+            "valueA": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+          },
+          {
+            "valueA": {
+              "_name": "是否为结束剧情",
+              "_targetVariableID": "9ed3376b-de68-42f9-bbfb-a179b5745937"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+          }
+        ],
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.ConditionList"
+      },
+      "_sourceNode": {
+        "$ref": "37"
+      },
+      "_targetNode": {
+        "$ref": "38"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "conditions": [
+          {
+            "needLeaveEffect": {
+              "_name": "需要战斗退出动效",
+              "_targetVariableID": "d5412738-b4a3-4c26-85ab-1239daa4f092"
+            },
+            "isMonsterDead": {
+              "_name": "是否为怪物死亡的退出",
+              "_targetVariableID": "60dc9e27-5b0c-4fc9-a239-5234b37e812a"
+            },
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckAllMonsterLeaveBattle"
+          },
+          {
+            "valueA": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+          },
+          {
+            "valueA": {
+              "_name": "是否为结束剧情",
+              "_targetVariableID": "9ed3376b-de68-42f9-bbfb-a179b5745937"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+          }
+        ],
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.ConditionList"
+      },
+      "_sourceNode": {
+        "$ref": "37"
+      },
+      "_targetNode": {
+        "$ref": "25"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_condition": {
+        "conditions": [
+          {
+            "state": 3,
+            "$type": "Lens.Gameplay.Modules.BigWorld.CanvasNodes.CheckBattleFieldState"
+          },
+          {
+            "valueA": {
+              "_name": "是否退出战斗",
+              "_targetVariableID": "a407408f-149d-4182-b401-9017c3162d4f"
+            },
+            "valueB": {},
+            "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Tasks.Conditions.CheckBoolean"
+          }
+        ],
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.ConditionList"
+      },
+      "_sourceNode": {
+        "$ref": "37"
+      },
+      "_targetNode": {
+        "$ref": "41"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "38"
+      },
+      "_targetNode": {
+        "$ref": "39"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "39"
+      },
+      "_targetNode": {
+        "$ref": "40"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "40"
+      },
+      "_targetNode": {
+        "$ref": "29"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    },
+    {
+      "_sourceNode": {
+        "$ref": "41"
+      },
+      "_targetNode": {
+        "$ref": "28"
+      },
+      "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.StateMachines.FSMConnection"
+    }
+  ],
+  "canvasGroups": [],
+  "localBlackboard": {
+    "_variables": {
+      "是否退出战斗": {
+        "_name": "是否退出战斗",
+        "_id": "a407408f-149d-4182-b401-9017c3162d4f",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "是否人物死亡": {
+        "_name": "是否人物死亡",
+        "_id": "d28669cc-41bb-45ea-977c-d2e2800bfda2",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "结束方式": {
+        "_name": "结束方式",
+        "_id": "d9be5bf7-c255-42e9-bc29-585b1e93987f",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "击杀目标id": {
+        "_name": "击杀目标id",
+        "_id": "9ae0ef87-c9a8-4892-9ce2-2229a687df58",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "空气墙": {
+        "_name": "空气墙",
+        "_id": "707045e0-0505-4ab8-bdc8-fbbf52f167db",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+      },
+      "静态地块id": {
+        "_name": "静态地块id",
+        "_id": "75f6eb34-cc38-4328-ac2d-84cd0ef2ed7e",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "槽位数据": {
+        "_value": [],
+        "_name": "槽位数据",
+        "_id": "2560b75d-73cf-4c6a-b739-7ab48d71dd09",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Collections.Generic.List`1[[System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "波次怪物数据": {
+        "_name": "波次怪物数据",
+        "_id": "d9fdba1e-0247-43b3-8733-fcad5abb52bb",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Collections.Generic.List`1[[System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "(set)是否可以逃离战斗": {
+        "_value": true,
+        "_name": "(set)是否可以逃离战斗",
+        "_id": "76ad81c6-9dd4-486c-af9b-e6ba886d8b3b",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "(set)进战坐骑状态": {
+        "_name": "(set)进战坐骑状态",
+        "_id": "113192aa-3219-43d6-b9a8-38e7343fe467",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "是否存在进战timeline": {
+        "_name": "是否存在进战timeline",
+        "_id": "abb26959-3ac7-43ed-a05c-1f054abe7f4e",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "需要战斗退出动效": {
+        "_name": "需要战斗退出动效",
+        "_id": "d5412738-b4a3-4c26-85ab-1239daa4f092",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "是否为怪物死亡的退出": {
+        "_name": "是否为怪物死亡的退出",
+        "_id": "60dc9e27-5b0c-4fc9-a239-5234b37e812a",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "DialogueId": {
+        "_name": "DialogueId",
+        "_id": "cdaaa7e7-cdfd-486b-a1a6-cf0b13e77e87",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "EntityId": {
+        "_name": "EntityId",
+        "_id": "1dee2494-eea0-4576-9ade-d3ee309e991d",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "storyTeamSet": {
+        "_name": "storyTeamSet",
+        "_id": "611e0d87-4ec6-403f-a73b-12baa281b63d",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "是否为结束剧情": {
+        "_name": "是否为结束剧情",
+        "_id": "9ed3376b-de68-42f9-bbfb-a179b5745937",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"
+      },
+      "Entity": {
+        "_name": "Entity",
+        "_id": "4c1bfc38-1c64-4154-82ef-93541c6d3e8f",
+        "$type": "Lens.Gameplay.Modules.BigWorld.NodeCanvas.Framework.Variable`1[[Lens.Gameplay.Modules.BigWorld.EntityWrap, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+      }
+    }
+  }
+}

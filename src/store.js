@@ -48,9 +48,12 @@ export class Store {
     SELECT CAST(json_extract(state,'$.chatWorldRoom') AS INTEGER) AS room FROM players
     UNION ALL SELECT CAST(target_id AS INTEGER) FROM chat_messages WHERE chat_type=2
   ) WHERE room BETWEEN 1 AND 4294967295`).get().count;}
-  transact(id,messageId,fn,{defer=false}={}) {
+  transact(id,messageId,fn,{defer=false,fork}={}) {
     if(defer){
-      const {state,revision}=this.load(id),result=fn(state);
+      const pending=this.pending.get(id),row=pending?null:this.playerById.get(id);
+      if(!pending&&!row)throw Error('Player not found');
+      const base=pending?.state??JSON.parse(row.state),revision=pending?.revision??row.revision;
+      const state=fork?fork(base):structuredClone(base),result=fn(state);
       if(result?.then)throw Error('Asynchronous player transaction is forbidden');
       this.pending.set(id,{state,revision});return result;
     }

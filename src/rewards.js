@@ -1,15 +1,18 @@
-import {createPets} from './pets.js';
+import {createPets,createCustomizedPets} from './pets.js';
 import {addHomeBuildings} from './home.js';
 import {ensure} from './handlers/common.js';import {addItems} from './inventory.js';import {createEggs} from './eggs.js';
 import {syncCurrencyMirrors} from './currency.js';
+import {heroData} from './player.js';
 export function parseRewards(value,allowZero=false){if(!value)return [];return String(value).split('|').filter(Boolean).map(token=>{const [itemtype,itemid,itemnum,...rest]=token.split('#').map(Number);ensure(!rest.length&&[itemtype,itemid].every(n=>Number.isSafeInteger(n)&&n>0)&&Number.isSafeInteger(itemnum)&&itemnum>=(allowZero?0:1)&&itemnum<=0xffffffff,'Malformed reward configuration',1007);return {itemtype,itemid,itemnum};});}
 export function grantRewards(tables,state,rewards,depth=0) {
  ensure(depth<=100,'Reward recursion limit',1007);const granted=[];
  for(const reward of rewards){
   const {itemtype,itemid,itemnum}=reward;
   ensure([itemtype,itemid,itemnum].every(x=>Number.isSafeInteger(x)&&x>0)&&itemnum<=0xffffffff,'Invalid reward quantity');
+  if(itemtype===1){ensure(itemnum===1&&tables.find('hero',itemid)?.isUsable===1,'Unknown or nonunique reward hero',1007);const heroes=state.player.heros_info.heros;let hero=heroes.find(h=>h.conf_id===itemid);if(!hero){hero=heroData(itemid,state.player.basic_info.id);ensure(!heroes.some(h=>h.guid===hero.guid),'Reward hero identity collision',1007);heroes.push(hero);}granted.push({...reward,guid:hero.guid});continue;}
   if(itemtype===3){ensure(tables.find('common_item',itemid),'Unknown reward item',1007);addItems(state,[reward]);}
   else if(itemtype===5){const pets=createPets(tables,state,itemid,itemnum);granted.push(...pets.map(p=>({itemtype:5,itemid,itemnum:1,guid:p.guid})));continue;}
+  else if(itemtype===30){const pets=createCustomizedPets(tables,state,itemid,itemnum);granted.push(...pets.map(p=>({itemtype:30,itemid,itemnum:1,guid:p.guid})));continue;}
   else if(itemtype===9){ensure(tables.find('soulessence',itemid),'Unknown equipment',1007);const bag=state.player.soulessence_infos.soulessences;ensure(itemnum<=1000&&bag.length+itemnum<=10000,'Equipment bag limit');let next=Math.max(state.nextEssenceGuid??1,...bag.map(e=>e.guid+1));ensure(next+itemnum-1<=0xffffffff,'Equipment identity space exhausted');for(let i=0;i<itemnum;i++){const guid=next++;bag.push({guid,id:itemid,lv:1,rank:1,advance:1,exp:0,lock:true,wear_hero:'0'});granted.push({itemtype,itemid,itemnum:1,guid:String(guid)});}state.nextEssenceGuid=next;continue;}
   else if(itemtype===25){ensure(tables.find('mount_saddle',itemid),'Unknown mount saddle',1007);state.mountSaddles??=tables.get('mount_saddle').map(r=>r.id);if(!state.mountSaddles.includes(itemid))state.mountSaddles.push(itemid);}
   else if(itemtype===28){ensure(tables.find('library_readings',itemid),'Unknown reading',1007);const books=state.readingBooks??={};if(books[itemid])continue;books[itemid]={book_id:itemid,book_state:0};granted.push({itemtype,itemid,itemnum:1});continue;}

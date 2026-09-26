@@ -19,4 +19,5 @@ test('configured task106009 grants free diamond and gold in both wallet fields b
  const packets=f.call(f.session,'TaskFinish',{u32:106009}),state=f.state(),sync=packets.find(p=>p.id===protocol.byName.get('CSProtoSyncPlayerData').id),reply=packets.find(p=>p.id===9852);
  assert(sync&&reply&&packets.indexOf(sync)<packets.indexOf(reply));const wire=protocol.decode('PlayerData',sync.payload);
  assert.equal(state.player.basic_info.diamond,60);assert.equal(state.player.basic_info.gold,1800);assert.equal(currency(state,1),'60');assert.equal(currency(state,2),'1800');assert.equal(wire.attr_infos.attrs.find(a=>a.attr_id===1).attr_val,'60');assert.equal(wire.attr_infos.attrs.find(a=>a.attr_id===2).attr_val,'1800');
+ assert.equal(state.player.basic_info.lv,3);assert.equal(state.player.basic_info.exp,200);assert.equal(wire.basic_info.lv,3);assert.equal(wire.basic_info.exp,200);
  }finally{f.store.close();}});

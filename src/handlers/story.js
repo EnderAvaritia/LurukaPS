@@ -1,5 +1,6 @@
 import {ensure} from './common.js';
-export function registerStory(on){on('SetStoryId',(c,r)=>{
+import {registerStoryBattle} from '../story-battle.js';
+export function registerStory(on,tables){registerStoryBattle(on,tables);on('SetStoryId',(c,r)=>{
  const config=c.tables.find('story',r.story_id);ensure(config,'Unknown story');const type=r.story_type??0;ensure(Number.isInteger(type)&&type>=0&&type<=4,'Unknown story type');
  const map=typeof config.mapId==='number'?config.mapId:config.mapId_id;ensure(!map||map===c.state.world.map_id,'Story belongs to another map');
  c.state.storyIds??=[];if(!c.state.storyIds.includes(r.story_id))c.state.storyIds.push(r.story_id);

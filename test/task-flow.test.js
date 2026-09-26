@@ -65,6 +65,44 @@ test('CBT3 indexed NPC events update only matching active condition and persist 
  t.call('ClientBehaviourRecord',event);t.login();assert.equal(t.state().tasks[0].nodes[0].node_values[0],1);
  t.call('MultiTaskClientCondAfter',{task_params:[{task_id:106001,node_id:8,indexes:[0]}]});t.call('MultiTaskClientAfter',{task_params:[{task_id:106001,node_id:8}]});assert.equal(t.state().tasks[0].nodes[0].node_id,62);
  }finally{t.store.close();}});
+test('leaving Luluka home satisfies the configured destination scene and advances quest 106009',()=>{const t=setup();try{
+ const graph=new TaskGraphs(tables).get(106009),q={task_id:106009,node_id:4};
+ t.edit(s=>{s.world.map_id=200;s.world.point_id=20004;s.taskRecords=[{task_id:106001,count:1,time:1},{task_id:106002,count:1,time:2}];s.taskEpochs[106009]=1;s.tasks=[{task_id:106009,nodes:[{...makeNode(graph,4,s),node_values:[0],client_before:true,client_cond_after:[false]}],finish_nodes:[1,3],reward_nodes:[],client_trace:true}];});
+ const sync=t.login().find(p=>p.id===9853),task=protocol.decode('SCTaskSync',sync.payload).tasks.find(x=>x.task_id===106009);
+ assert.equal(t.state().world.map_id,200);
+ assert.equal(task.nodes[0].node_values[0],1);
+ assert.throws(()=>t.call('ClientBehaviourRecord',{key:2519,args:[251,106009,4,0,1]}),/target/);
+ t.call('ClientBehaviourRecord',{key:2519,args:[200,106009,4,0,1]});
+ t.call('TaskClientCondAfter',{...q,indexes:[0]});t.call('TaskClientAfter',q);
+ assert.equal(t.state().tasks[0].nodes[0].node_id,7);
+ const state=t.state();t.call('ClientBehaviourRecord',{key:2519,args:[200,106009,4,0,1]});assert.deepEqual(t.state(),state);
+ }finally{t.store.close();}});
+test('quest 106009 grants its configured hero then 900 experience and unlocks the next quest',()=>{const t=setup();try{
+ const graph=new TaskGraphs(tables).get(106009);
+ t.edit(s=>{s.world.map_id=200;s.world.point_id=200001;s.taskRecords=[{task_id:106001,count:1,time:1},{task_id:106002,count:1,time:2}];s.taskEpochs[106009]=1;s.tasks=[{task_id:106009,nodes:[{...makeNode(graph,8,s),client_before:true}],finish_nodes:[1,3,4,7],reward_nodes:[],client_trace:true}];});
+ t.call('ClientBehaviourRecord',{key:2519,args:[106009008,106009,8,0,1]});
+ t.call('TaskClientCondAfter',{task_id:106009,node_id:8,indexes:[0]});t.call('TaskClientAfter',{task_id:106009,node_id:8});
+ assert.equal(t.state().tasks[0].nodes[0].node_id,10);
+ t.call('EnterWorldMap',{map_id:100,point_id:10045,task_id:106009,node_id:10,client_trans_data:2});
+ t.call('TaskClientBefore',{task_id:106009,node_id:10});t.call('ClientBehaviourRecord',{key:2519,args:[100,106009,10,0,1]});
+ t.call('TaskClientCondAfter',{task_id:106009,node_id:10,indexes:[0]});t.call('TaskClientAfter',{task_id:106009,node_id:10});
+ const hero=t.state().player.heros_info.heros.filter(h=>h.conf_id===108001);assert.equal(hero.length,1);assert.equal(t.state().tasks[0].nodes[0].node_id,9);
+ t.call('TaskClientAfter',{task_id:106009,node_id:10});assert.equal(t.state().player.heros_info.heros.filter(h=>h.conf_id===108001).length,1);
+ const packets=t.call('TaskFinish',{u32:106009}),basic=t.state().player.basic_info;
+ assert.equal(basic.lv,3);assert.equal(basic.exp,200);assert(t.state().tasks.some(q=>q.task_id===106010));
+ const sync=packets.find(p=>p.id===5008&&protocol.decode('PlayerData',p.payload).basic_info?.lv===3);assert(sync);assert.equal(protocol.decode('PlayerData',sync.payload).basic_info.exp,200);
+ }finally{t.store.close();}});
+test('quest 106010 node78 grants configured customized pet before advancing',()=>{const t=setup();try{
+ const graph=new TaskGraphs(tables).get(106010),q={task_id:106010,node_id:78};
+ t.edit(s=>{s.world.map_id=100;s.taskRecords=[{task_id:106001,count:1,time:1},{task_id:106002,count:1,time:2},{task_id:106009,count:1,time:3}];s.taskEpochs[106010]=1;s.taskEvents??={};s.taskEvents['106010:1:78:0']=1;s.tasks=[{task_id:106010,nodes:[{...makeNode(graph,78,s),client_before:true,client_cond_after:[true]}],finish_nodes:[3,74],reward_nodes:[],client_trace:true}];});
+ const before=t.state().pets.length,packets=t.call('TaskClientAfter',q),state=t.state(),pet=state.pets.find(p=>p.customized_id===500072);
+ assert.equal(state.pets.length,before+1);assert.equal(pet.config_id,500072);assert.equal(pet.can_not_release,true);
+ assert.deepEqual(Object.fromEntries(pet.comprehension.map(x=>[x.attr_id,x.level])),{1:7,3:4,5:4,7:7,229:4,230:4});
+ assert.deepEqual(pet.gene_infos.map(x=>x.gene_id),[532048,533003,533036,533026,533008,533040,533001,533076]);
+ assert.equal(state.tasks[0].nodes[0].node_id,149);assert(state.tasks[0].reward_nodes.includes(78));
+ const petSync=packets.findIndex(p=>p.id===6517),reply=packets.findIndex(p=>p.id===9862);assert(petSync>=0&&petSync<reply);
+ t.call('TaskClientAfter',q);assert.equal(t.state().pets.length,before+1);
+ }finally{t.store.close();}});
 test('invalid batch rolls back preceding callbacks; level unlocks do not reset active quests',()=>{const t=setup();try{
  const before=t.state();assert.throws(()=>t.call('MultiTaskClientBefore',{task_params:[{task_id:106001,node_id:5},{task_id:106001,node_id:999}]}));assert.deepEqual(t.state(),before);
  t.edit(s=>{s.player.basic_info.lv=25;unlockAutomaticTasks(tables,s,1);});assert(t.state().tasks.some(t=>t.task_id===400201));assert(!t.state().tasks.some(t=>t.task_id===400202));

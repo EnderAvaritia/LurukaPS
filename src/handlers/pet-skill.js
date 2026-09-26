@@ -1,4 +1,5 @@
 import {ensure,pet} from './common.js';
+import {isRetiredTrialActor} from '../trial-actors.js';
 export function skillFailureRate(tables,state,p){
  const suppression=p.suppress_lv??0,force=BigInt(state.player.attr_infos.attrs.find(a=>a.attr_id===22)?.attr_val??'0');
  ensure(Number.isInteger(suppression)&&suppression>=0&&force>=0n,'Invalid pet suppression state');
@@ -10,7 +11,8 @@ export function skillFailureRate(tables,state,p){
 }
 export function registerPetSkill(on){
  on('SkillFailVec',(c,r)=>{
-  const p=pet(c.state,r.unit_id),rate=skillFailureRate(c.tables,c.state,p),records=c.state.petSkillRolls??={};
+  if(isRetiredTrialActor(c.state,r.unit_id))return;
+  const p=c.state.trialGroup?.pets?.find(p=>p.guid===r.unit_id)??pet(c.state,r.unit_id),rate=skillFailureRate(c.tables,c.state,p),records=c.state.petSkillRolls??={};
   let record=records[p.guid];
   if(!c.requestKey||record?.request_key!==c.requestKey||record.rate!==rate){
    // The wire format leaves the batch size to the server; 32 is local policy.

@@ -19,6 +19,18 @@ test('independent summons preserve valid client IDs and reject another account n
  const hero=f.state().player.heros_info.heros[0].guid,id=((17n<<56n)|(1n<<32n)|BigInt(f.session.id)).toString();const request={unit_id:hero,summon_info:{unit_id:id,config_id:123,summon_type:3},verify_info:{battle_index:'7'}};assert.equal(f.call('CreateSummon',request)[0].data.unit_id,id);
  const before=f.store.load(f.session.id);assert.throws(()=>f.call('CreateSummon',{...request,verify_info:{battle_index:'8'},summon_info:{...request.summon_info,unit_id:(BigInt(id)+1n).toString()}}));assert.deepEqual(f.store.load(f.session.id),before);
 }finally{f.store.close();}});
+
+test('reconnecting permits restarted summon indices while preserving enemy HP',()=>{const f=fixture();try{
+ const [hero,other]=f.state().player.heros_info.heros;
+ const request={unit_id:hero.guid,summon_info:{config_id:300001,summon_type:1,skill_id:20011},verify_info:{battle_index:'4294967304'}};
+ const first=f.call('CreateSummon',request)[0].data.unit_id;
+ f.store.transact(f.session.id,0,s=>{s.combat.entities['enemy-fixture']={hp:82};});
+ const game=new Game(protocol,f.store,tables),session={},enter=protocol.byName.get('CSProtoEnterGame');
+ game.dispatch(session,{id:enter.id,seq:1,payload:protocol.encode(enter.req,{open_id:'world-combat'})});
+ const e=protocol.byName.get('CSProtoCreateSummon'),packets=game.dispatch(session,{id:e.id,seq:2,payload:protocol.encode(e.req,{...request,unit_id:other.guid,summon_info:{config_id:480056,summon_type:2,skill_id:10700161}})});
+ const second=protocol.decode(protocol.byId.get(packets[0].id).rsp,packets[0].payload).unit_id;
+ assert.notEqual(second,first);assert.equal(f.state().combat.summons[first],undefined);assert.equal(f.state().combat.entities['enemy-fixture'].hp,82);
+ }finally{f.store.close();}});
 test('fight break updates are local values, not skill cancellation or rewards',()=>{const f=fixture();try{
  const hero=f.state().player.heros_info.heros[0].guid;f.call('SkillStart',{unit_id:hero,skill:{skill_id:20011}});assert.deepEqual(f.call('FightBreak',{infos:[{tarId:hero,val:{val:17,chg_time_p:'9007199254740993'}}]}),[]);assert.equal(f.state().combat.breakValues[hero].val,17);assert(f.state().combat.skills[hero]);
 }finally{f.store.close();}});

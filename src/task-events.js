@@ -1,4 +1,4 @@
-import {TaskGraphs,activeTask,activeNode,nodeConditions,conditionValue,reconcileTaskBefore} from './tasks.js';
+import {TaskGraphs,activeTask,nodeConditions,conditionValue,reconcileTaskBefore} from './tasks.js';
 import {deliveryKey} from './task-delivery.js';
 import {ensure} from './handlers/common.js';
 import fs from 'node:fs';
@@ -41,18 +41,25 @@ export function recordTaskBehaviour(c,r){
  ensure(a.length===(photo?4:5)&&a.every(Number.isInteger),'Invalid task event arguments');
  const [target,taskId,nodeId,index,count]=photo?[0,...a]:a;
  ensure(count===1,'Invalid task event count');
- const graph=graphs.get(taskId),task=activeTask(c.state,taskId),node=activeNode(task,nodeId);
+ const graph=graphs.get(taskId),task=activeTask(c.state,taskId),node=task.nodes.find(n=>n.node_id===nodeId);
+ if(!node&&task.finish_nodes.includes(nodeId)){
+  const completed=nodeConditions(graph.nodes.get(nodeId))[index];
+  ensure(completed?.conditionId===r.key&&((c.state.taskEvents?.[deliveryKey(c.state,taskId,nodeId,index)]??0)>0||!!completed.__type_TaskConditionBaseData?.__type_TaskCondInSceneData),'Task event was not previously completed');
+  return true;
+ }
+ ensure(node,'Task node is not active');
  // The node is already active in server state; client_before acknowledges
  // its preceding actions and may arrive after a queued interaction event.
  // Recording this event does not acknowledge those actions or advance a node.
  const condition=nodeConditions(graph.nodes.get(nodeId))[index];
  ensure(condition&&condition.conditionId===r.key,'Task event condition mismatch');
  const base=condition.__type_TaskConditionBaseData??{};
- const data=base.__type_TaskCondNPCTriggerData??base.__type_TaskCondActiveNPCTriggerData??base.__type_TaskCondEnemiesGroupData??base.__type_TaskCondPhotoSceneData??base.__type_TaskCondPackageDownloadCompleteData;
+ const scene=base.__type_TaskCondInSceneData;
+ const data=scene??base.__type_TaskCondNPCTriggerData??base.__type_TaskCondActiveNPCTriggerData??base.__type_TaskCondEnemiesGroupData??base.__type_TaskCondPhotoSceneData??base.__type_TaskCondPackageDownloadCompleteData;
  ensure(data,'Task event configuration unavailable',1007);
- const map=base.mapData?.sceneId||data.sceneId||data.npcData?.sceneId||data.enemiesDatas?.sceneId;
+ const map=scene?.sceneId??(base.mapData?.sceneId||data.sceneId||data.npcData?.sceneId||data.enemiesDatas?.sceneId);
  ensure(!map||map===c.state.world.map_id,'Task event is in a different map');
- if(!photo){const expected=base.__type_TaskCondPackageDownloadCompleteData?0xffffffff:r.key===1001?data.npcId:r.key===2519&&data.isNowCreate?data.npcData?.createNpcId:data.createNpcId;ensure(Number.isSafeInteger(expected)&&expected===target,'Task event target mismatch');}
+ if(!photo){const expected=scene?.sceneId??(base.__type_TaskCondPackageDownloadCompleteData?0xffffffff:r.key===1001?data.npcId:r.key===2519&&data.isNowCreate?data.npcData?.createNpcId:data.createNpcId);ensure(Number.isSafeInteger(expected)&&expected===target,'Task event target mismatch');}
  // These reports attest client-owned interactions. They cannot grant items or
  // bypass exact-item submission, account-level or other server-owned conditions.
  const key=deliveryKey(c.state,taskId,nodeId,index),events=c.state.taskEvents??={};

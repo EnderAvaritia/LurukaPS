@@ -11,8 +11,30 @@ test('quick formation updates slots, control and simultaneous pet swaps before r
  const s=f.state(),[a,b]=s.player.heros_info.heros,[p,q]=s.pets;
  f.call('WearPet',{hero_guid:a.guid,pet_guid:p.guid});f.call('WearPet',{hero_guid:b.guid,pet_guid:q.guid});
  const packets=f.call('QuickChangeGroupInfo',{type:1,id:1,infos:[{hero_guid:b.guid,pet_guid:p.guid},{hero_guid:'0',pet_guid:'0'},{hero_guid:a.guid,pet_guid:q.guid}]});
- const now=f.state(),g=now.player.group_mgrs[0].groups[0];assert.deepEqual(g.heros.map(x=>x.hero_id),[b.guid,'0',a.guid]);assert.equal(now.player.heros_info.heros.find(h=>h.guid===a.guid).pet_id,q.guid);assert.equal(now.pets.find(x=>x.guid===p.guid).hero_id,b.guid);assert.equal(now.pets.find(x=>x.guid===q.guid).hero_id,a.guid);assert.equal(packets.at(-1).id,5981);assert(packets.slice(0,-1).some(p=>p.id===10009));
+ const now=f.state(),g=now.player.group_mgrs[0].groups[0];assert.deepEqual(g.heros.map(x=>x.hero_id),[b.guid,'0',a.guid]);assert.deepEqual(g.heros.map(x=>x.pet_id),[p.guid,'0',q.guid]);assert.equal(now.player.heros_info.heros.find(h=>h.guid===a.guid).pet_id,q.guid);assert.equal(now.pets.find(x=>x.guid===p.guid).hero_id,b.guid);assert.equal(now.pets.find(x=>x.guid===q.guid).hero_id,a.guid);assert.equal(packets.at(-1).id,5981);assert(packets.slice(0,-1).some(p=>p.id===10009));
  const before=f.store.load(f.session.id);for(const infos of [[{hero_guid:a.guid,pet_guid:p.guid},{hero_guid:b.guid,pet_guid:p.guid}],[{hero_guid:a.guid},{hero_guid:a.guid}],[{hero_guid:'0',pet_guid:p.guid}],[{hero_guid:a.guid,pet_guid:'999'}]]){assert.throws(()=>f.call('QuickChangeGroupInfo',{type:1,id:1,infos}));assert.deepEqual(f.store.load(f.session.id),before);}
+}finally{f.store.close();}});
+test('legacy two-pet formation is visible on login and a full save preserves both pets',()=>{const f=fixture();try{
+ const [a,b]=f.state().player.heros_info.heros,[p,q]=f.state().pets;
+ f.store.transact(f.session.id,0,s=>{const heroes=s.player.heros_info.heros,pets=s.pets,group=s.player.group_mgrs[0].groups[0];heroes[0].pet_id=p.guid;heroes[1].pet_id=q.guid;pets[0].hero_id=a.guid;pets[1].hero_id=b.guid;group.heros=[{hero_id:a.guid},{hero_id:b.guid},{hero_id:'0'}];group.control=a.guid;s.initialFormationVersion=2;});
+ const session={},entry=protocol.byName.get('CSProtoEnterGame'),packets=f.game.dispatch(session,{id:entry.id,seq:1,payload:protocol.encode(entry.req,{open_id:'logged-errors'})});
+ const wire=protocol.decode('SCEnterGame',packets.find(x=>x.id===5001).payload).data.group_mgrs[0].groups[0];
+ assert.deepEqual(wire.heros.map(x=>x.pet_id),[p.guid,q.guid,'0']);
+ assert.deepEqual(f.state().player.group_mgrs[0].groups[0].heros.map(x=>x.pet_id),[p.guid,q.guid,'0']);
+ f.call('QuickChangeGroupInfo',{type:1,id:1,infos:[{hero_guid:a.guid,pet_guid:p.guid},{hero_guid:b.guid,pet_guid:q.guid},{hero_guid:'0',pet_guid:'0'}]});
+ assert.deepEqual(f.state().player.group_mgrs[0].groups[0].heros.map(x=>x.pet_id),[p.guid,q.guid,'0']);
+ assert.equal(f.state().player.heros_info.heros.find(h=>h.guid===a.guid).pet_id,p.guid);
+ assert.equal(f.state().player.heros_info.heros.find(h=>h.guid===b.guid).pet_id,q.guid);
+}finally{f.store.close();}});
+test('equipping and reordering heroes keeps every normal formation pet slot in sync',()=>{const f=fixture();try{
+ const [a,b]=f.state().player.heros_info.heros,[p,q]=f.state().pets;
+ f.store.transact(f.session.id,0,s=>{const group=s.player.group_mgrs[0].groups[0];group.heros=[{hero_id:a.guid,pet_id:'0'},{hero_id:b.guid,pet_id:'0'},{hero_id:'0',pet_id:'0'}];group.control=a.guid;s.initialFormationVersion=2;});
+ f.call('WearPet',{hero_guid:a.guid,pet_guid:p.guid});const packets=f.call('WearPet',{hero_guid:b.guid,pet_guid:q.guid});
+ assert.deepEqual(f.state().player.group_mgrs[0].groups[0].heros.map(x=>x.pet_id),[p.guid,q.guid,'0']);
+ const heroSync=packets.findIndex(x=>x.id===5008&&x.data.heros_info?.heros?.length),groupSync=packets.findIndex(x=>x.id===5008&&x.data.group_mgrs?.length);
+ assert(heroSync>=0&&groupSync>heroSync);assert.deepEqual(packets[groupSync].data.group_mgrs[0].groups[0].heros.map(x=>x.pet_id),[p.guid,q.guid,'0']);
+ f.call('ChangeHeroGroupIndex',{type:1,group:{id:1,heros:[{hero_id:b.guid},{hero_id:a.guid},{hero_id:'0'}],control:b.guid}});
+ assert.deepEqual(f.state().player.group_mgrs[0].groups[0].heros.map(x=>x.pet_id),[q.guid,p.guid,'0']);
 }finally{f.store.close();}});
 test('logged state queries return stored lists and bounded telemetry without fake one-way replies',()=>{const f=fixture();try{
  assert.deepEqual(f.call('ChatGetIsolateList')[0].data,{isolates:[],lists:[]});assert.deepEqual(f.call('TitleGetList')[0].data,{preffix_title:[],suffix_title:[]});

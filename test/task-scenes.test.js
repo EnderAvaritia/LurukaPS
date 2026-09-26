@@ -20,8 +20,23 @@ test('same-scene point transport starts native player transfer flow with cmd19 a
  assert.equal(map.cmd,19);assert.equal(map.client_trans_data,73);assert.equal(map.map_id,102);assert.equal(f.state().world.point_id,10203);
  const entry=f.call('EnterWorldMap',{map_id:102});assert.equal(entry.find(p=>p.id===9103).data.cmd,256);
  }finally{f.store.close();}});
+test('prologue end node accepts its configured transfer to scene251 before TaskFinish',()=>{const f=setup();try{
+ const graph=new TaskGraphs(tables).get(106002);
+ f.edit(s=>{s.taskRecords=[{task_id:106001,count:1,time:1}];s.tasks=[{task_id:106002,nodes:[makeNode(graph,60,s)],finish_nodes:[1,56,65,61,58,63,62,57,59,64],reward_nodes:[]}];Object.assign(s.world,tables.position(tables.find('world_borthpos',10401)));delete s.pendingTaskScene;});
+ const before=f.state();assert.throws(()=>f.call('EnterWorldMap',{task_id:106002,node_id:60,map_id:100,point_id:10045}),/not configured/);assert.deepEqual(f.state(),before);
+ const packets=f.call('EnterWorldMap',{task_id:106002,node_id:60,map_id:251,point_id:25101,client_trans_data:2});assert.equal(f.state().world.map_id,251);assert.equal(f.state().world.point_id,25101);assert.equal(packets.find(p=>p.id===9103).data.map_id,251);
+ f.call('TaskFinish',{u32:106002});assert.equal(f.state().taskRecords.find(x=>x.task_id===106002).count,1);
+ }finally{f.store.close();}});
 test('CBT3 one-way WorldPointAck records flow completion without moving or rewarding twice',()=>{const f=setup();try{
  f.call('WorldPoint',{point_id:102002,client_trans_data:2});const before=f.state(),packets=f.call('WorldPointAck');assert.deepEqual(packets,[]);
  const after=f.state();assert.deepEqual(after.world.pos,before.world.pos);assert.equal(after.world.point_id,102002);assert.equal(after.world.last_point_ack.point_id,102002);assert.deepEqual(after.player.sbag_infos,before.player.sbag_infos);
  f.call('WorldPointAck');assert.deepEqual(f.state().world.pos,after.world.pos);
+ }finally{f.store.close();}});
+test('prologue active behavior3 emits the configured same-scene transfer without advancing the story',()=>{const f=setup();try{
+ const graph=new TaskGraphs(tables).get(106002);
+ f.edit(s=>{s.tasks=[{task_id:106002,nodes:[makeNode(graph,59,s)],finish_nodes:[1],reward_nodes:[]}];s.taskRecords=[{task_id:106001,count:1,time:1}];Object.assign(s.world,tables.position(tables.find('world_borthpos',10401)));s.world.pos.x+=800;});
+ const before=f.state(),packets=f.call('WorldMapActiveBehavior',{type:3}),map=packets.find(x=>x.id===9103).data;
+ assert.equal(map.cmd,19);assert.equal(map.map_id,104);assert.equal(f.state().world.point_id,10401);assert.deepEqual(f.state().world.pos,tables.position(tables.find('world_borthpos',10401)).pos);
+ assert.equal(f.state().tasks[0].nodes[0].node_id,59);assert.deepEqual(f.state().player.sbag_infos,before.player.sbag_infos);
+ const saved=f.state();assert.throws(()=>f.call('WorldMapActiveBehavior',{type:99}),/not implemented/);assert.deepEqual(f.state(),saved);
  }finally{f.store.close();}});
