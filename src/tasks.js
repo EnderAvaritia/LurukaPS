@@ -2,6 +2,7 @@ import {WorldObjectCatalog} from './world-objects.js';
 import {deliveryComplete,deliveryKey} from './task-delivery.js';
 import fs from 'node:fs';import path from 'node:path';
 import {ensure} from './handlers/common.js';
+import {guidedConditionValue,guidedRequirement} from './guided-conditions.js';
 export const asList=value=>value==null?[]:Array.isArray(value)?value:[value];
 export class TaskGraphs {
  constructor(tables,directory=path.resolve(tables.dir,'../Config/Task')){this.tables=tables;this.directory=directory;this.cache=new Map();}
@@ -20,6 +21,9 @@ export function conditionValue(condition,state,context) {
  if(condition.conditionId===2521){const d=base.__type_TaskCondEntityStatusData;if(!d||d.status!==1)return 0;const obj=state.worldObjects?.[`${d.sceneId}:${d.npcId}`];return obj&&(obj.complete||obj.state_data?.step===d.status)?1:0;}
  if(condition.conditionId===2505)return state.characterCustomized?1:0;
  if(condition.conditionId===2504){const id=base.__type_TaskCondGuideData?.guideId;return state.player.guide_infos?.infos?.some(g=>g.id===id&&g.complete)?1:0;}
+ if(condition.conditionId===2518)return guidedConditionValue(base.__type_TaskCondGuidedAchievementsData?.achievId,state);
+ if(condition.conditionId===2525){const d=base.__type_TaskCondCompletePlayableData,finish=state.playableFinishes?.[d?.playableId];return d&&finish&&(!base.mapData?.sceneId||finish.map_id===base.mapData.sceneId)?1:0;}
+ if(condition.conditionId===2523&&context){const group=base.__type_TaskCondPetCheckData?.petId;return Number.isInteger(group)&&state.taskPetChoices?.[context.taskId]===group?1:0;}
  if([2508,2526].includes(condition.conditionId)&&context)return state.taskEvents?.[deliveryKey(state,context.taskId,context.nodeId,context.index)]??0;
  if([2501,2513,2514].includes(condition.conditionId))return deliveryComplete(state,condition,context)?1:0;
  if(condition.conditionId===2519&&base.__type_TaskCondInSceneData){const scene=base.__type_TaskCondInSceneData.sceneId;return Number.isInteger(scene)&&scene>0&&state.world.map_id===scene?1:0;}
@@ -29,10 +33,25 @@ export function conditionValue(condition,state,context) {
  return 0;
 }
 export function nodeConditions(node){return asList((node.__type_TaskConditionNodeData??node.__type_TaskConditonBranchNodeData)?.conditionList);}
-export function conditionSatisfied(condition,value){return condition.__type_TaskConditionBaseData?.unneedCompleted===1||value>=(condition.conditionId===2526?2:1);}
+export function conditionSatisfied(condition,value){const required=condition.conditionId===2526?2:condition.conditionId===2518?guidedRequirement(condition.__type_TaskConditionBaseData?.__type_TaskCondGuidedAchievementsData?.achievId):1;return condition.__type_TaskConditionBaseData?.unneedCompleted===1||value>=required;}
 export function activeTask(state,id){const task=state.tasks.find(t=>t.task_id===id);ensure(task,'Task is not active');return task;}
 export function activeNode(task,id){const node=task.nodes.find(n=>n.node_id===id);ensure(node,'Task node is not active');return node;}
 export function makeNode(graph,id,state){const n=graph.nodes.get(id);ensure(n,'Dangling task graph edge',1007);const conditions=nodeConditions(n);return {node_id:id,node_values:conditions.map((c,index)=>conditionValue(c,state,{taskId:graph.config.id,nodeId:id,index})),client_before:false,client_cond_after:conditions.map(()=>false)};}
+export function advancePetChoiceBranch(graph,task,state){
+ let changed=false;
+ for(const node of [...task.nodes]){
+  const config=graph.nodes.get(node.node_id),conditions=nodeConditions(config),next=asList(config.nextNodeIdList);
+  if(config.nodeType!==34||!conditions.length||next.length!==conditions.length||!conditions.every(c=>c.conditionId===2523))continue;
+  const values=conditions.map((c,index)=>conditionValue(c,state,{taskId:task.task_id,nodeId:node.node_id,index}));
+  const matches=values.flatMap((value,index)=>value>0?[index]:[]);
+  if(matches.length!==1)continue;
+  const chosen=next[matches[0]];ensure(graph.nodes.has(chosen)&&!task.finish_nodes.includes(chosen),'Invalid pet-choice branch',1007);
+  task.nodes=task.nodes.filter(n=>n.node_id!==node.node_id);task.finish_nodes.push(node.node_id);
+  if(!task.nodes.some(n=>n.node_id===chosen))task.nodes.push(makeNode(graph,chosen,state));
+  changed=true;
+ }
+ return changed;
+}
 
 export function taskUnlocked(graph,state){
  const rules=String(graph.config.unlockcondition||'').split('|').filter(Boolean);
@@ -82,7 +101,7 @@ export function reconcileTaskBefore(tables,graph,task,node,state){
 export function refreshTaskProgress(tables,state){
  let graphs=automaticGraphs.get(tables);if(!graphs){graphs=new TaskGraphs(tables);automaticGraphs.set(tables,graphs);}
  const changed=[];
- for(const task of state.tasks){const graph=graphs.get(task.task_id);let dirty=advanceStartNodes(graph,task,state);
+ for(const task of state.tasks){const graph=graphs.get(task.task_id);let dirty=advanceStartNodes(graph,task,state);if(advancePetChoiceBranch(graph,task,state))dirty=true;
   for(const node of task.nodes)nodeConditions(graph.nodes.get(node.node_id)).forEach((q,index)=>{
    if(q.conditionId===2500&&node.client_before){
     const base=q.__type_TaskConditionBaseData??{},d=base.__type_TaskCondBattleTriggerData;

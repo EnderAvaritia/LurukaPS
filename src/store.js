@@ -27,6 +27,7 @@ export class Store {
     this.playerById=this.db.prepare('SELECT state,revision FROM players WHERE account_id=?');
     this.savePlayer=this.db.prepare('UPDATE players SET state=?,revision=revision+1,updated_at=? WHERE account_id=?');
     this.log=this.db.prepare('INSERT INTO request_log(account_id,message_id,status,created_at) VALUES(?,?,?,?)');
+    this.failedRequest=this.db.prepare("SELECT 1 FROM request_log WHERE account_id=? AND message_id=? AND status='error:1024' AND created_at>=? ORDER BY id DESC LIMIT 1");
     this.pending=new Map();
     this.flushTimer=setInterval(()=>{try{this.flushPending();}catch(error){console.warn(`Deferred player flush: ${error.message}`);}},flushIntervalMs);
     this.flushTimer.unref();
@@ -44,6 +45,7 @@ export class Store {
     }).immediate();
   }
   load(id) { const pending=this.pending.get(id);if(pending)return {state:structuredClone(pending.state),revision:pending.revision};const row=this.playerById.get(id); if(!row) throw Error('Player not found'); return {state:JSON.parse(row.state),revision:row.revision}; }
+  hasFailedRequestAfter(id,messageId,sinceMs){return !!this.failedRequest.get(id,messageId,sinceMs);}
   maxWorldChatRoom(){return this.db.prepare(`SELECT max(1,coalesce(max(room),1)) AS count FROM (
     SELECT CAST(json_extract(state,'$.chatWorldRoom') AS INTEGER) AS room FROM players
     UNION ALL SELECT CAST(target_id AS INTEGER) FROM chat_messages WHERE chat_type=2

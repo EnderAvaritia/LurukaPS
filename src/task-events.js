@@ -57,7 +57,11 @@ export function recordTaskBehaviour(c,r){
  const scene=base.__type_TaskCondInSceneData;
  const data=scene??base.__type_TaskCondNPCTriggerData??base.__type_TaskCondActiveNPCTriggerData??base.__type_TaskCondEnemiesGroupData??base.__type_TaskCondPhotoSceneData??base.__type_TaskCondPackageDownloadCompleteData;
  ensure(data,'Task event configuration unavailable',1007);
- const map=scene?.sceneId??(base.mapData?.sceneId||data.sceneId||data.npcData?.sceneId||data.enemiesDatas?.sceneId);
+ // The exported NPC-trigger payload calls its storyId `sceneId`; the CBT3
+ // TaskCondNPCTriggerData/TaskCondActiveNPCTriggerData classes confirm that
+ // field identifies a story, not a world map. Use only actual map fields.
+ const npc=base.__type_TaskCondNPCTriggerData,activeNpc=base.__type_TaskCondActiveNPCTriggerData;
+ const map=scene?.sceneId??(base.mapData?.sceneId||activeNpc?.npcData?.sceneId||(!npc&&!activeNpc?(data.sceneId||data.enemiesDatas?.sceneId):0));
  ensure(!map||map===c.state.world.map_id,'Task event is in a different map');
  if(!photo){const expected=scene?.sceneId??(base.__type_TaskCondPackageDownloadCompleteData?0xffffffff:r.key===1001?data.npcId:r.key===2519&&data.isNowCreate?data.npcData?.createNpcId:data.createNpcId);ensure(Number.isSafeInteger(expected)&&expected===target,'Task event target mismatch');}
  // These reports attest client-owned interactions. They cannot grant items or

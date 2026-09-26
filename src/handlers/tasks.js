@@ -2,7 +2,7 @@ import {submitTaskItems,deliveryKey} from '../task-delivery.js';
 import {grantRewards,parseRewards} from '../rewards.js';
 import {ensure} from './common.js';
 import {WorldObjectCatalog} from '../world-objects.js';
-import {TaskGraphs,activeTask,activeNode,makeNode,nodeConditions,conditionValue,asList,conditionSatisfied,taskUnlocked,acceptTask,taskSnapshot} from '../tasks.js';
+import {TaskGraphs,activeTask,activeNode,makeNode,nodeConditions,conditionValue,asList,conditionSatisfied,taskUnlocked,acceptTask,taskSnapshot,advancePetChoiceBranch} from '../tasks.js';
 export function registerTasks(register,tables) {
  const handlers=new Map();const on=(name,fn)=>{handlers.set(name,fn);register(name,fn);};
  const graphs=new TaskGraphs(tables);
@@ -56,7 +56,7 @@ export function registerTasks(register,tables) {
   const next=asList(config.nextNodeIdList);ensure(next.length>0,'Task node has no successor',1007);ensure(new Set(next).size===next.length,'Duplicate task edges',1007);
   ensure(next.every(id=>!task.finish_nodes.includes(id)),'Cyclic task graph requires loop state',1007);
   task.nodes=task.nodes.filter(n=>n.node_id!==r.node_id);if(!task.finish_nodes.includes(r.node_id))task.finish_nodes.push(r.node_id);
-  for(const id of next)if(!task.nodes.some(n=>n.node_id===id))task.nodes.push(makeNode(graph,id,c.state));sync(c);return {rewards};
+  for(const id of next)if(!task.nodes.some(n=>n.node_id===id))task.nodes.push(makeNode(graph,id,c.state));advancePetChoiceBranch(graph,task,c.state);sync(c);return {rewards};
  });
  for(const suffix of ['Before','After','CondAfter'])on('MultiTaskClient'+suffix,(c,r)=>{
   ensure(Array.isArray(r.task_params)&&r.task_params.length>0&&r.task_params.length<=128,'Invalid task callback batch');

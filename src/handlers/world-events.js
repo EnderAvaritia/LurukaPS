@@ -8,7 +8,13 @@ export function registerWorldEvents(on,tables){const drops=new WorldObjectCatalo
   return event;
  };
  on('WorldEventTrigger',(c,r)=>({infos:[wire(trigger(c,config(c,r.cfg_id)))]}));
- on('WorldEventStep',(c,r)=>{const row=config(c,r.cfg_id),key=`${row.worldMapID}:${row.id}`,event=c.state.worldEvents?.[key];ensure(event,'Event not started');ensure(!r.reset_start,'Event restart must follow cooldown');ensure(!event.expired&&(!row.overtime||c.now<event.begin_time+row.overtime),'Event expired');const step=r.step;ensure(Number.isInteger(step)&&step>=event.step&&step<=event.step+1&&step<row.stepCount,'Invalid event transition');let rewards=[];event.step=step;
+ on('WorldEventStep',(c,r)=>{const row=config(c,r.cfg_id),key=`${row.worldMapID}:${row.id}`,event=c.state.worldEvents?.[key];ensure(event,'Event not started');const step=r.step;ensure(Number.isInteger(step)&&step>=1&&step<row.stepCount,'Invalid event transition');
+  if(event.completed){ensure(step===event.step,'Event restart must follow cooldown');c.pushBefore('CSProtoWorldEventInfo',{infos:[wire(event)]});return {rewards:[]};}
+  if(event.expired){ensure(r.reset_start&&step===event.step,'Event expired');c.pushBefore('CSProtoWorldEventInfo',{infos:[wire(event)]});return {rewards:[]};}
+  ensure(!row.overtime||c.now<event.begin_time+row.overtime,'Event expired');
+  ensure(r.reset_start||step>=event.step&&step<=event.step+1,'Invalid event transition');
+  let rewards=[];
+  if(step!==event.step){event.step=step;if(r.reset_start){event.begin_time=c.now;event.next_trigger_time=c.now+Math.max(0,row.refreshCD);}}
   if(step===row.stepCount-1&&!event.rewarded){for(const id of String(row.dropID||'').split('|').filter(Boolean).map(Number))rewards.push(...drops.drops(id,c.randomInt));rewards=grantRewards(c.tables,c.state,rewards);event.rewarded=true;event.completed=true;if(rewards.length)syncPlayer({...c,push:c.pushBefore});}
   c.pushBefore('CSProtoWorldEventInfo',{infos:[wire(event)]});return {rewards};
  });

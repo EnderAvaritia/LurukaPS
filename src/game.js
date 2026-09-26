@@ -7,6 +7,7 @@ import {registerTrialGroups,trialPayload,expireTaskTrialGroup,restoreMixedTrialG
 import {prepareTaskScenes} from './task-scenes.js';
 import {worldSync} from './handlers/world.js';
 import {unlockAutomaticTasks,taskSnapshot,refreshTaskProgress} from './tasks.js';
+import {deliveryKey} from './task-delivery.js';
 import {repairSoulEssenceStars} from './equipment.js';
 import {registerPlayableLifecycle,playableSnapshot} from './handlers/playable-lifecycle.js';
 import {registerPetSkill} from './handlers/pet-skill.js';
@@ -19,6 +20,7 @@ import {registerChat,chatSnapshots} from './handlers/chat.js';
 import {registerPlayableEnemies} from './handlers/playable-enemies.js';
 import {registerGM} from './handlers/gm.js';
 import {registerWorldEvents} from './handlers/world-events.js';
+import {registerKiboDuel,ensureArenaFormationManager} from './handlers/kibo-duel.js';
 import {registerProfileQueries} from './handlers/profile-queries.js';
 import {registerWorldObjects} from './handlers/world-objects.js';
 import {registerWorldCombat} from './handlers/world-combat.js';
@@ -31,7 +33,9 @@ import {registerRelease} from './handlers/release.js';
 import {releaseFields} from './release-ledger.js';
 import {registerHatching} from './handlers/hatching.js';
 import {registerProduction} from './handlers/production.js';
+import {registerSimpleProduction} from './handlers/simple-production.js';
 import {refreshProduction,productionDue} from './production.js';
+import {simpleProductionDue,settleSimpleProducts,simpleProductSnapshot} from './simple-production.js';
 import {registerTechnology} from './handlers/technology.js';
 import {registerBuildingPlacement} from './handlers/buildings.js';
 import {registerHome} from './handlers/home.js';
@@ -47,12 +51,13 @@ import {upgradeSkillState} from './skills.js';
 import {randomBytes,randomInt} from 'node:crypto';
 import {seedPlayer} from './player.js';
 import {repairPetProfiles} from './pets.js';
+import {mountPayload,repairMountSelection} from './mounts.js';
 import {GameError,ensure,textValue} from './handlers/common.js';
 import {registerCore} from './handlers/core.js';
 import {registerCollection} from './handlers/collection.js';
-import {registerWorld} from './handlers/world.js';
+import {registerWorld,repairLegacyMountState} from './handlers/world.js';
 import {registerMail} from './handlers/mail.js';
-const deferredMessages=new Set(['CSProtoBattleInfoReduce','CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoPerfectDefense','CSProtoCombineAttackBegin','CSProtoCombineAttackEnd','CSProtoStateUpdate']);
+const deferredMessages=new Set(['CSProtoBattleInfoReduce','CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoPerfectDefense','CSProtoCombineAttackBegin','CSProtoCombineAttackEnd','CSProtoStateUpdate','CSProtoPlayableStart']);
 const fastCombatTelemetry=new Set(['CSProtoSkillStart','CSProtoSkillStop','CSProtoCreateBullet','CSProtoBulletActionChange','CSProtoFightBreak','CSProtoKiboDuelBTTreeRunning','CSProtoSkillEffectDone','CSProtoShieldInfo','CSProtoShieldInfoDel','CSProtoPerfectDefense']);
 function forkWithoutPets(base){const {pets,...other}=base;return {...structuredClone(other),pets};}
 function forkMovement(base){return {...base,world:{...base.world,pos:{...base.world.pos}}};}
@@ -81,7 +86,35 @@ export class Game {
   const on=(name,handler)=>{const e=protocol.byName.get(name)||protocol.byName.get(`CSProto${name}`);if(!e)throw Error(`Unknown handler ${name}`);if(this.handlers.has(e.id))throw Error(`Duplicate handler ${name}`);this.handlers.set(e.id,handler);};
   registerTrialGroups(on,tables);registerPlayableSaves(on);registerRoulette(on);registerPetSkill(on);registerPetCatch(on);registerPlayableLifecycle(on,tables);
   const runGM=registerGM(on,{enabled:gmEnabled});
-  registerCore(on);registerMonthly(on,tables);registerLocalPayments(on,tables,store,{enabled:offlinePayments});registerChat(on,store,{runGM});registerPlayableEnemies(on,tables,store);registerWorldEvents(on,tables);registerProfileQueries(on,tables,store);registerWorldObjects(on,tables);registerWorldCombat(on);registerEcology(on,tables);registerMall(on,tables);registerCombat(on);registerClientState(on);registerCollection(on);registerWorld(on);registerMail(on);registerProgression(on);this.finishPendingCharacterTask=registerTasks(on,tables);registerStory(on,tables);registerItems(on);registerShops(on,tables);registerHome(on,tables);registerBuildingPlacement(on,tables);registerTechnology(on,tables);registerProduction(on,tables);registerHatching(on);registerRelease(on,tables);
+  registerCore(on);registerMonthly(on,tables);registerLocalPayments(on,tables,store,{enabled:offlinePayments});registerChat(on,store,{runGM});registerPlayableEnemies(on,tables,store);registerWorldEvents(on,tables);registerKiboDuel(on,tables,protocol);registerProfileQueries(on,tables,store);registerWorldObjects(on,tables);registerWorldCombat(on);registerEcology(on,tables);registerMall(on,tables);registerCombat(on);registerClientState(on);registerCollection(on);registerWorld(on);registerMail(on);registerProgression(on);this.finishPendingCharacterTask=registerTasks(on,tables);registerStory(on,tables);registerItems(on);registerShops(on,tables);registerHome(on,tables);registerBuildingPlacement(on,tables);registerTechnology(on,tables);registerProduction(on,tables);registerSimpleProduction(on,tables);registerHatching(on);registerRelease(on,tables);
+ }
+ recoverFailedPetChoice(state,accountId,now){
+  const task=state.tasks.find(t=>t.task_id===106010),node=task?.nodes.find(n=>n.node_id===151),run=state.playableRuns?.[60001];
+  const receipt=state.playableChoiceReceipts?.[`106010:${state.taskEpochs?.[106010]??0}:60001`];
+  if(!node?.client_before||state.playableFinishes?.[60001]||run?.map_id!==100||state.world.map_id!==100||run.status!==2||run.finish_step<this.tables.find('playable',60001)?.stepMax||!receipt||receipt.pet_guid!==run.selected_pet_guid||receipt.pet_group!==run.selected_pet_group||state.taskPetChoices?.[106010]!==receipt.pet_group||!state.pets.some(p=>p.guid===receipt.pet_guid)||!this.store.hasFailedRequestAfter(accountId,9404,run.time*1000))return false;
+  // The old server rejected this exact finish request after both steps and
+  // the selected pet had already been committed. Replay the same handlers
+  // during login so rewards and task receipts remain once-only.
+  const c={id:accountId,state,now,tables:this.tables,randomInt:this.rng,push:()=>{},pushBefore:()=>{}};
+  const call=(name,request)=>this.handlers.get(this.protocol.byName.get(`CSProto${name}`).id)(c,request);
+  call('PlayableFinish',{playId:60001,score:0,pos:{}});
+  call('TaskClientCondAfter',{task_id:106010,node_id:151,indexes:[0]});
+  call('TaskClientAfter',{task_id:106010,node_id:151});
+  return true;
+ }
+ recoverClosedPetPageAfterChoice(state,accountId){
+  const task=state.tasks.find(t=>t.task_id===106010),group=state.taskPetChoices?.[106010],expected={52:181,55:182,56:183}[group];
+  const node=task?.nodes.find(n=>n.node_id===expected),run=state.playableRuns?.[60001],finish=state.playableFinishes?.[60001];
+  const receipt=state.playableChoiceReceipts?.[`106010:${state.taskEpochs?.[106010]??0}:60001`];
+  if(!node?.client_before||node.node_values?.[0]>0||state.world.map_id!==100||!task.finish_nodes.includes(151)||!task.finish_nodes.includes(148)||run?.status!==3||finish?.selected_pet_guid!==run.selected_pet_guid||finish?.selected_pet_group!==group||receipt?.pet_guid!==run.selected_pet_guid||receipt?.pet_group!==group||!state.pets.some(p=>p.guid===receipt.pet_guid)||!this.store.hasFailedRequestAfter(accountId,9404,run.time*1000))return false;
+  const key=deliveryKey(state,106010,expected,0);
+  if(state.taskEvents?.[key])return false;
+  // This page-close condition became active only after login repaired a
+  // previously rejected PlayableFinish. The old UI is already gone on login;
+  // expose the completed condition so the client performs the configured
+  // CondAfter/After callbacks and its following story action itself.
+  (state.taskEvents??={})[key]=1;
+  return true;
  }
  packet(id,value={},meta={}) {const e=typeof id==='number'?this.protocol.byId.get(id):this.protocol.byName.get(id);if(!e?.rsp)throw Error(`No response schema for ${id}`);return {id:e.id,payload:this.protocol.encode(e.rsp,value),...meta};}
  dispatch(session,frame) {
@@ -98,7 +131,7 @@ export class Game {
    const a=this.store.login(r.open_id,(id,openId)=>seedPlayer(this.tables,id,openId));
    session.id=a.id;session.openId=r.open_id;session.token=session.token||randomBytes(24).toString('hex');
    if(e.name==='CSProtoLogin'){session.entered=false;return [reply({open_id:r.open_id,pid:a.id,guid:a.id,server_token:session.token})];}
-   const packets=this.store.transact(session.id,e.id,state=>{unlockAutomaticTasks(this.tables,state,now);repairCharacterCreationMarker(state);initializeCharacterFormation(this.tables,state);reconcileFormationPets(state);refreshTaskProgress(this.tables,state);prepareTaskScenes(this.tables,state,{login:true});expireTaskTrialGroup(this.tables,state);restoreMixedTrialGroup(this.tables,state);repairSoulEssenceStars(state);upgradeInventory(state);refundPendingCatchCards(state);syncCurrencyMirrors(state.player);repairPetProfiles(this.tables,state);upgradeSkillState(this.tables,state);upgradeEggState(state);ensureHome(this.tables,state);refreshProduction(state,now);for(const [id,capture]of Object.entries(state.petCaptureResults??{}))if(capture.map_id===state.world.map_id&&state.combat?.entities?.[id]?.captured!==true)retireCapturedEnemy({state,now,pushBefore:()=>{}},id);const battle=[];syncBattle({state,tables:this.tables,push:(name,value)=>battle.push(this.packet(name,value))});return [...this.loginPackets(state,session,r,frame,e.id),...battle];});
+   const packets=this.store.transact(session.id,e.id,state=>{unlockAutomaticTasks(this.tables,state,now);repairCharacterCreationMarker(state);initializeCharacterFormation(this.tables,state);ensureArenaFormationManager(state);reconcileFormationPets(state);upgradeInventory(state);repairLegacyMountState(state);this.recoverFailedPetChoice(state,session.id,now);this.recoverClosedPetPageAfterChoice(state,session.id);settleSimpleProducts(this.tables,state,now);refreshTaskProgress(this.tables,state);prepareTaskScenes(this.tables,state,{login:true});expireTaskTrialGroup(this.tables,state);restoreMixedTrialGroup(this.tables,state);repairSoulEssenceStars(state);refundPendingCatchCards(state);syncCurrencyMirrors(state.player);repairPetProfiles(this.tables,state);repairMountSelection(this.tables,state);upgradeSkillState(this.tables,state);upgradeEggState(state);ensureHome(this.tables,state);refreshProduction(state,now);for(const [id,capture]of Object.entries(state.petCaptureResults??{}))if(capture.map_id===state.world.map_id&&state.combat?.entities?.[id]?.captured!==true)retireCapturedEnemy({state,now,pushBefore:()=>{}},id);const battle=[];syncBattle({state,tables:this.tables,push:(name,value)=>battle.push(this.packet(name,value))});return [...this.loginPackets(state,session,r,frame,e.id),...battle];});
    session.entered=true;return packets;
   }
   ensure(session.id,'Login required',101);
@@ -123,7 +156,13 @@ export class Game {
    const statePacket=(name,value,meta={})=>{if(name==='CSProtoSyncPlayerData'&&value){syncCurrencyMirrors(state.player);const {sbag_infos,soulessence_infos,...other}=value;value={...other,...(value.basic_info?{basic_info:state.player.basic_info}:{}),...(value.attr_infos?{attr_infos:state.player.attr_infos}:{})};if(!Object.keys(value).length)return null;}return this.packet(name,value,meta);};
    const emit=(target,name,value,meta)=>{const p=statePacket(name,value,meta);if(p)target.push(p);};
    const petIdsBefore=state.pets.map(p=>p.guid);const eggIdsBefore=(state.petEggs||[]).map(e=>e.guid);const petRevision=state.petRevision||0;const playerLevelBefore=state.player.basic_info.lv;const homeBuildIdsBefore=(state.home?.builds||[]).map(b=>b.guid);const homeWishIdsBefore=(state.home?.wishlist||[]).map(x=>x.uid);const homeRevision=state.homeRevision||0;const eggRevision=state.eggRevision||0;const before=[];const pushes=[];const context={id:session.id,combatSessionId:session.token,requestKey:frame.seq?session.token+':'+frame.id+':'+frame.seq:null,state,now,randomInt:this.rng,tables:this.tables,pushTo:(recipient,name,value)=>pushes.push(this.packet(name,value,{recipient})),broadcast:(audience,name,value)=>pushes.push(this.packet(name,value,{audience})),pushBefore:(name,value)=>emit(before,name,value),push:(name,value)=>emit(pushes,name,value,{pushSeq:frame.pushSeq})};
-   if(!battleReport)refreshProduction(state,now);const response=handler(context,r);
+   if(!battleReport)refreshProduction(state,now);
+   // Older servers persisted the selected pet and final step, then rejected
+   // PlayableFinish. The client keeps requesting Start while that run remains
+   // incomplete, so recover on the next request as well as on login.
+   const recoveredChoice=e.name==='CSProtoPlayableStart'&&r.u32===60001&&this.recoverFailedPetChoice(state,session.id,now);
+   if(recoveredChoice){context.push('CSProtoPlayableSync',playableSnapshot(state));context.push('CSProtoTaskSync',taskSnapshot(this.tables,state));}
+   const response=recoveredChoice?{}:handler(context,r);
    if(e.name==='CSProtoPlayerCustomData')this.finishPendingCharacterTask(context);
    syncCurrencyMirrors(state.player);
    const updatedTasks=refreshTaskProgress(this.tables,state);if(updatedTasks.length)context.push('CSProtoTaskSync',{tasks:updatedTasks});
@@ -143,10 +182,26 @@ export class Game {
    return [...playerSync,...saddleSync,...bookSync,...petSync,...before,...eggSync,...homeSync,...packets,...pushes];
   },{defer:deferredMessages.has(e.name),fork:e.name==='CSProtoBattleInfoReduce'?forkBattleReport:deferredMessages.has(e.name)?forkWithoutPets:undefined});
  }
- tick(id){const now=this.clock();if(!productionDue(this.store.load(id).state,now))return [];return this.store.transact(id,0,state=>{const eggRevision=state.eggRevision||0;if(!refreshProduction(state,now))return [];return [...((state.eggRevision||0)!==eggRevision?[this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}})]:[]),this.packet('CSProtoHomeSync',homePayload(this.tables,state))];});}
+ tick(id){
+  const now=this.clock(),current=this.store.load(id).state,homeDue=productionDue(current,now),simpleDue=simpleProductionDue(current,now);
+  if(!homeDue&&!simpleDue)return [];
+  return this.store.transact(id,0,state=>{
+   const packets=[],eggRevision=state.eggRevision||0;
+   if(homeDue&&refreshProduction(state,now)){
+    if((state.eggRevision||0)!==eggRevision)packets.push(this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}}));
+    packets.push(this.packet('CSProtoHomeSync',homePayload(this.tables,state)));
+   }
+   if(simpleDue){const settled=settleSimpleProducts(this.tables,state,now);if(settled.changed){
+    if(settled.rewards.length)packets.push(this.packet('CSProtoSyncPlayerData',{sbag_infos:state.player.sbag_infos,basic_info:state.player.basic_info,attr_infos:state.player.attr_infos}));
+    packets.push(this.packet('CSProtoSimpleProductFinish',{...simpleProductSnapshot(state),reward:{rewards:settled.rewards},dels:settled.dels}));
+    const updated=refreshTaskProgress(this.tables,state);if(updated.length)packets.push(this.packet('CSProtoTaskSync',{tasks:updated}));
+   }}
+   return packets;
+  });
+ }
  loginPackets(state,session,r,frame,id) {
   const now=this.clock();
-  return [this.packet('CSProtoEnterGameCallbackStart',{reconnect:!!r.reconnect,player_id:session.id,crc_rand_index:this.crcDelay,server_time:String(Date.now()),time_offset:'0'}),this.packet(id,{data:state.player,reconnect:!!r.reconnect,time_zone:8,time:now,time_msec:Date.now()%1000,player_id:session.id,server_token:session.token,rc4_key:'',ntf_seq:r.ntf_seq||0,req_seq:frame.seq,line_id:0,server_id:'azurjs',node_id:'azurjs-0'},{seq:frame.seq,pushSeq:frame.pushSeq}),...(state.trialGroup?[this.packet('CSProtoTrialDatas',trialPayload(state))]:[]),this.packet('CSProtoPetInfoSync',{...releaseFields(state,'pet',now,this.releaseResetHour),pet_infos:{pets:state.pets}}),this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}}),this.packet('CSProtoPetBoxInfoSync',{box_infos:state.petBoxes}),this.packet('CSProtoRideMountInfo',{mount_saddlerys:state.mountSaddles??this.tables.get('mount_saddle').map(s=>s.id)}),this.packet('CSProtoTaskSync',taskSnapshot(this.tables,state)),this.packet('CSProtoMailSync',{mails:state.mail}),this.packet('CSProtoStorySync',{infos:{infos:state.storyIds||[]}}),this.packet('CSProtoHomeSync',homePayload(this.tables,state)),this.packet('SCProtoMonthlyCardInfoSync',monthlyPayload(state)),this.packet('CSProtoReadHandbookInfoSync',{infos:Object.values(state.readingBooks??{}),send_type:0}),this.packet('CSProtoPlayableSync',playableSnapshot(state)),this.packet('CSProtoAllRouletteInfoSync',roulettePayload(state)),this.packet('CSProtoChatRoomSync',{chat_type:2,sysId:String(state.chatWorldRoom??1)}),this.packet('CSProtoChatListSync',chatSnapshots(this.store,state,session.id).list),this.packet('CSProtoChatMsgCntSync',chatSnapshots(this.store,state,session.id).counts)];
+  return [this.packet('CSProtoEnterGameCallbackStart',{reconnect:!!r.reconnect,player_id:session.id,crc_rand_index:this.crcDelay,server_time:String(Date.now()),time_offset:'0'}),this.packet(id,{data:state.player,reconnect:!!r.reconnect,time_zone:8,time:now,time_msec:Date.now()%1000,player_id:session.id,server_token:session.token,rc4_key:'',ntf_seq:r.ntf_seq||0,req_seq:frame.seq,line_id:0,server_id:'azurjs',node_id:'azurjs-0'},{seq:frame.seq,pushSeq:frame.pushSeq}),...(state.trialGroup?[this.packet('CSProtoTrialDatas',trialPayload(state))]:[]),this.packet('CSProtoPetInfoSync',{...releaseFields(state,'pet',now,this.releaseResetHour),pet_infos:{pets:state.pets}}),this.packet('CSProtoPetEggInfoSync',{...releaseFields(state,'egg',now,this.releaseResetHour),egg_infos:{eggs:state.petEggs||[]}}),this.packet('CSProtoPetBoxInfoSync',{box_infos:state.petBoxes}),this.packet('CSProtoRideMountInfo',mountPayload(this.tables,state)),this.packet('CSProtoTaskSync',taskSnapshot(this.tables,state)),this.packet('CSProtoMailSync',{mails:state.mail}),this.packet('CSProtoStorySync',{infos:{infos:state.storyIds||[]}}),this.packet('CSProtoHomeSync',homePayload(this.tables,state)),this.packet('CSProtoSimpleProductFinish',simpleProductSnapshot(state)),this.packet('SCProtoMonthlyCardInfoSync',monthlyPayload(state)),this.packet('CSProtoReadHandbookInfoSync',{infos:Object.values(state.readingBooks??{}),send_type:0}),this.packet('CSProtoPlayableSync',playableSnapshot(state)),this.packet('CSProtoAllRouletteInfoSync',roulettePayload(state)),this.packet('CSProtoChatRoomSync',{chat_type:2,sysId:String(state.chatWorldRoom??1)}),this.packet('CSProtoChatListSync',chatSnapshots(this.store,state,session.id).list),this.packet('CSProtoChatMsgCntSync',chatSnapshots(this.store,state,session.id).counts)];
  }
 }
 

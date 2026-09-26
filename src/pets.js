@@ -3,6 +3,7 @@ import {randomInt} from 'node:crypto';
 import {initialPetSkills} from './skills.js';import {ensure} from './handlers/common.js';
 import {pairs} from './battle.js';
 import {initialPetComprehension,repairPetComprehension} from './pet-comprehension.js';
+import {randomMountSpeed} from './mounts.js';
 
 // The localized export corrupts pet.gradeScore. Use the numeric CBT3 table.
 const petScores=new Map(JSON.parse(fs.readFileSync(new URL('../data/pet-tables/pet.json',import.meta.url),'utf8')).map(row=>[row.id,row.gradeScore]));
@@ -70,11 +71,12 @@ export function repairPetProfiles(tables,state){
   if(!Number.isInteger(pet.grade)||pet.grade<=0){pet.grade=petGrade(tables,pet);changed=true;}
   if(!Array.isArray(pet.labor_infos)){pet.labor_infos=initialPetLabor(tables,pet.config_id);changed=true;}
   if(!Array.isArray(pet.talent_id)){pet.talent_id=initialPetTalents(tables,pet.config_id);changed=true;}
+  if(tables.find('mount',pet.config_id)&&(!Number.isInteger(pet.speed)||pet.speed<=0)){pet.speed=randomMountSpeed(tables);changed=true;}
  }
  if(changed)state.petRevision=(state.petRevision||0)+1;
  return changed;
 }
-export function petData(tables,configId,guid,box,builderRuleId=1001){const config=tables.find('pet',configId);ensure(config&&tables.find('template_value',configId),'Missing pet configuration',1007);const pet={guid:String(guid),config_id:configId,feature:1,comprehension:initialPetComprehension(tables,builderRuleId),inherent_skills:initialPetSkills(config),lv:1,rank:1,exp:0,base_lv:1,favor_lv:1,favor_val:0,is_lock:true,box_id:box,type:1,satiety_val:10000,hero_id:'0',roulette_pos:0};pet.gene_infos=initialPetGenes(tables,config);pet.gene_state=Math.ceil(pet.gene_infos.length/2);pet.grade=petGrade(tables,pet);pet.labor_infos=initialPetLabor(tables,configId);pet.talent_id=initialPetTalents(tables,configId);return pet;}
+export function petData(tables,configId,guid,box,builderRuleId=1001){const config=tables.find('pet',configId);ensure(config&&tables.find('template_value',configId),'Missing pet configuration',1007);const pet={guid:String(guid),config_id:configId,feature:1,comprehension:initialPetComprehension(tables,builderRuleId),inherent_skills:initialPetSkills(config),lv:1,rank:1,exp:0,base_lv:1,favor_lv:1,favor_val:0,is_lock:true,box_id:box,type:1,satiety_val:10000,hero_id:'0',roulette_pos:0};if(tables.find('mount',configId))pet.speed=randomMountSpeed(tables);pet.gene_infos=initialPetGenes(tables,config);pet.gene_state=Math.ceil(pet.gene_infos.length/2);pet.grade=petGrade(tables,pet);pet.labor_infos=initialPetLabor(tables,configId);pet.talent_id=initialPetTalents(tables,configId);return pet;}
 export function createPets(tables,state,configId,count,builderRuleId=1001){const boxCount=Number(tables.get('game').find(r=>r.title==='PET_BOX_NUM')?.value),boxSize=Number(tables.get('game').find(r=>r.title==='PET_BOX_LIMIT')?.value);ensure(Number.isInteger(boxCount)&&boxCount>0&&Number.isInteger(boxSize)&&boxSize>0&&boxSize<100,'Invalid pet box limits',1007);ensure(Number.isInteger(count)&&count>0&&state.pets.length+count<=boxCount*boxSize,'Pet boxes are full');
  const used=new Set(state.pets.map(p=>p.box_id)),slots=[];for(let box=1;box<=boxCount;box++)for(let slot=1;slot<=boxSize;slot++){const id=box*100+slot;if(!used.has(id))slots.push(id);}ensure(slots.length>=count,'No free pet slot');
  let sequence=state.nextPetSequence||1;for(const pet of state.pets){const id=BigInt(pet.guid);if((id>>56n)===2n)sequence=Math.max(sequence,Number(id&0xffffffffn)+1);}ensure(Number.isSafeInteger(sequence)&&sequence+count-1<=0xffffffff,'Pet identity space exhausted');

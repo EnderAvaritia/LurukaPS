@@ -3,5 +3,7 @@ data/*.sqlite*
 .env
 data/*.txt
 data/*.log
+data/*/*.log
+data/*/*/*.log
 .analysis-python/
 *.cpuprofile

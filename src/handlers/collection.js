@@ -1,6 +1,7 @@
 import {isPreviousTrialActor} from './trial-groups.js';
 import {syncBattle} from '../battle.js';
 import {reconcileFormationPets} from '../formation-pets.js';
+import {mountPayload,repairMountSelection} from '../mounts.js';
 import {ensure,textValue,hero,pet,manager,group,syncPlayer,syncPets} from './common.js';
 export function registerCollection(on) {
   const syncGroups=c=>{syncPlayer(c,{group_mgrs:c.state.player.group_mgrs});syncBattle(c);};
@@ -32,8 +33,8 @@ export function registerCollection(on) {
   on('PetChangeName',(c,r)=>{pet(c.state,r.guid).pet_name=textValue(r.pet_name,20);syncPets(c);return {};});
   on('PetEggLock',(c,r)=>{const egg=(c.state.petEggs||[]).find(e=>String(e.guid)===r.guid);ensure(egg,'Pet egg not owned');egg.lock_state=!!r.lock_operate;c.state.eggRevision=(c.state.eggRevision||0)+1;return {};});
   on('PetLock',(c,r)=>{pet(c.state,r.guid).is_lock=!!r.lock_operate;syncPets(c);return {};});
-  on('PetSetRoulettePos',(c,r)=>{ensure(Number.isInteger(r.pos)&&r.pos>=1&&r.pos<=8,'Invalid roulette position');const p=pet(c.state,r.guid);for(const x of c.state.pets)if(x.roulette_pos===r.pos)x.roulette_pos=0;p.roulette_pos=r.pos;syncPets(c);return {};});
-  on('PetRemoveRoulettePos',(c,r)=>{ensure(r.u32>=1&&r.u32<=8);for(const p of c.state.pets)if(p.roulette_pos===r.u32)p.roulette_pos=0;syncPets(c);return {};});
+  on('PetSetRoulettePos',(c,r)=>{ensure(Number.isInteger(r.pos)&&r.pos>=1&&r.pos<=8,'Invalid roulette position');const p=pet(c.state,r.guid);ensure(c.tables.find('mount',p.config_id),'Pet has no mount configuration');for(const x of c.state.pets)if(x.roulette_pos===r.pos)x.roulette_pos=0;p.roulette_pos=r.pos;syncPets(c);if(repairMountSelection(c.tables,c.state))c.push('CSProtoRideMountInfo',mountPayload(c.tables,c.state));return {};});
+  on('PetRemoveRoulettePos',(c,r)=>{ensure(r.u32>=1&&r.u32<=8);for(const p of c.state.pets)if(p.roulette_pos===r.u32)p.roulette_pos=0;syncPets(c);if(repairMountSelection(c.tables,c.state))c.push('CSProtoRideMountInfo',mountPayload(c.tables,c.state));return {};});
   on('PetBoxRename',(c,r)=>{const box=c.state.petBoxes.find(b=>b.id===r.box_id);ensure(box,'Unknown pet box');box.box_name=textValue(r.box_name,20);c.push('CSProtoPetBoxInfoSync',{box_infos:c.state.petBoxes});return {};});
   on('ExchangePetBoxId',(c,r)=>{const a=pet(c.state,r.guid),b=pet(c.state,r.target_guid);[a.box_id,b.box_id]=[b.box_id,a.box_id];syncPets(c);return {};});
 }
