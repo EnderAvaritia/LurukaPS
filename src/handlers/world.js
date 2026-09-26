@@ -1,8 +1,9 @@
 import {expireTaskTrialGroup,trialPayload} from './trial-groups.js';
 import {validateTaskTransfer} from '../task-scenes.js';
-import {syncBattle} from '../battle.js';
+import {heroBattleLimits,heroModules,syncBattle} from '../battle.js';
 import {ensure,group,pet} from './common.js';
 import {mountPayload} from '../mounts.js';
+import {addWorldMark,deleteWorldMarks,setWorldMarkTrace,updateWorldMarks,worldMarkPayload} from '../world-marks.js';
 function mapPlayer(c){
  const s=c.state,w=s.world,g=group(s),ids=g.heros.filter(h=>h.hero_id&&h.hero_id!=='0').map(h=>h.hero_id);
  const move={pos:w.pos,angle:w.angle,area_id:w.area_id,move_status:1,timestamp:String(c.now*1000)};
@@ -18,10 +19,11 @@ function playerStatusSync(c,cmd){const w=c.state.world,mount=w.mount,move={pos:w
  c.push('CSProtoWorldMapSync',{cmd,creator_id:c.id,map_id:w.map_id,player_id:c.id,notify_id:c.id,zone_id:0,map_info:{creator_id:c.id,map_id:w.map_id,exist:true,area_id:w.area_id,players:[player]}});
 }
 export function repairLegacyMountState(state){const w=state.world;if(w.pendingMountExit)delete w.pendingMountExit;if(w.status!==1||w.mountSyncVersion||!w.mount||w.mount==='0')return false;w.status=0;w.status_arg='0';w.mount='0';w.mount_status=0;return true;}
-export function worldSync(c,r={},cmd=256) {
+export function worldSync(c,r={},cmd=256,includeMarks=true) {
  if(expireTaskTrialGroup(c.tables,c.state)){c.push('CSProtoTrialDatas',trialPayload(c.state));c.push('CSProtoSyncPlayerData',{heros_info:c.state.player.heros_info,group_mgrs:c.state.player.group_mgrs});}
  const s=c.state,w=s.world;
  c.push('CSProtoWorldMapPointSync',{u32s:w.points});
+ if(includeMarks)c.push('CSProtoWorldMapMarkListSync',worldMarkPayload(s));
  c.push('CSProtoWorldMapSync',{cmd,creator_id:c.id,map_id:w.map_id,player_id:c.id,notify_id:c.id,zone_id:0,client_trans_data:r.client_trans_data||0,map_info:{creator_id:c.id,map_id:w.map_id,exist:true,area_id:w.area_id,objs:Object.entries(s.worldObjects??{}).filter(([key])=>key.startsWith(w.map_id+':')).map(([,record])=>{const {claims,...obj}=record;return obj;}),players:[mapPlayer(c)]}});
  for(const [id,capture]of Object.entries(s.petCaptureResults??{}))if(capture.map_id===w.map_id)c.push('SCProtoObjDisappearNtf',{agent_uid:id});
 }
@@ -44,6 +46,15 @@ export function registerWorld(on) {
  on('EnterWorldMap',(c,r)=>{const w=c.state.world,taskPoint=validateTaskTransfer(c.tables,c.state,r);if(c.state.pendingTaskScene&&!taskPoint&&(!(r.point_id>0)||r.reconnect)){r={...r,map_id:w.map_id,point_id:0};}delete c.state.pendingTaskScene;if(r.map_id&&r.map_id!==w.map_id || r.point_id>0) {const p=taskPoint??(r.point_id>0?c.tables.find('world_borthpos',r.point_id):c.tables.get('world_borthpos').find(p=>p.cityId===r.map_id));ensure(p&&(!r.map_id||p.cityId===r.map_id),'Invalid map/point');rememberMap(c,p.cityId);Object.assign(w,c.tables.position(p));}worldSync(c,r);syncBattle(c);return {};});
  on('WorldPoint',(c,r)=>{const p=c.tables.find('world_borthpos',r.point_id);ensure(p&&c.state.world.points.includes(p.id),'Point is not unlocked');rememberMap(c,p.cityId);Object.assign(c.state.world,c.tables.position(p));worldSync(c,r,19);syncBattle(c);return {};});
  on('WorldPointAck',c=>{c.state.world.last_point_ack={map_id:c.state.world.map_id,point_id:c.state.world.point_id,time:c.now};});
+ on('WorldMapMarkAdd',(c,r)=>{const mark=addWorldMark(c.state,r);c.push('CSProtoWorldMapMarkListSync',worldMarkPayload(c.state));return mark;});
+ on('WorldMapMarkDel',(c,r)=>{const deleted=deleteWorldMarks(c.state,r.guids??[]);c.push('CSProtoWorldMapMarkListSync',worldMarkPayload(c.state,deleted));return {};});
+ on('WorldMapTracePointSet',(c,r)=>{setWorldMarkTrace(c.state,r.u32??0);c.push('CSProtoWorldMapMarkListSync',worldMarkPayload(c.state));return {};});
+ on('WorldMapMarkUpdate',(c,r)=>{const infos=updateWorldMarks(c.state,r.infos??[]);c.push('CSProtoWorldMapMarkListSync',worldMarkPayload(c.state));return {infos};});
+ on('WorldMapPlayerRevive',(c)=>{
+  const heroes=[...(c.state.player.heros_info.heros??[]),...(c.state.trialGroup?.heroes??[])],seen=new Set();
+  for(const hero of heroes){if(seen.has(hero.guid))continue;seen.add(hero.guid);const battle=c.state.player.heros_info.battle_infos.find(info=>info.hero_id===hero.guid);if(!battle)continue;const max=heroBattleLimits(heroModules(c.tables,c.state,hero));Object.assign(battle,{hp:max.hp,sp:max.sp,alive_state:0});}
+  syncBattle(c);return {};
+ });
  on('WorldMapReturnLast',c=>{const previous=c.state.worldHistory?.pop();const fallback=previous?null:c.tables.find('world_borthpos',10045);ensure(previous||fallback,'No return destination');const target=previous??c.tables.position(fallback);ensure(c.tables.get('world_borthpos').some(p=>p.cityId===target.map_id),'Return map unavailable');Object.assign(c.state.world,target);worldSync(c);syncBattle(c);return {};});
  on('StateUpdate',(c,r)=>{
   const m=r.move_msg;if(!m)return;const w=c.state.world;ensure(m.map_id===w.map_id,'Wrong map');

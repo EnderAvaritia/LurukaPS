@@ -149,7 +149,7 @@ export function registerKiboDuel(on,tables,protocol){
   c.pushBefore('CSProtoKiboDuelAttrInfoSync',arenaAttributePayload(tables,c.state));
   c.pushBefore('SCProtoKiboDuelArenaCardInfoSync',{pet_guids:petGuids});
   c.pushBefore('SCProtoKiboDuelArenaFirstInfoSync',{id:c.id,pet_guid:c.state.kiboDuelFirstGuid});
-  worldSync(c);
+  worldSync(c,{},256,false);
   const arenaInfo={status_endtime:String(c.now+Number(duel.time||300)),enter_type:0};
   c.push('SCProtoKiboDuelArenaInfoSync',{...arenaInfo,status:2});
   c.push('SCProtoKiboDuelArenaInfoSync',{...arenaInfo,status:3});
