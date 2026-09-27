@@ -16,7 +16,7 @@ const ENTRY_WORLD_CHAT_DELAY_MS = 15_000
 const ENTRY_WORLD_CHAT_TEXT_BASE64 =
     'QXp1ckpTIOaYr+WFjei0ueeahO+8jOS7heS+m+WtpuS5oOeglOeptuWNj+iuruWunueOsO+8jOS4peemgeeUqOS6juWVhuS4mueUqOmAlOOAgkF6dXJKUyBpcyBmcmVlIGFuZCBpbnRlbmRlZCBmb3IgbGVhcm5pbmcgYW5kIHByb3RvY29sIHJlc2VhcmNoIG9ubHk7IGNvbW1lcmNpYWwgdXNlIGlzIHByb2hpYml0ZWQu'
 const AZURJS_CHAT_PROFILE_HEAD_ID = 10114 // CBT3 playercard_dress entry for Luluka
-const DEFAULT_CHAT_PROFILE_FRAME_ID = 10201
+const AZURJS_CHAT_PROFILE_FRAME_ID = 10231 // CBT3 playercard_dress: Kibo Duel Legend frame
 
 async function readJsonBody(req, maxBytes = 1024 * 1024) {
     const chunks = []
@@ -121,7 +121,7 @@ export async function startServer(config, logger = console) {
                                 lv: 80,
                                 stand_plates: {
                                     profile: AZURJS_CHAT_PROFILE_HEAD_ID,
-                                    profile_frame: DEFAULT_CHAT_PROFILE_FRAME_ID,
+                                    profile_frame: AZURJS_CHAT_PROFILE_FRAME_ID,
                                 },
                             },
                             extra_info: '',
