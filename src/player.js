@@ -77,10 +77,10 @@ export function seedPlayer(tables, id, openId) {
             basic_info: {
                 id,
                 zone_id: 1,
-                name: bytes('&AzurPlayer'),
+                name: bytes('&AzurJSPlayer'),
                 sex: 2,
                 lv: 1,
-                sign: bytes('azurjs'),
+                sign: 'QXp1ckpTIOaYr+WFjei0ueeahO+8jOS7heS+m+WtpuS5oOeglOeptuWNj+iuruWunueOsO+8jOS4peemgeeUqOS6juWVhuS4mueUqOmAlOOAgi9BenVySlMgaXMgZnJlZSBmb3IgbGVhcm5pbmcgYW5kIHByb3RvY29sIHJlc2VhcmNoIG9ubHk7IGNvbW1lcmNpYWwgdXNlIGlzIHByb2hpYml0ZWQu',
                 gold: 0,
                 diamond: 0,
                 exp: 0,
