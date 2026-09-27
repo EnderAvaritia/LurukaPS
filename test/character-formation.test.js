@@ -25,8 +25,8 @@ test('new formation keeps one load-safe placeholder until creation, then only th
         assert(groups.slice(1).every((g) => g.heros.every((h) => h.hero_id === '0')))
     }
 })
-test('migration clears a matching default party and retains different custom formations', () => {
-    const s = seedPlayer(tables, 1, 'legacy-party'),
+test('character selection updates only team1 and leaves every other team untouched', () => {
+    const s = seedPlayer(tables, 1, 'configured-party'),
         groups = s.player.group_mgrs[0].groups,
         heroes = s.player.heros_info.heros
     groups[1].heros = heroes.slice(0, 3).map((hero) => ({ hero_id: hero.guid }))
@@ -36,23 +36,21 @@ test('migration clears a matching default party and retains different custom for
     groups[2].control = heroes[0].guid
     const custom = structuredClone(groups[2])
     s.characterCustomized = true
-    s.initialFormationVersion = 2
     initializeCharacterFormation(tables, s)
-    assert.equal(groups[0].heros.filter((h) => h.hero_id !== '0').length, 1)
-    assert.equal(groups[1].control, '0')
+    assert.equal(groups[0].heros[0].hero_id, heroes.find((hero) => hero.conf_id === 199001).guid)
+    assert.deepEqual(
+        groups[1].heros,
+        heroes.slice(0, 3).map((hero) => ({ hero_id: hero.guid })),
+    )
     assert.deepEqual(groups[2], custom)
-    assert.equal(s.initialFormationVersion, 3)
-    const after = structuredClone(groups)
-    initializeCharacterFormation(tables, s)
-    assert.deepEqual(groups, after)
+    assert.equal(s.initialFormationVersion, undefined)
 })
-test('version-one prologue migration restores the companion left on the former default hero', () => {
+test('character selection restores the companion left on the former default hero', () => {
     const s = seedPlayer(tables, 1, 'lost-companion'),
         old = s.player.heros_info.heros[0],
         main = s.player.heros_info.heros.find((h) => h.conf_id === 199001),
         pet = s.pets[0]
     s.characterCustomized = true
-    s.initialFormationVersion = 1
     s.tasks = [{ task_id: 106002 }]
     old.pet_id = pet.guid
     pet.hero_id = old.guid

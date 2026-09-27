@@ -1,6 +1,6 @@
 import { registerPetCatch } from './handlers/pet-catch.js'
 import { refundPendingCatchCards } from './handlers/pet-catch.js'
-import { repairCharacterCreationMarker, initializeCharacterFormation } from './character-creation.js'
+import { repairCharacterCreationMarker } from './character-creation.js'
 import { reconcileFormationPets } from './formation-pets.js'
 import { syncCurrencyMirrors } from './currency.js'
 import {
@@ -341,7 +341,6 @@ export class Game {
                 repairPendingDuelEntry(state)
                 unlockAutomaticTasks(this.tables, state, now)
                 repairCharacterCreationMarker(state)
-                initializeCharacterFormation(this.tables, state)
                 ensureArenaFormationManager(state)
                 reconcileFormationPets(state)
                 upgradeInventory(state)
@@ -453,7 +452,6 @@ export class Game {
                     state.player.basic_info.wardrobe = r.wardrobe_info
                     state.player.basic_info.sex = r.wardrobe_info.sex
                 }
-                initializeCharacterFormation(this.tables, state)
                 return this.loginPackets(state, session, r, frame, e.id)
             })
         }

@@ -1,113 +1,79 @@
 import { bytes } from './player.js'
 
-const INITIAL_FORMATION_VERSION = 3
-const blankGroup = (group) =>
+const isBlankGroup = (group) =>
     group.heros.every((slot) => !slot.hero_id || slot.hero_id === '0') && (!group.control || group.control === '0')
 
 export function initializeCharacterFormation(tables, state) {
-    if (state.initialFormationVersion >= INITIAL_FORMATION_VERSION) return false
-    const groups = state.player.group_mgrs.find((m) => m.type === 1)?.groups
-    if (!groups) return false
+    // The seed already gives a fresh account one valid loading placeholder in
+    // team1. Apply the player's choice only when the creation callback arrives;
+    // do not rewrite saved formations during login.
+    if (!state.characterCustomized) return false
+    const groups = state.player.group_mgrs.find((manager) => manager.type === 1)?.groups,
+        group = groups?.find((candidate) => candidate.id === 1)
+    if (!group) return false
+
     const game = tables.get('game'),
-        maleId = Number(game.find((row) => row.title === 'AVATAR_HERO_ID_MALE')?.value),
-        femaleId = Number(game.find((row) => row.title === 'AVATAR_HERO_ID_FEMALE')?.value),
-        id = state.player.basic_info.sex === 1 ? maleId : femaleId,
-        main = state.player.heros_info.heros.find((h) => h.conf_id === id),
-        heroes = state.player.heros_info.heros,
-        legacy = heroes.slice(0, 3).map((h) => h.guid),
-        placeholder = heroes[0]?.guid
+        key = state.player.basic_info.sex === 1 ? 'AVATAR_HERO_ID_MALE' : 'AVATAR_HERO_ID_FEMALE',
+        id = Number(game.find((row) => row.title === key)?.value),
+        main = state.player.heros_info.heros.find((hero) => hero.conf_id === id),
+        placeholder = state.player.heros_info.heros[0]?.guid
     if (!main) throw Error('Configured protagonist is not available')
     if (!placeholder) throw Error('Starter placeholder hero is not available')
 
-    const isDefaultParty = (group) =>
-        group.heros.length === 3 &&
-        group.heros.every((slot, i) => slot.hero_id === legacy[i]) &&
-        group.control === legacy[0]
-    const isPlaceholderParty = (group) =>
+    const isPlaceholderParty =
         group.heros.length === 3 &&
         group.heros[0].hero_id === placeholder &&
         group.heros.slice(1).every((slot) => !slot.hero_id || slot.hero_id === '0') &&
         group.control === placeholder
-    const isLegacySelectedParty = (group) =>
+    const isMainParty =
         group.heros.length === 3 &&
         group.heros[0].hero_id === main.guid &&
-        group.heros[1].hero_id === legacy[1] &&
-        group.heros[2].hero_id === legacy[2] &&
+        group.heros.slice(1).every((slot) => !slot.hero_id || slot.hero_id === '0') &&
         group.control === main.guid
-    const setParty = (group, ids) => {
+    let changed = false
+    if (isBlankGroup(group) || isPlaceholderParty) {
         group.heros = Array.from({ length: 3 }, (_, i) => ({
-            hero_id: ids[i] ?? '0',
+            hero_id: i === 0 ? main.guid : '0',
             pet_id: '0',
         }))
-        group.control = ids[0] ?? '0'
+        group.control = main.guid
+        changed = true
+    } else if (!isMainParty) {
+        return false
     }
-    const restoreCompanion = () => {
-        if (
-            !(state.tasks ?? []).some((t) => [106001, 106002].includes(t.task_id)) ||
-            (main.pet_id && main.pet_id !== '0')
-        )
-            return false
-        const old = heroes[0],
-            pet = state.pets.find((p) => p.guid === old.pet_id && p.hero_id === old.guid)
-        if (
-            !pet ||
-            old.guid === main.guid ||
-            groups.filter((g) => g.id !== 0).some((g) => g.heros.some((slot) => slot.hero_id === old.guid))
-        )
-            return false
-        old.pet_id = '0'
-        main.pet_id = pet.guid
-        pet.hero_id = main.guid
-        for (const group of groups)
-            for (const slot of group.heros)
-                if (slot.hero_id === main.guid && (!slot.pet_id || slot.pet_id === '0')) slot.pet_id = pet.guid
-        return true
-    }
+    return restoreCompanion(state, main, groups) || changed
+}
 
-    let changed = false
-    if (!state.characterCustomized) {
-        // Keep one valid actor so the client can finish loading, but leave the
-        // remaining nine teams empty until the player chooses a protagonist.
-        for (const group of groups) {
-            if (group.id === 0) continue
-            if (group.id === 1) {
-                if (blankGroup(group) || isDefaultParty(group)) {
-                    setParty(group, [placeholder])
-                    changed = true
-                }
-            } else if (isDefaultParty(group)) {
-                setParty(group, [])
-                changed = true
-            }
-        }
-        return changed
-    }
-
-    for (const group of groups) {
-        if (group.id === 0) continue
-        if (
-            group.id === 1 &&
-            (blankGroup(group) || isPlaceholderParty(group) || isDefaultParty(group) || isLegacySelectedParty(group))
-        ) {
-            setParty(group, [main.guid])
-            changed = true
-        } else if (group.id !== 1 && isDefaultParty(group)) {
-            // Version 3 removes each exact legacy default party, even when the
-            // same formation was deliberately configured by the player.
-            setParty(group, [])
-            changed = true
-        }
-    }
-    changed = restoreCompanion() || changed
-    state.initialFormationVersion = INITIAL_FORMATION_VERSION
-    return changed
+function restoreCompanion(state, main, groups) {
+    if (
+        !(state.tasks ?? []).some((task) => [106001, 106002].includes(task.task_id)) ||
+        (main.pet_id && main.pet_id !== '0')
+    )
+        return false
+    const old = state.player.heros_info.heros[0],
+        pet = state.pets.find((candidate) => candidate.guid === old.pet_id && candidate.hero_id === old.guid)
+    if (
+        !pet ||
+        old.guid === main.guid ||
+        groups
+            .filter((candidate) => candidate.id !== 0)
+            .some((candidate) => candidate.heros.some((slot) => slot.hero_id === old.guid))
+    )
+        return false
+    old.pet_id = '0'
+    main.pet_id = pet.guid
+    pet.hero_id = main.guid
+    for (const candidate of groups)
+        for (const slot of candidate.heros)
+            if (slot.hero_id === main.guid && (!slot.pet_id || slot.pet_id === '0')) slot.pet_id = pet.guid
+    return true
 }
 
 // CBT3 L_PlayerStore:getIsNewPlayer uses the first character of the decoded
 // player name. Legacy placeholder names omitted the required '&' prefix.
 export function repairCharacterCreationMarker(state) {
     if (state.characterCustomized || state.player.basic_info.name !== bytes('AzurPlayer')) return false
-    if (!(state.tasks ?? []).some((t) => t.task_id === 106001)) return false
+    if (!(state.tasks ?? []).some((task) => task.task_id === 106001)) return false
     state.player.basic_info.name = bytes('&AzurPlayer')
     return true
 }
