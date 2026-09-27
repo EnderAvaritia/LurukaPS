@@ -60,12 +60,37 @@ export function registerWorldEvents(on, tables) {
             c.pushBefore('CSProtoWorldEventInfo', { infos: [wire(event)] })
             return { rewards: [] }
         }
-        if (event.expired) {
-            ensure(r.reset_start && step === event.step, 'Event expired')
-            c.pushBefore('CSProtoWorldEventInfo', { infos: [wire(event)] })
-            return { rewards: [] }
+        const timedOut = row.overtime > 0 && c.now >= event.begin_time + row.overtime
+        if (timedOut && !event.expired) {
+            event.expired = true
+            event.step = row.overtimeResult
         }
-        ensure(!row.overtime || c.now < event.begin_time + row.overtime, 'Event expired')
+        if (event.expired) {
+            // ForceReqSetStep sends reset_start when the configured overtime
+            // resolves an event. Commit that final step once and start the
+            // normal refresh cooldown; echoing the old expired state makes
+            // the client retry this packet forever.
+            ensure(r.reset_start && step === event.step && step === row.overtimeResult, 'Event expired')
+            event.expired = false
+            event.step = step
+            event.begin_time = c.now
+            event.next_trigger_time = c.now + Math.max(0, row.refreshCD)
+            let rewards = []
+            if (step === row.stepCount - 1 && !event.rewarded) {
+                for (const id of String(row.dropID || '')
+                    .split('|')
+                    .filter(Boolean)
+                    .map(Number))
+                    rewards.push(...drops.drops(id, c.randomInt))
+                rewards = grantRewards(c.tables, c.state, rewards)
+                event.rewarded = true
+                event.completed = true
+                if (rewards.length) syncPlayer({ ...c, push: c.pushBefore })
+            }
+            c.pushBefore('CSProtoWorldEventInfo', { infos: [wire(event)] })
+            return { rewards }
+        }
+        ensure(!timedOut, 'Event expired')
         ensure(r.reset_start || (step >= event.step && step <= event.step + 1), 'Invalid event transition')
         let rewards = []
         if (step !== event.step) {
