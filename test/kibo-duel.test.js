@@ -18,12 +18,10 @@ test('CBT3 duel501 initializes the native arena manager and locked formation bef
         seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get(`CSProto${name}`)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     try {
         call('EnterGame', { open_id: 'duel-501' })
@@ -182,12 +180,10 @@ test('duel501 enters its table-linked arena through one-way 9510 and can leave w
         seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get(`CSProto${name}`)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     try {
         call('EnterGame', { open_id: 'arena-entry' })
@@ -258,12 +254,10 @@ test('relogin recovers legacy and timed-out READY duel entries without losing fr
         seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get(`CSProto${name}`)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     try {
         call('EnterGame', { open_id: 'stranded-duel' })

@@ -15,12 +15,10 @@ function fixture() {
     let seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get(`CSProto${name}`)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     call('EnterGame', { open_id: 'world-marks' })
     return { store, session, call, state: () => store.load(session.id).state, close: () => store.close() }

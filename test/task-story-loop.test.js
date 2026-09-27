@@ -18,12 +18,10 @@ test('task106010 node152 accepts its exact story NPC callback without mistaking 
     let seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get(`CSProto${name}`)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     try {
         call('EnterGame', { open_id: 'story-loop' })

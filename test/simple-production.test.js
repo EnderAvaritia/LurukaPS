@@ -18,12 +18,10 @@ function fixture() {
         session = {}
     const call = (name, r = {}, who = session) => {
         const e = protocol.byName.get(`CSProto${name}`)
-        return game
-            .dispatch(who, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(who, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     call('EnterGame', { open_id: 'simple-production' })
     const graph = new TaskGraphs(tables).get(106010)
@@ -59,12 +57,10 @@ function fixture() {
             now = value
         },
         tick: () =>
-            game
-                .tick(session.id)
-                .map((packet) => ({
-                    id: packet.id,
-                    data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-                })),
+            game.tick(session.id).map((packet) => ({
+                id: packet.id,
+                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+            })),
         close: () => store.close(),
     }
 }

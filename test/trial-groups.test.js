@@ -173,12 +173,10 @@ test('node59 trial pet102 joins temporary formation, participates in combat and 
     let seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get('CSProto' + name)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     try {
         call('EnterGame', { open_id: 'trial-pet-node59' })
@@ -392,12 +390,10 @@ test('logged reconnect request can restore trial hero and duplicated trial pet t
     let seq = 1
     const call = (name, r = {}) => {
         const e = protocol.byName.get('CSProto' + name)
-        return game
-            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
-            .map((packet) => ({
-                id: packet.id,
-                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-            }))
+        return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) }).map((packet) => ({
+            id: packet.id,
+            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+        }))
     }
     try {
         call('EnterGame', { open_id: 'trial-mixed-request' })
