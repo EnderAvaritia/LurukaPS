@@ -75,6 +75,10 @@ export function conditionValue(condition, state, context) {
     if (condition.conditionId === 2525) {
         const d = base.__type_TaskCondCompletePlayableData,
             finish = state.playableFinishes?.[d?.playableId]
+        // TODO(106010/167, playable62102 坐骑挑战): implement the mount-course
+        // flow and authoritative finish result, verify it with the CBT3 client,
+        // then remove this temporary condition2525 bypass.
+        if (context?.taskId === 106010 && d?.playableId === 62102) return 1
         return d && finish && (!base.mapData?.sceneId || finish.map_id === base.mapData.sceneId) ? 1 : 0
     }
     if (condition.conditionId === 2523 && context) {
