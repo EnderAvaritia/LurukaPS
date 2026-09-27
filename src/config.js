@@ -34,7 +34,6 @@ export function configuration() {
         serverId: integer('AZUR_SERVER_ID', 320229),
         serverDescription: process.env.AZUR_SERVER_DESC || 'azurjs CBT3 local server',
         clientLogUrl: process.env.AZUR_CLIENT_LOG || '',
-        marqueeCdnKey: process.env.AZUR_MARQUEE_CDN_KEY || '',
         maxConnections: 64,
         idleTimeout: 120000,
     }

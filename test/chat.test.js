@@ -210,6 +210,97 @@ test('TCP routes private/encrypted and scoped public pushes, exact retry does no
     }
 })
 
+test('entry sends one Base64 server notice into each session world chat after its own timer', async () => {
+    const server = await startServer(
+            {
+                ...config,
+                gamePort: 0,
+                httpPort: 0,
+                database: ':memory:',
+                strongEncryption: true,
+                entryWorldChatNoticeDelayMs: 30,
+            },
+            { info: () => {}, warn: () => {} },
+        ),
+        clients = []
+    function client() {
+        const socket = net.connect(server.tcp.address().port, '127.0.0.1'),
+            reader = new FrameReader(),
+            queue = []
+        let key,
+            wake,
+            seq = 1
+        const c = {
+            socket,
+            queue,
+            async response(id) {
+                const end = Date.now() + 5000
+                while (Date.now() < end) {
+                    const i = queue.findIndex((frame) => frame.id === id)
+                    if (i >= 0) return queue.splice(i, 1)[0]
+                    await new Promise((resolve) => {
+                        const timer = setTimeout(resolve, 25)
+                        wake = () => {
+                            clearTimeout(timer)
+                            resolve()
+                        }
+                    })
+                }
+                throw Error(`Missing ${id}`)
+            },
+            send(name, request = {}) {
+                const e = server.protocol.byName.get(`CSProto${name}`)
+                socket.write(
+                    encodeFrame(
+                        { id: e.id, seq: seq++, flag: key && e.id !== 5001 ? 2 : 0 },
+                        server.protocol.encode(e.req, request),
+                        { encryptionKey: key },
+                    ),
+                )
+            },
+        }
+        socket.on('data', (chunk) => {
+            reader.feed(chunk, (frame) => {
+                if (frame.id === 5014) {
+                    key = Buffer.from(server.protocol.decode('SCEnterGameToken', frame.payload).rc4_key, 'base64')
+                    reader.setEncryptionKey(key)
+                }
+                queue.push(frame)
+            })
+            wake?.()
+        })
+        clients.push(c)
+        return c
+    }
+    try {
+        const a = client(),
+            b = client()
+        await Promise.all(clients.map((x) => once(x.socket, 'connect')))
+        a.send('EnterGame', { open_id: 'entry-chat-a' })
+        await a.response(5001)
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        b.send('EnterGame', { open_id: 'entry-chat-b' })
+        await b.response(5001)
+
+        const [noticeA, noticeB] = await Promise.all([a.response(9932), b.response(9932)]),
+            decodedA = server.protocol.decode('SCChatInfoChange', noticeA.payload),
+            decodedB = server.protocol.decode('SCChatInfoChange', noticeB.payload)
+        for (const decoded of [decodedA, decodedB]) {
+            assert.equal(decoded.target.chat_type, 2)
+            assert.equal(decoded.target.tid, '1')
+            assert.equal(decoded.chat.msg, 'QXp1ckpTIOaYr+WFjei0ueeahO+8jOS7heS+m+WtpuS5oOeglOeptuWNj+iuruWunueOsO+8jOS4peemgeeUqOS6juWVhuS4mueUqOmAlOOAgi9BenVySlMgaXMgZnJlZSBmb3IgbGVhcm5pbmcgYW5kIHByb3RvY29sIHJlc2VhcmNoIG9ubHk7IGNvbW1lcmNpYWwgdXNlIGlzIHByb2hpYml0ZWQu')
+            assert.equal(decoded.chat.player_id, 0)
+            assert.equal(decoded.chat.basic_info.name, 'QXp1ckpT')
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        assert.equal(a.queue.filter((frame) => frame.id === 9932).length, 0)
+        assert.equal(b.queue.filter((frame) => frame.id === 9932).length, 0)
+    } finally {
+        for (const c of clients) c.socket.destroy()
+        await server.close()
+    }
+})
+
 test('schema2 upgrades chat storage and outgoing encode failure rolls back inserted messages', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azur-chat-'))
     let store = new Store(path.join(dir, 'state.sqlite'))

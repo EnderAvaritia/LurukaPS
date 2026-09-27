@@ -12,8 +12,9 @@ import { Tables } from './player.js'
 import { Game } from './game.js'
 import { FrameReader, encodeFrame } from './wire.js'
 
-const ENTRY_MARQUEE_DELAY_MS = 60_000
-const ENTRY_MARQUEE_DURATION_SECONDS = 300
+const ENTRY_WORLD_CHAT_DELAY_MS = 60_000
+const ENTRY_WORLD_CHAT_TEXT_BASE64 =
+    'QXp1ckpTIOaYr+WFjei0ueeahO+8jOS7heS+m+WtpuS5oOeglOeptuWNj+iuruWunueOsO+8jOS4peemgeeUqOS6juWVhuS4mueUqOmAlOOAgi9BenVySlMgaXMgZnJlZSBmb3IgbGVhcm5pbmcgYW5kIHByb3RvY29sIHJlc2VhcmNoIG9ubHk7IGNvbW1lcmNpYWwgdXNlIGlzIHByb2hpYml0ZWQu'
 
 async function readJsonBody(req, maxBytes = 1024 * 1024) {
     const chunks = []
@@ -83,56 +84,51 @@ export async function startServer(config, logger = console) {
             return false
         }
     }
-    function scheduleEntryMarquee(session, socket) {
-        if (session.entryMarqueeTimer) clearTimeout(session.entryMarqueeTimer)
-        session.entryMarqueeTimer = setTimeout(() => {
-            logger.info(`Entry marquee: sending to ${session.id}`)
-            session.entryMarqueeTimer = undefined
+    function scheduleEntryWorldChatNotice(session, socket) {
+        if (session.entryChatNoticeTimer) clearTimeout(session.entryChatNoticeTimer)
+        const delayMs =
+            Number.isInteger(config.entryWorldChatNoticeDelayMs) && config.entryWorldChatNoticeDelayMs >= 0
+                ? config.entryWorldChatNoticeDelayMs
+                : ENTRY_WORLD_CHAT_DELAY_MS
+        session.entryChatNoticeTimer = setTimeout(() => {
+            logger.info(`Entry world chat: sending to ${session.id}`)
+            session.entryChatNoticeTimer = undefined
             if (!session.entered || !session.id || owners.get(session.id) !== socket || socket.destroyed) {
-                logger.info(`Entry marquee: skipped inactive session ${session.id}`)
+                logger.info(`Entry world chat: skipped inactive session ${session.id}`)
                 return
             }
             try {
-                const contentKey = String(config.marqueeCdnKey ?? '').trim()
-                if (!contentKey) {
-                    logger.warn('Entry marquee skipped: set AZUR_MARQUEE_CDN_KEY to a published marquee-content object key')
-                    return
-                }
-                const now = Math.floor(Date.now() / 1000)
-                const noticeId = now,
-                    packet = game.packet('CSProtoAnnouncementNotify', {
-                        scrolling: [
-                            {
-                                meta: [
-                                    { title: '', content: contentKey, language: 'chs' },
-                                    { title: '', content: contentKey, language: 'cht' },
-                                    { title: '', content: contentKey, language: 'en' },
-                                    { title: '', content: contentKey, language: 'jp' },
-                                    { title: '', content: contentKey, language: 'kr' },
-                                ],
-                                publish_time: now - 10,
-                                order_id: noticeId,
-                                tab_id: 0,
-                                end_time: now + ENTRY_MARQUEE_DURATION_SECONDS,
-                                id: noticeId,
-                                type: 0,
-                                jump_id: '',
-                                hide: false,
-                                showPosition: 0,
-                                device_type: [],
-                                priority: 1,
-                                showPositionScrolling: 0,
-                                channel: '',
+                const state = store.load(session.id).state,
+                    now = Math.floor(Date.now() / 1000),
+                    room = Number.isInteger(state.chatWorldRoom) && state.chatWorldRoom > 0 ? state.chatWorldRoom : 1,
+                    basicInfo = state.player.basic_info,
+                    packet = game.packet('CSProtoChatInfoChange', {
+                        target: { tid: String(room), chat_type: 2 },
+                        chat: {
+                            msg: ENTRY_WORLD_CHAT_TEXT_BASE64,
+                            time: now,
+                            type: 0,
+                            player_id: 0,
+                            order: now,
+                            basic_info: {
+                                id: 0,
+                                zone_id: basicInfo.zone_id ?? 1,
+                                name: 'QXp1ckpT',
+                                sex: 1,
+                                birth: 0,
                             },
-                        ],
+                            extra_info: '',
+                            bubbleId: 0,
+                            language: basicInfo.language ?? 1,
+                        },
                     })
-                if (deliverTo(session.id, packet)) logger.info(`Entry marquee: delivered 10701 to ${session.id}`)
-                else logger.warn(`Entry marquee: delivery rejected for ${session.id}`)
+                if (deliverTo(session.id, packet)) logger.info(`Entry world chat: delivered 9932 to ${session.id}`)
+                else logger.warn(`Entry world chat: delivery rejected for ${session.id}`)
             } catch (err) {
-                logger.warn(`Entry marquee: ${err.message}`)
+                logger.warn(`Entry world chat: ${err.message}`)
             }
-        }, ENTRY_MARQUEE_DELAY_MS)
-        session.entryMarqueeTimer.unref()
+        }, delayMs)
+        session.entryChatNoticeTimer.unref()
     }
     const tcp = net.createServer((socket) => {
         if (sockets.size >= config.maxConnections) {
@@ -151,7 +147,7 @@ export async function startServer(config, logger = console) {
         socket.on('close', () => {
             sockets.delete(socket)
             sessions.delete(socket)
-            if (session.entryMarqueeTimer) clearTimeout(session.entryMarqueeTimer)
+            if (session.entryChatNoticeTimer) clearTimeout(session.entryChatNoticeTimer)
             if (owners.get(session.id) === socket) owners.delete(session.id)
         })
         socket.on('data', (chunk) => {
@@ -191,7 +187,7 @@ export async function startServer(config, logger = console) {
                             if (old && old !== socket) old.destroy()
                             owners.set(session.id, socket)
                         }
-                        if (entering && session.entered) scheduleEntryMarquee(session, socket)
+                        if (entering && session.entered) scheduleEntryWorldChatNotice(session, socket)
                     } catch (err) {
                         diagnostics.record({ protocol, frame, accountId: session.id, error: err })
                         try {
