@@ -12,6 +12,9 @@ import { Tables } from './player.js'
 import { Game } from './game.js'
 import { FrameReader, encodeFrame } from './wire.js'
 
+const ENTRY_MARQUEE_DELAY_MS = 60_000
+const ENTRY_MARQUEE_DURATION_SECONDS = 300
+
 async function readJsonBody(req, maxBytes = 1024 * 1024) {
     const chunks = []
     let size = 0
@@ -57,11 +60,11 @@ export async function startServer(config, logger = console) {
     function deliverTo(id, packet) {
         const target = owners.get(id),
             connection = target && sessions.get(target)
-        if (!connection?.session.entered || target.destroyed) return
+        if (!connection?.session.entered || target.destroyed) return false
         try {
             if (target.writableLength > 8 * 1024 * 1024) {
                 target.destroy()
-                return
+                return false
             }
             connection.replay.invalidate()
             const destination = connection.session
@@ -73,10 +76,63 @@ export async function startServer(config, logger = console) {
                     { encryptionKey: destination.wireKey },
                 ),
             )
+            return true
         } catch (err) {
             logger.warn(`Push delivery: ${err.message}`)
             target.destroy()
+            return false
         }
+    }
+    function scheduleEntryMarquee(session, socket) {
+        if (session.entryMarqueeTimer) clearTimeout(session.entryMarqueeTimer)
+        session.entryMarqueeTimer = setTimeout(() => {
+            logger.info(`Entry marquee: sending to ${session.id}`)
+            session.entryMarqueeTimer = undefined
+            if (!session.entered || !session.id || owners.get(session.id) !== socket || socket.destroyed) {
+                logger.info(`Entry marquee: skipped inactive session ${session.id}`)
+                return
+            }
+            try {
+                const contentKey = String(config.marqueeCdnKey ?? '').trim()
+                if (!contentKey) {
+                    logger.warn('Entry marquee skipped: set AZUR_MARQUEE_CDN_KEY to a published marquee-content object key')
+                    return
+                }
+                const now = Math.floor(Date.now() / 1000)
+                const noticeId = now,
+                    packet = game.packet('CSProtoAnnouncementNotify', {
+                        scrolling: [
+                            {
+                                meta: [
+                                    { title: '', content: contentKey, language: 'chs' },
+                                    { title: '', content: contentKey, language: 'cht' },
+                                    { title: '', content: contentKey, language: 'en' },
+                                    { title: '', content: contentKey, language: 'jp' },
+                                    { title: '', content: contentKey, language: 'kr' },
+                                ],
+                                publish_time: now - 10,
+                                order_id: noticeId,
+                                tab_id: 0,
+                                end_time: now + ENTRY_MARQUEE_DURATION_SECONDS,
+                                id: noticeId,
+                                type: 0,
+                                jump_id: '',
+                                hide: false,
+                                showPosition: 0,
+                                device_type: [],
+                                priority: 1,
+                                showPositionScrolling: 0,
+                                channel: '',
+                            },
+                        ],
+                    })
+                if (deliverTo(session.id, packet)) logger.info(`Entry marquee: delivered 10701 to ${session.id}`)
+                else logger.warn(`Entry marquee: delivery rejected for ${session.id}`)
+            } catch (err) {
+                logger.warn(`Entry marquee: ${err.message}`)
+            }
+        }, ENTRY_MARQUEE_DELAY_MS)
+        session.entryMarqueeTimer.unref()
     }
     const tcp = net.createServer((socket) => {
         if (sockets.size >= config.maxConnections) {
@@ -95,6 +151,7 @@ export async function startServer(config, logger = console) {
         socket.on('close', () => {
             sockets.delete(socket)
             sessions.delete(socket)
+            if (session.entryMarqueeTimer) clearTimeout(session.entryMarqueeTimer)
             if (owners.get(session.id) === socket) owners.delete(session.id)
         })
         socket.on('data', (chunk) => {
@@ -134,6 +191,7 @@ export async function startServer(config, logger = console) {
                             if (old && old !== socket) old.destroy()
                             owners.set(session.id, socket)
                         }
+                        if (entering && session.entered) scheduleEntryMarquee(session, socket)
                     } catch (err) {
                         diagnostics.record({ protocol, frame, accountId: session.id, error: err })
                         try {
