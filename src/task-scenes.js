@@ -52,9 +52,13 @@ export function prepareTaskScenes(tables, state, { login = false } = {}) {
                 config = graph.nodes.get(node.node_id),
                 actions = taskActions(config)
             const team = actions.find((a) => a.__type_TaskTeamChangeData?.changeScene > 0)?.__type_TaskTeamChangeData
-            const transfer = actions.find(
-                (a) => a.__type_TaskTransferBaseData?.transferPointId > 0,
-            )?.__type_TaskTransferBaseData
+            const transfers = actions
+                .map((a) => a.__type_TaskTransferBaseData)
+                .filter((a) => a?.transferPointId > 0)
+            // Multi-transfer story nodes must run their configured scene/story
+            // sequence in order on the client. Prepositioning at the first point
+            // can leave the rest of that sequence in the same scene.
+            const transfer = transfers.length === 1 ? transfers[0] : null
             let point
             if (team) point = taskBirthPoint(tables, 0, team.changeScene)
             else if (node.client_before && transfer) point = taskBirthPoint(tables, transfer.transferPointId)
