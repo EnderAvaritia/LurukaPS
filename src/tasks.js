@@ -68,8 +68,10 @@ export function conditionValue(condition, state, context) {
         const id = base.__type_TaskCondGuideData?.guideId
         return state.player.guide_infos?.infos?.some((g) => g.id === id && g.complete) ? 1 : 0
     }
-    if (condition.conditionId === 2518)
-        return guidedConditionValue(base.__type_TaskCondGuidedAchievementsData?.achievId, state)
+    if (condition.conditionId === 2518) {
+        const achievId = base.__type_TaskCondGuidedAchievementsData?.achievId
+        return guidedConditionValue(achievId, state, context)
+    }
     if (condition.conditionId === 2525) {
         const d = base.__type_TaskCondCompletePlayableData,
             finish = state.playableFinishes?.[d?.playableId]

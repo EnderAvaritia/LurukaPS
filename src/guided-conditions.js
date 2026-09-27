@@ -23,12 +23,27 @@ export function guidedRequirement(id) {
     return Number.isInteger(param) && param > 0 ? param : 1
 }
 
-export function guidedConditionValue(id, state) {
+export function guidedConditionValue(id, state, context) {
     const row = conditions.get(id)
     if (!row) return 0
     const parts = String(row.condition || '')
         .split('|')
         .map(Number)
+    // TODO: remove this local bypass after Kibo Duel condition50002 has a
+    // server implementation and its result has been verified against CBT3.
+    // TODO: remove after server-side Kibo Duel condition 50002 is
+    // implemented and its result is validated against the official server.
+    if (context && parts[0] === 50002) return guidedRequirement(id)
+    // CBT3 common_condition 12030 is ActivationPoint. The local server seeds
+    // all configured transfer points, so evaluate the configured point ID
+    // against that authoritative unlocked-point list.
+    if (
+        parts.length === 2 &&
+        parts[0] === 12030 &&
+        Number.isInteger(parts[1]) &&
+        parts[1] > 0
+    )
+        return (state.world?.points ?? []).includes(parts[1]) ? 1 : 0
     // CBT3 conditionNode_12027 reads HomeStore buildingBag.used_num by group.
     // Dry farmland groups use a separate plowed-field counter in the client.
     if (
