@@ -4,7 +4,7 @@ import { Tables, seedPlayer } from '../src/player.js'
 import { configuration } from '../src/config.js'
 import { initializeCharacterFormation } from '../src/character-creation.js'
 const tables = new Tables(configuration().tables)
-test('new formation stays empty until creation, then only the selected protagonist enters first slot', () => {
+test('new formation keeps one load-safe placeholder until creation, then only the protagonist remains', () => {
     for (const [sex, id] of [
         [1, 199002],
         [2, 199001],
@@ -12,7 +12,11 @@ test('new formation stays empty until creation, then only the selected protagoni
         const s = seedPlayer(tables, 1, 'creation'),
             groups = s.player.group_mgrs[0].groups
         initializeCharacterFormation(tables, s)
-        assert(groups.every((g) => g.control === '0' && g.heros.every((h) => h.hero_id === '0')))
+        const placeholder = s.player.heros_info.heros[0].guid
+        assert.equal(groups[0].heros[0].hero_id, placeholder)
+        assert.equal(groups[0].control, placeholder)
+        assert(groups[0].heros.slice(1).every((h) => h.hero_id === '0'))
+        assert(groups.slice(1).every((g) => g.control === '0' && g.heros.every((h) => h.hero_id === '0')))
         s.characterCustomized = true
         s.player.basic_info.sex = sex
         initializeCharacterFormation(tables, s)
@@ -21,21 +25,23 @@ test('new formation stays empty until creation, then only the selected protagoni
         assert(groups.slice(1).every((g) => g.heros.every((h) => h.hero_id === '0')))
     }
 })
-test('legacy automatic parties migrate once and deliberately customized parties are retained', () => {
+test('migration clears a matching default party and retains different custom formations', () => {
     const s = seedPlayer(tables, 1, 'legacy-party'),
         groups = s.player.group_mgrs[0].groups,
         heroes = s.player.heros_info.heros
-    for (const g of groups) {
-        g.heros = heroes.slice(0, 3).map((h) => ({ hero_id: h.guid }))
-        g.control = heroes[0].guid
-    }
+    groups[1].heros = heroes.slice(0, 3).map((hero) => ({ hero_id: hero.guid }))
+    groups[1].control = heroes[0].guid
+    groups[2].heros = heroes.slice(0, 3).map((hero) => ({ hero_id: hero.guid }))
     groups[2].heros[1].hero_id = heroes[4].guid
+    groups[2].control = heroes[0].guid
     const custom = structuredClone(groups[2])
     s.characterCustomized = true
+    s.initialFormationVersion = 2
     initializeCharacterFormation(tables, s)
     assert.equal(groups[0].heros.filter((h) => h.hero_id !== '0').length, 1)
     assert.equal(groups[1].control, '0')
     assert.deepEqual(groups[2], custom)
+    assert.equal(s.initialFormationVersion, 3)
     const after = structuredClone(groups)
     initializeCharacterFormation(tables, s)
     assert.deepEqual(groups, after)

@@ -53,9 +53,20 @@ test('creation page receives CBT3 new-player name marker and legacy default acco
         assert.equal(Buffer.from(f.state().player.basic_info.name, 'base64').toString('utf8'), '&AzurPlayer')
         assert.equal(f.state().tasks[0].nodes[0].node_id, 11)
         f.call('PlayerCustomData', { name: bytes('PlayerName'), wardrobe_info: { sex: 2, height: 90, complexion: 0 } })
-        assert.equal(f.state().characterCustomized, true)
-        assert.equal(f.state().tasks[0].nodes[0].node_values[0], 1)
-        assert.equal(Buffer.from(f.state().player.basic_info.name, 'base64').toString('utf8'), 'PlayerName')
+        const state = f.state(),
+            groups = state.player.group_mgrs[0].groups,
+            main = state.player.heros_info.heros.find((hero) => hero.conf_id === 199001)
+        assert.equal(state.characterCustomized, true)
+        assert.equal(state.tasks[0].nodes[0].node_values[0], 1)
+        assert.equal(Buffer.from(state.player.basic_info.name, 'base64').toString('utf8'), 'PlayerName')
+        assert.equal(groups[0].heros[0].hero_id, main.guid)
+        assert.equal(groups[0].control, main.guid)
+        assert(groups[0].heros.slice(1).every((slot) => slot.hero_id === '0'))
+        assert(
+            groups
+                .slice(1)
+                .every((group) => group.control === '0' && group.heros.every((slot) => slot.hero_id === '0')),
+        )
         f.game.dispatch({}, { id: e.id, seq: 2, payload: p.encode(e.req, { open_id: 'prologue' }) })
         assert.equal(Buffer.from(f.state().player.basic_info.name, 'base64').toString('utf8'), 'PlayerName')
     } finally {

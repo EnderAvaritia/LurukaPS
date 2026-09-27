@@ -112,7 +112,10 @@ export function registerPetCatch(on) {
             time: c.now,
         }
         retireCapturedEnemy(c, id)
-        c.push('SCProtoObjDisappearNtf', { agent_uid: id })
+        // The SCCatchPet success response drives CBT3's local catch result state
+        // (SingleReceivePetCatch / OnRealTimeCatchResult). Single-player has no
+        // server AOI despawn; SCProtoObjDisappearNtf is MultiTeam-only.
+        // c.push('SCProtoObjDisappearNtf', { agent_uid: id })
         const rewards = [{ itemtype: 5, itemid: petId, itemnum: 1, guid: pet.guid }]
         return { tar_id: id, success: true, guid: pet.guid, rand_rate: 1, rewards: { rewards } }
     })

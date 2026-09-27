@@ -335,6 +335,9 @@ export class Game {
                 return [reply({ open_id: r.open_id, pid: a.id, guid: a.id, server_token: session.token })]
             }
             const packets = this.store.transact(session.id, e.id, (state) => {
+                // A reconnect sends a complete task snapshot, so an interrupted
+                // story transition must not leave task sync held behind its old barrier.
+                delete state.pendingTaskStorySync
                 repairPendingDuelEntry(state)
                 unlockAutomaticTasks(this.tables, state, now)
                 repairCharacterCreationMarker(state)
@@ -450,6 +453,7 @@ export class Game {
                     state.player.basic_info.wardrobe = r.wardrobe_info
                     state.player.basic_info.sex = r.wardrobe_info.sex
                 }
+                initializeCharacterFormation(this.tables, state)
                 return this.loginPackets(state, session, r, frame, e.id)
             })
         }

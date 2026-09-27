@@ -276,6 +276,42 @@ export function taskSnapshot(tables, state) {
         next_main_id: main?.task_id ?? 0,
     }
 }
+
+function storyReported(state, storyId, tag = 0) {
+    return (
+        state.storyIds?.includes(storyId) ||
+        Object.values(state.storyWatches ?? {}).some((watch) => watch.story_id === storyId && watch.tag === tag)
+    )
+}
+
+export function deferTaskSyncUntilAfterStories(state, taskId, nodeId, config) {
+    const node = config.__type_TaskConditionNodeData ?? config,
+        stories = asList(node.afterActionList)
+            .map((action) => action.dataType?.__type_TaskOpenStoryData)
+            .filter((story) => Number.isInteger(story?.storyId) && story.storyId > 0)
+            .map((story) => ({ story_id: story.storyId, tag: story.storyTag ?? 0 }))
+            .filter((story) => !storyReported(state, story.story_id, story.tag))
+    if (!stories.length) return false
+    const barrier = (state.pendingTaskStorySync ??= { task_id: taskId, node_id: nodeId, stories: [], extra: {} })
+    barrier.task_id = taskId
+    barrier.node_id = nodeId
+    const unique = new Set(barrier.stories.map((story) => `${story.story_id}:${story.tag}`))
+    for (const story of stories) {
+        const key = `${story.story_id}:${story.tag}`
+        if (!unique.has(key)) barrier.stories.push(story)
+        unique.add(key)
+    }
+    return true
+}
+
+export function flushTaskSyncAfterStories(tables, state, push) {
+    const barrier = state.pendingTaskStorySync
+    if (!barrier || !barrier.stories.every((story) => storyReported(state, story.story_id, story.tag))) return false
+    delete state.pendingTaskStorySync
+    push({ ...taskSnapshot(tables, state), ...(barrier.extra ?? {}) })
+    return true
+}
+
 export function reconcileTaskBefore(tables, graph, task, node, state) {
     if (node.client_before) return false
     const config = graph.nodes.get(node.node_id),

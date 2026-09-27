@@ -1,5 +1,6 @@
 import { ensure } from './common.js'
 import { registerStoryBattle } from '../story-battle.js'
+import { flushTaskSyncAfterStories } from '../tasks.js'
 export function registerStory(on, tables) {
     registerStoryBattle(on, tables)
     on('SetStoryId', (c, r) => {
@@ -24,6 +25,7 @@ export function registerStory(on, tables) {
             click_count: r.param || 0,
         }
         c.push('CSProtoStorySync', { infos: { infos: [r.story_id] } })
+        flushTaskSyncAfterStories(c.tables, c.state, (snapshot) => c.push('CSProtoTaskSync', snapshot))
         return { u32: r.story_id }
     })
 }

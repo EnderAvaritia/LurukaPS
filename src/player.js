@@ -61,12 +61,15 @@ export function seedPlayer(tables, id, openId) {
     const essences = tables
         .get('soulessence')
         .map((e) => ({ guid: e.id, id: e.id, lv: 1, rank: 1, advance: 1, exp: 0, lock: true, wear_hero: '0' }))
-    const groups = Array.from({ length: 5 }, (_, i) => ({
+    const placeholder = heroes[0]
+    const groups = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         group_name: bytes(`队伍${i + 1}`),
         heros: Array.from({ length: 3 }, () => ({ hero_id: '0', pet_id: '0' })),
         control: '0',
     }))
+    groups[0].heros[0].hero_id = placeholder.guid
+    groups[0].control = placeholder.guid
     const birth = tables.find('world_borthpos', 10045) || tables.get('world_borthpos')[0]
     return {
         schema: 1,

@@ -102,8 +102,6 @@ export function worldSync(c, r = {}, cmd = 256, includeMarks = true) {
             players: [mapPlayer(c)],
         },
     })
-    for (const [id, capture] of Object.entries(s.petCaptureResults ?? {}))
-        if (capture.map_id === w.map_id) c.push('SCProtoObjDisappearNtf', { agent_uid: id })
 }
 export function rememberMap(c, destination) {
     const w = c.state.world

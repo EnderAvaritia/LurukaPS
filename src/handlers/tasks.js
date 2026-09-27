@@ -15,6 +15,7 @@ import {
     acceptTask,
     taskSnapshot,
     advancePetChoiceBranch,
+    deferTaskSyncUntilAfterStories,
 } from '../tasks.js'
 export function registerTasks(register, tables) {
     const handlers = new Map()
@@ -24,7 +25,14 @@ export function registerTasks(register, tables) {
     }
     const graphs = new TaskGraphs(tables)
     const drops = new WorldObjectCatalog(tables)
-    const sync = (c, extra = {}) => c.push('CSProtoTaskSync', { ...taskSnapshot(tables, c.state), ...extra })
+    const sync = (c, extra = {}) => {
+        const barrier = c.state.pendingTaskStorySync
+        if (barrier) {
+            barrier.extra = { ...(barrier.extra ?? {}), ...extra }
+            return
+        }
+        c.push('CSProtoTaskSync', { ...taskSnapshot(tables, c.state), ...extra })
+    }
     const current = (c, r) => {
         const graph = graphs.get(r.task_id),
             task = activeTask(c.state, r.task_id),
@@ -69,6 +77,7 @@ export function registerTasks(register, tables) {
     })
     on('TaskAbandon', (c, r) => {
         activeTask(c.state, r.u32)
+        if (c.state.pendingTaskStorySync?.task_id === r.u32) delete c.state.pendingTaskStorySync
         c.state.tasks = c.state.tasks.filter((t) => t.task_id !== r.u32)
         sync(c, { del_tasks: [r.u32], del_trace_list: [r.u32] })
         return {}
@@ -102,6 +111,7 @@ export function registerTasks(register, tables) {
         record.count++
         record.time = c.now
         c.state.tasks = c.state.tasks.filter((t) => t.task_id !== r.u32)
+        if (c.state.pendingTaskStorySync?.task_id === r.u32) delete c.state.pendingTaskStorySync
         c.push('CSProtoSyncPlayerData', c.state.player)
         sync(c, { del_tasks: [r.u32], del_trace_list: [r.u32] })
         return { rewards }
@@ -136,6 +146,7 @@ export function registerTasks(register, tables) {
     on('TaskClientBefore', (c, r) => {
         if (finished(c, r)) return {}
         const { node } = current(c, r)
+        if (node.client_before) return {}
         node.client_before = true
         sync(c)
         return {}
@@ -161,16 +172,19 @@ export function registerTasks(register, tables) {
             r.indexes.length > 0 && r.indexes.every((i) => Number.isInteger(i) && i >= 0 && i < conditions.length),
             'Invalid task condition indexes',
         )
+        let changed = false
         for (const i of new Set(r.indexes)) {
-            node.node_values[i] = conditionValue(conditions[i], c.state, {
+            const value = conditionValue(conditions[i], c.state, {
                 taskId: r.task_id,
                 nodeId: r.node_id,
                 index: i,
             })
-            ensure(conditionSatisfied(conditions[i], node.node_values[i]), 'Server task condition not complete')
+            ensure(conditionSatisfied(conditions[i], value), 'Server task condition not complete')
+            if (!node.client_cond_after[i] || node.node_values[i] !== value) changed = true
+            node.node_values[i] = value
             node.client_cond_after[i] = true
         }
-        sync(c)
+        if (changed) sync(c)
         return {}
     })
     on('TaskClientAfter', (c, r) => {
@@ -226,6 +240,7 @@ export function registerTasks(register, tables) {
         for (const id of next)
             if (!task.nodes.some((n) => n.node_id === id)) task.nodes.push(makeNode(graph, id, c.state))
         advancePetChoiceBranch(graph, task, c.state)
+        deferTaskSyncUntilAfterStories(c.state, r.task_id, r.node_id, config)
         sync(c)
         return { rewards }
     })
