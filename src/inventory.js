@@ -1,5 +1,6 @@
 import { ensure } from './handlers/common.js'
 import { syncCurrencyMirrors } from './currency.js'
+import { pruneAutoCropShortcuts } from './home.js'
 export function upgradeInventory(state) {
     const items = state.player.sbag_infos.items,
         used = new Set()
@@ -64,6 +65,7 @@ export function spend(state, costs, gold = 0, now = Math.floor(Date.now() / 1000
     }
     for (const [stack, n] of plan) stack.itemnum -= n
     state.player.basic_info.gold -= gold
+    if (plan.length) pruneAutoCropShortcuts(state)
     if (gold) syncCurrencyMirrors(state.player)
     // Zero-count entries are retained for delta synchronization; client removes them.
     return plan.map(([stack]) => ({ ...stack }))

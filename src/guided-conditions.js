@@ -1,4 +1,6 @@
 import fs from 'node:fs'
+import path from 'node:path'
+import { configuration } from './config.js'
 
 const conditions = new Map(
     JSON.parse(fs.readFileSync(new URL('../data/task-tables/task_condition.json', import.meta.url), 'utf8')).map(
@@ -11,6 +13,25 @@ const buildingGroups = new Map(
     ),
 )
 const fieldGroups = new Set([2016, 2033])
+const shopTableDir = configuration().tables
+const shopTable = (name) => JSON.parse(fs.readFileSync(path.join(shopTableDir, `${name}.json`), 'utf8'))
+const shopSlots = new Map(
+    shopTable('shop_slot').map((row) => [
+        row.slotId,
+        row.slotParam,
+    ]),
+)
+const goods = new Map(
+    shopTable('goods').map((row) => [
+        row.goodsId,
+        row,
+    ]),
+)
+const commonItemTypes = new Map(
+    shopTable('common_item').map(
+        (row) => [row.id, row.type],
+    ),
+)
 const petGroups = new Map(
     JSON.parse(fs.readFileSync(new URL('../data/task-tables/pet_rank.json', import.meta.url), 'utf8')).map((row) => [
         row.petId,
@@ -60,6 +81,29 @@ export function guidedConditionValue(id, state, context) {
                 sum + (buildingGroups.get(entry.build_id) === parts[1] ? Math.max(0, Number(entry.used_num) || 0) : 0),
             0,
         )
+    }
+    // ShopPurchaseGoods uses the shop, reward type, common-item type, item ID
+    // and purchased quantity. Inventory is not a purchase counter: the seeds
+    // may already have been sown when the task progress is refreshed.
+    if (
+        parts.length === 6 &&
+        parts[0] === 12033 &&
+        parts.slice(1).every((value) => Number.isInteger(value) && value > 0)
+    ) {
+        const [, shopId, rewardType, itemType, itemId] = parts
+        if (rewardType !== 3 || commonItemTypes.get(itemId) !== itemType) return 0
+        return Object.entries(state.shopPurchases ?? {}).reduce((total, [key, record]) => {
+            const [purchasedShop, slot] = key.split(':').map(Number)
+            if (purchasedShop !== shopId) return total
+            const item = goods.get(shopSlots.get(slot))
+            if (!item) return total
+            const quantity = String(item.item || '')
+                .split('|')
+                .map((reward) => reward.split('#').map(Number))
+                .filter(([type, id, count]) => type === rewardType && id === itemId && count > 0)
+                .reduce((sum, [, , count]) => sum + count, 0)
+            return total + quantity * (record.count || 0)
+        }, 0)
     }
     // common_condition 12067 is PortableProduction. The table specifies the
     // produced reward type and ID; only settled quick-production output counts.

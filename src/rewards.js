@@ -1,5 +1,5 @@
 import { createPets, createCustomizedPets } from './pets.js'
-import { addHomeBuildings } from './home.js'
+import { addHomeBuildings, refreshAutoCropShortcut } from './home.js'
 import { ensure } from './handlers/common.js'
 import { addItems } from './inventory.js'
 import { createEggs } from './eggs.js'
@@ -54,6 +54,7 @@ export function grantRewards(tables, state, rewards, depth = 0) {
         if (itemtype === 3) {
             ensure(tables.find('common_item', itemid), 'Unknown reward item', 1007)
             addItems(state, [reward])
+            if (state.home) refreshAutoCropShortcut(tables, state, itemid)
         } else if (itemtype === 5) {
             const pets = createPets(tables, state, itemid, itemnum)
             granted.push(...pets.map((p) => ({ itemtype: 5, itemid, itemnum: 1, guid: p.guid })))

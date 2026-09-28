@@ -127,6 +127,14 @@ export function registerHome(on, tables) {
                 for (const id of newIds) suppressed.delete(id)
                 home.suppressedBuildShortcuts = [...suppressed]
                 home.autoBuildShortcutIds = (home.autoBuildShortcutIds ?? []).filter((id) => !oldIds.has(id))
+            } else {
+                const oldIds = new Set((home.shortcuts[index]?.item_id ?? []).filter((id) => id > 0))
+                const newIds = new Set(bar.item_id.filter((id) => id > 0))
+                const suppressed = new Set(home.suppressedCropShortcuts ?? [])
+                for (const id of oldIds) if (!newIds.has(id)) suppressed.add(id)
+                for (const id of newIds) suppressed.delete(id)
+                home.suppressedCropShortcuts = [...suppressed]
+                home.autoCropShortcutIds = (home.autoCropShortcutIds ?? []).filter((id) => newIds.has(id))
             }
             if (index < 0) home.shortcuts.push(bar)
             else home.shortcuts[index] = bar

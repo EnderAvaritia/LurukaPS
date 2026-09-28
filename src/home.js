@@ -40,13 +40,27 @@ export function ensureHome(tables, state) {
 }
 export function homePayload(tables, state) {
     const h = ensureHome(tables, state)
+    // The CBT3 client's getBeltItems starts zero-filling at #list, overwriting
+    // the last entry unless the wire list already has the full slot count.
+    const shortcutSlots = Math.max(
+        ...tables.get('game')
+            .filter((row) => row.title === 'HOME_BELT_NUM_PC' || row.title === 'HOME_BELT_NUM_MOBILE')
+            .map((row) => Number(row.value)),
+    )
+    ensure(Number.isInteger(shortcutSlots) && shortcutSlots > 0, 'Invalid home shortcut capacity', 1007)
     return {
         technology: technologyPayload(tables, state),
         home_lv: h.level,
         home_name: h.name,
         builds: h.inventory,
         home_builds: h.builds,
-        shortcut_bars: h.shortcuts,
+        shortcut_bars: h.shortcuts.map((bar) => ({
+            ...bar,
+            item_id: Array.from(
+                { length: Math.max(shortcutSlots, bar.item_id.length) },
+                (_, index) => bar.item_id[index] ?? 0,
+            ),
+        })),
         wishlist: h.wishlist,
         formula: Object.entries(h.craftCounts || {}).map(([id, count]) => ({
             product_id: Number(id),
@@ -57,10 +71,10 @@ export function homePayload(tables, state) {
     }
 }
 
-function addBuildShortcut(home, id) {
-    let bar = home.shortcuts.find((entry) => entry.type === 1)
+function addShortcut(home, type, id) {
+    let bar = home.shortcuts.find((entry) => entry.type === type)
     if (!bar) {
-        bar = { type: 1, item_id: [] }
+        bar = { type, item_id: [] }
         home.shortcuts.push(bar)
     }
     if (bar.item_id.includes(id)) return false
@@ -76,11 +90,55 @@ export function refreshAutoBuildShortcut(home, id) {
     const autoIds = (home.autoBuildShortcutIds ??= [])
     const bar = home.shortcuts.find((entry) => entry.type === 1)
     if (available?.unlock && available.total_num > available.used_num) {
-        if (!home.suppressedBuildShortcuts?.includes(id) && addBuildShortcut(home, id)) autoIds.push(id)
+        if (!home.suppressedBuildShortcuts?.includes(id) && addShortcut(home, 1, id)) autoIds.push(id)
     } else if (autoIds.includes(id)) {
         if (bar) bar.item_id = bar.item_id.map((item) => item === id ? 0 : item)
         home.autoBuildShortcutIds = autoIds.filter((item) => item !== id)
     }
+}
+
+export function refreshAutoCropShortcut(tables, state, id) {
+    const item = tables.find('common_item', id)
+    if (!item || item.type !== 310 || !tables.get('home_seeds').some((seed) => seed.id === item.subId))
+        return false
+    const home = ensureHome(tables, state)
+    const count = state.player.sbag_infos.items
+        .filter((entry) => entry.itemid === id)
+        .reduce((sum, entry) => sum + entry.itemnum, 0)
+    const autoIds = (home.autoCropShortcutIds ??= [])
+    const bar = home.shortcuts.find((entry) => entry.type === 2)
+    if (count > 0) {
+        if (home.suppressedCropShortcuts?.includes(id) || !addShortcut(home, 2, id)) return false
+        autoIds.push(id)
+    } else if (autoIds.includes(id)) {
+        if (bar) bar.item_id = bar.item_id.map((entry) => entry === id ? 0 : entry)
+        home.autoCropShortcutIds = autoIds.filter((entry) => entry !== id)
+    } else return false
+    state.homeRevision = (state.homeRevision || 0) + 1
+    return true
+}
+
+export function pruneAutoCropShortcuts(state) {
+    const home = state.home
+    if (!home?.autoCropShortcutIds?.length) return
+    const owned = new Set(
+        state.player.sbag_infos.items.filter((item) => item.itemnum > 0).map((item) => item.itemid),
+    )
+    const removed = home.autoCropShortcutIds.filter((id) => !owned.has(id))
+    if (!removed.length) return
+    const bar = home.shortcuts.find((entry) => entry.type === 2)
+    if (bar) bar.item_id = bar.item_id.map((id) => removed.includes(id) ? 0 : id)
+    home.autoCropShortcutIds = home.autoCropShortcutIds.filter((id) => owned.has(id))
+    state.homeRevision = (state.homeRevision || 0) + 1
+}
+
+export function reconcileHomeCropShortcuts(tables, state) {
+    ensureHome(tables, state)
+    const ids = new Set([
+        ...state.player.sbag_infos.items.map((entry) => entry.itemid),
+        ...(state.home.autoCropShortcutIds ?? []),
+    ])
+    for (const id of ids) refreshAutoCropShortcut(tables, state, id)
 }
 
 export function reconcileHomeBuildShortcuts(tables, state) {
