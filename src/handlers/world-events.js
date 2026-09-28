@@ -1,6 +1,8 @@
 import { ensure, syncPlayer } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards } from '../rewards.js'
+import { u64, combatState, boundedSet } from '../combat-state.js'
+import { enemyDefinition } from '../enemy-state.js'
 function wire(record) {
     return {
         cfg_id: record.cfg_id,
@@ -22,7 +24,8 @@ export function registerWorldEvents(on, tables) {
         const events = (c.state.worldEvents ??= {}),
             key = `${row.worldMapID}:${row.id}`
         let event = events[key]
-        if (event && event.step < row.stepCount - 1 && row.overtime > 0 && c.now >= event.begin_time + row.overtime) {
+        if (event?.completed && event.step === row.stepCount - 1) event.completed = false
+        if (event && event.step < row.stepCount && row.overtime > 0 && c.now >= event.begin_time + row.overtime) {
             event.step = row.overtimeResult
             event.expired = true
         }
@@ -54,7 +57,12 @@ export function registerWorldEvents(on, tables) {
             event = c.state.worldEvents?.[key]
         ensure(event, 'Event not started')
         const step = r.step
-        ensure(Number.isInteger(step) && step >= 1 && step < row.stepCount, 'Invalid event transition')
+        // stepCount includes the initial step. The client reports the last
+        // transition as stepCount (event 201: start + three monster waves).
+        ensure(Number.isInteger(step) && step >= 1 && step <= row.stepCount, 'Invalid event transition')
+        // Older servers marked stepCount - 1 as complete. Let an interrupted
+        // event advance to the real final step without restarting the waves.
+        if (event.completed && event.step === row.stepCount - 1) event.completed = false
         if (event.completed) {
             ensure(step === event.step, 'Event restart must follow cooldown')
             c.pushBefore('CSProtoWorldEventInfo', { infos: [wire(event)] })
@@ -76,14 +84,16 @@ export function registerWorldEvents(on, tables) {
             event.begin_time = c.now
             event.next_trigger_time = c.now + Math.max(0, row.refreshCD)
             let rewards = []
-            if (step === row.stepCount - 1 && !event.rewarded) {
-                for (const id of String(row.dropID || '')
-                    .split('|')
-                    .filter(Boolean)
-                    .map(Number))
-                    rewards.push(...drops.drops(id, c.randomInt))
-                rewards = grantRewards(c.tables, c.state, rewards)
-                event.rewarded = true
+            if (step === row.stepCount) {
+                if (!event.rewarded) {
+                    for (const id of String(row.dropID || '')
+                        .split('|')
+                        .filter(Boolean)
+                        .map(Number))
+                        rewards.push(...drops.drops(id, c.randomInt))
+                    rewards = grantRewards(c.tables, c.state, rewards)
+                    event.rewarded = true
+                }
                 event.completed = true
                 if (rewards.length) syncPlayer({ ...c, push: c.pushBefore })
             }
@@ -100,19 +110,59 @@ export function registerWorldEvents(on, tables) {
                 event.next_trigger_time = c.now + Math.max(0, row.refreshCD)
             }
         }
-        if (step === row.stepCount - 1 && !event.rewarded) {
-            for (const id of String(row.dropID || '')
-                .split('|')
-                .filter(Boolean)
-                .map(Number))
-                rewards.push(...drops.drops(id, c.randomInt))
-            rewards = grantRewards(c.tables, c.state, rewards)
-            event.rewarded = true
+        if (step === row.stepCount) {
+            if (!event.rewarded) {
+                for (const id of String(row.dropID || '')
+                    .split('|')
+                    .filter(Boolean)
+                    .map(Number))
+                    rewards.push(...drops.drops(id, c.randomInt))
+                rewards = grantRewards(c.tables, c.state, rewards)
+                event.rewarded = true
+            }
             event.completed = true
             if (rewards.length) syncPlayer({ ...c, push: c.pushBefore })
         }
         c.pushBefore('CSProtoWorldEventInfo', { infos: [wire(event)] })
         return { rewards }
+    })
+    on('MonsterSceneChange', (c, r) => {
+        const infos = r.infos ?? []
+        ensure(infos.length > 0 && infos.length <= 256, 'Invalid monster scene batch')
+        const battle = combatState(c.state, c.now)
+        battle.monsterScenes ??= {}
+        const objects = new Map(tables.get(`worldmap_${c.state.world.map_id}`).map((row) => [row.id, row]))
+        const playableMonsters = new Set(
+            Object.entries(c.state.playableEnemies ?? {})
+                .filter(([key]) => key.startsWith(`${c.state.world.map_id}:`))
+                .flatMap(([, entry]) => entry.entities.map((entity) => entity.uuid)),
+        )
+        const eventTargets = new Set()
+        for (const [key, event] of Object.entries(c.state.worldEvents ?? {})) {
+            if (!key.startsWith(`${c.state.world.map_id}:`) || event.expired) continue
+            const row = tables.find('world_event', event.cfg_id)
+            for (const value of String(row?.targetParamList ?? '').split('|')) {
+                const id = Number(value.split('#')[0])
+                if (Number.isInteger(id) && id > 0) eventTargets.add(id)
+            }
+        }
+        for (const info of infos) {
+            const id = u64(info.tar_id),
+                value = BigInt(id),
+                kind = Number(value >> 56n),
+                objectId = Number(value & 0xffffffffn),
+                scene = info.scene ?? 0,
+                worldObject = objects.get(objectId),
+                spawner = worldObject && tables.find('world_spawner', worldObject.spawnerId)
+            ensure([0, 1, 2, 3].includes(scene), 'Invalid monster scene')
+            ensure(
+                (kind === 3 && (spawner?.objectType === 50 || eventTargets.has(objectId))) ||
+                    (kind === 7 && playableMonsters.has(id)) ||
+                    (kind === 4 && !!enemyDefinition(tables, c.state, id)),
+                'Unknown scene monster',
+            )
+            boundedSet(battle.monsterScenes, id, { scene, updated_at: c.now }, 512)
+        }
     })
     on('TaskRandomArea', (c, r) => {
         ensure(Number.isInteger(r.u32) && r.u32 > 0, 'Invalid random task group')

@@ -28,6 +28,11 @@ export function registerPlayableLifecycle(on, tables) {
         ensure(row, 'Unknown playable')
         return row
     }
+    // A zero stepMax means this playable has no fixed table maximum. The
+    // client still sends its completion step (62026 sends step 1 after the
+    // five local investigation interactions).
+    const requiredStep = (row) => Math.max(1, row.stepMax)
+    const stepLimit = (row) => (row.stepMax > 0 ? row.stepMax : 1024)
     const sync = (c) => c.pushBefore('CSProtoPlayableSync', playableSnapshot(c.state))
     const taskForPlayable = (state, playId) =>
         state.tasks?.find((task) => {
@@ -126,6 +131,10 @@ export function registerPlayableLifecycle(on, tables) {
         const row = config(r.playId),
             run = c.state.playableRuns?.[row.id]
         ensure(run && run.map_id === c.state.world.map_id, 'Playable is not running')
+        if (run.status === 3 && c.state.playableFinishes?.[row.id]?.map_id === run.map_id) {
+            const { map_id, selected_step, selected_pet_group, selected_pet_guid, ...play } = run
+            return { play, pos: c.state.world.pos, rewards: { rewards: [] }, drop_id: [] }
+        }
         ensure(
             !row.stepRewards || (row.id === 60001 && activeTaskPlayable(c.state, row.id)),
             'Playable stage reward mapping is not implemented',
@@ -135,7 +144,7 @@ export function registerPlayableLifecycle(on, tables) {
             dropIds = []
         if (r.is_step) {
             const step = r.finish_step ?? 0
-            ensure(Number.isInteger(step) && step >= run.finish_step && step <= row.stepMax, 'Invalid playable step')
+            ensure(Number.isInteger(step) && step >= run.finish_step && step <= stepLimit(row), 'Invalid playable step')
             const drop = choiceDrops.get(step)
             if (row.id === 60001 && drop) {
                 ensure(!run.selected_step || run.selected_step === step, 'Playable pet choice already made')
@@ -143,7 +152,7 @@ export function registerPlayableLifecycle(on, tables) {
             }
             if (row.id === 60001 && step === row.stepMax) ensure(run.selected_step, 'Playable pet choice is missing')
             run.finish_step = step
-            run.status = step >= row.stepMax ? 2 : 1
+            run.status = step >= requiredStep(row) ? 2 : 1
         } else {
             const subs = r.sub_datas ?? []
             ensure(subs.length <= 256, 'Too many playable substeps')
@@ -174,10 +183,9 @@ export function registerPlayableLifecycle(on, tables) {
         )
         const finished = (c.state.playableFinishes ??= {})
         if (!finished[row.id]) {
-            ensure(run.finish_step >= row.stepMax && run.status === 2, 'Playable has not completed its steps')
+            ensure(run.finish_step >= requiredStep(row) && run.status === 2, 'Playable has not completed its steps')
             if (row.id === 60001)
                 ensure(run.selected_pet_group && run.selected_pet_guid, 'Playable pet choice is missing')
-            run.status = 3
             finished[row.id] = {
                 play_id: row.id,
                 map_id: run.map_id,
@@ -188,6 +196,7 @@ export function registerPlayableLifecycle(on, tables) {
                 finished_at: c.now,
             }
         }
+        run.status = 3
         sync(c)
         return { playId: row.id, reward: { rewards: [] }, drop_id: [], pos: c.state.world.pos }
     })

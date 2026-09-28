@@ -301,6 +301,39 @@ export class Game {
         ;(state.taskEvents ??= {})[key] = 1
         return true
     }
+    recoverFailedInvestigationPlayable(state, accountId, now) {
+        const task = state.tasks.find((t) => t.task_id === 106013),
+            node = task?.nodes.find((n) => n.node_id === 6),
+            run = state.playableRuns?.[62026]
+        if (
+            !node?.client_before ||
+            node.node_values?.[0] > 0 ||
+            state.playableFinishes?.[62026] ||
+            state.world.map_id !== 100 ||
+            run?.map_id !== 100 ||
+            run.status !== 1 ||
+            run.finish_step !== 0 ||
+            !this.store.hasFailedRequestAfter(accountId, 9406, run.time * 1000) ||
+            !this.store.hasFailedRequestAfter(accountId, 9404, run.time * 1000)
+        )
+            return false
+        // The client already completed the five local investigations and sent
+        // step 1 followed by Finish. The old zero-step table check rejected
+        // both; replay those two handlers once during reconnect.
+        const c = {
+            id: accountId,
+            state,
+            now,
+            tables: this.tables,
+            randomInt: this.rng,
+            push: () => {},
+            pushBefore: () => {},
+        }
+        const call = (name, request) => this.handlers.get(this.protocol.byName.get(`CSProto${name}`).id)(c, request)
+        call('PlayableStep', { playId: 62026, is_step: true, finish_step: 1 })
+        call('PlayableFinish', { playId: 62026, score: 0, pos: {} })
+        return true
+    }
     packet(id, value = {}, meta = {}) {
         const e = typeof id === 'number' ? this.protocol.byId.get(id) : this.protocol.byName.get(id)
         if (!e?.rsp) throw Error(`No response schema for ${id}`)
@@ -358,6 +391,7 @@ export class Game {
                 repairLegacyMountState(state)
                 this.recoverFailedPetChoice(state, session.id, now)
                 this.recoverClosedPetPageAfterChoice(state, session.id)
+                this.recoverFailedInvestigationPlayable(state, session.id, now)
                 settleSimpleProducts(this.tables, state, now)
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
