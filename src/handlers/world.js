@@ -3,6 +3,8 @@ import { validateTaskTransfer } from '../task-scenes.js'
 import { heroBattleLimits, heroModules, syncBattle } from '../battle.js'
 import { ensure, group, pet } from './common.js'
 import { mountPayload } from '../mounts.js'
+import { restoreLegacyHomeFormation } from '../home-formation.js'
+import { repairMainHeroType } from '../main-hero.js'
 import {
     addWorldMark,
     deleteWorldMarks,
@@ -10,6 +12,9 @@ import {
     updateWorldMarks,
     worldMarkPayload,
 } from '../world-marks.js'
+
+export const WORLD_MAP_CMD_ENTER = 256
+
 function mapPlayer(c) {
     const s = c.state,
         w = s.world,
@@ -68,7 +73,14 @@ export function repairLegacyMountState(state) {
     w.mount_status = 0
     return true
 }
-export function worldSync(c, r = {}, cmd = 256, includeMarks = true) {
+export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = true) {
+    const restoredFormation = restoreLegacyHomeFormation(c.state),
+        repairedMainHero = repairMainHeroType(c.tables, c.state)
+    if (restoredFormation || repairedMainHero)
+        c.push('CSProtoSyncPlayerData', {
+            ...(restoredFormation ? { group_mgrs: c.state.player.group_mgrs } : {}),
+            ...(repairedMainHero ? { heros_info: c.state.player.heros_info } : {}),
+        })
     if (expireTaskTrialGroup(c.tables, c.state)) {
         c.push('CSProtoTrialDatas', trialPayload(c.state))
         c.push('CSProtoSyncPlayerData', {
@@ -107,7 +119,7 @@ export function rememberMap(c, destination) {
     const w = c.state.world
     if (w.map_id === destination) return
     const history = (c.state.worldHistory ??= [])
-    history.push({ map_id: w.map_id, area_id: w.area_id, pos: { ...w.pos }, angle: w.angle })
+    history.push({ map_id: w.map_id, point_id: w.point_id, area_id: w.area_id, pos: { ...w.pos }, angle: w.angle })
     if (history.length > 8) history.shift()
 }
 export function registerWorld(on) {
@@ -143,8 +155,17 @@ export function registerWorld(on) {
                     ? c.tables.find('world_borthpos', r.point_id)
                     : c.tables.get('world_borthpos').find((p) => p.cityId === r.map_id))
             ensure(p && (!r.map_id || p.cityId === r.map_id), 'Invalid map/point')
+            const mapChanged = w.map_id !== p.cityId
             rememberMap(c, p.cityId)
             Object.assign(w, c.tables.position(p))
+            if (mapChanged) delete c.state.combat
+        }
+        const homeMapId = Number(c.tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
+        if (w.map_id === homeMapId) {
+            const area = c.tables.get('world_area').find((row) => row.sceneId === homeMapId)
+            ensure(area, 'Missing home world area', 1007)
+            if (w.area_id !== area.id) delete c.state.combat
+            w.area_id = area.id
         }
         worldSync(c, r)
         syncBattle(c)
@@ -157,6 +178,27 @@ export function registerWorld(on) {
         Object.assign(c.state.world, c.tables.position(p))
         worldSync(c, r, 19)
         syncBattle(c)
+        return {}
+    })
+    on('WorldQuitHome', (c) => {
+        const homeMapId = Number(c.tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
+        ensure(Number.isInteger(homeMapId) && homeMapId > 0, 'Missing home map id', 1007)
+        if (c.state.world.map_id !== homeMapId) return {}
+
+        const history = c.state.worldHistory ?? []
+        const previous = history.pop()
+        if (previous && c.tables.get('world_borthpos').some((point) => point.cityId === previous.map_id)) {
+            Object.assign(c.state.world, previous)
+        } else {
+            const fallback = c.tables.find('world_borthpos', 10045)
+            ensure(fallback, 'Missing exploration return point', 1007)
+            Object.assign(c.state.world, c.tables.position(fallback))
+        }
+
+        delete c.state.combat
+        const sceneContext = { ...c, push: c.pushBefore }
+        worldSync(sceneContext, {}, WORLD_MAP_CMD_ENTER)
+        syncBattle(sceneContext)
         return {}
     })
     on('WorldPointAck', (c) => {

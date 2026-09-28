@@ -1,8 +1,9 @@
 import { petData } from './pets.js'
+import { mainHeroConfigId } from './main-hero.js'
 import fs from 'node:fs'
 import path from 'node:path'
 export const bytes = (text) => Buffer.from(text, 'utf8').toString('base64')
-export const heroData = (configId, accountId) => ({
+export const heroData = (configId, accountId, type = 0) => ({
     guid: ((1n << 56n) | (BigInt(configId) << 32n) | BigInt(accountId)).toString(),
     conf_id: configId,
     hero_lv: 1,
@@ -11,7 +12,7 @@ export const heroData = (configId, accountId) => ({
     hero_star: 0,
     hero_grade: 1,
     system_skill_levels: [1, 1, 1, 1, 1, 1],
-    type: 0,
+    type,
     favorability_lv: 1,
     trial_pet: '0',
     pet_id: '0',
@@ -39,20 +40,24 @@ export class Tables {
         const values = String(point.borthPoint).split('|').map(Number)
         if (values.length !== 6 || values.some((x) => !Number.isFinite(x)))
             throw Error(`Invalid borthPoint ${point.id}`)
+        const homeMapId = Number(this.get('game').find((row) => row.title === 'HOME_ID')?.value)
+        const homeArea = point.cityId === homeMapId ? this.get('world_area').find((row) => row.sceneId === homeMapId) : null
+        if (point.cityId === homeMapId && !homeArea) throw Error(`Missing home world area ${homeMapId}`)
         return {
             map_id: point.cityId,
             point_id: point.id,
             pos: { x: Math.trunc(values[0] * 100), y: Math.trunc(values[1] * 100), z: Math.trunc(values[2] * 100) },
             angle: Math.trunc(values[4]),
-            area_id: point.cityId === 100 ? 100004 : 0,
+            area_id: point.cityId === 100 ? 100004 : (homeArea?.id ?? 0),
         }
     }
 }
 export function seedPlayer(tables, id, openId) {
+    const mainId = mainHeroConfigId(tables, 2)
     const heroes = tables
         .get('hero')
         .filter((h) => h.isUsable === 1)
-        .map((h) => heroData(h.id, id))
+        .map((h) => heroData(h.id, id, h.id === mainId ? 1 : 0))
     if (!heroes.length) throw Error('No usable heroes in table')
     const pets = tables
         .get('pet')

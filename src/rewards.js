@@ -5,6 +5,7 @@ import { addItems } from './inventory.js'
 import { createEggs } from './eggs.js'
 import { syncCurrencyMirrors } from './currency.js'
 import { heroData } from './player.js'
+import { mainHeroConfigId } from './main-hero.js'
 export function parseRewards(value, allowZero = false) {
     if (!value) return []
     return String(value)
@@ -42,7 +43,8 @@ export function grantRewards(tables, state, rewards, depth = 0) {
             const heroes = state.player.heros_info.heros
             let hero = heroes.find((h) => h.conf_id === itemid)
             if (!hero) {
-                hero = heroData(itemid, state.player.basic_info.id)
+                const mainId = mainHeroConfigId(tables, state.player.basic_info.sex)
+                hero = heroData(itemid, state.player.basic_info.id, itemid === mainId ? 1 : 0)
                 ensure(!heroes.some((h) => h.guid === hero.guid), 'Reward hero identity collision', 1007)
                 heroes.push(hero)
             }

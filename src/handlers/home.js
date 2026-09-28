@@ -3,6 +3,22 @@ import { ensureHome } from '../home.js'
 import { homeCondition } from '../home-grid.js'
 import { reconcileFormationPets } from '../formation-pets.js'
 import { mountPayload, repairMountSelection } from '../mounts.js'
+import { syncBattle } from '../battle.js'
+import { rememberMap, worldSync, WORLD_MAP_CMD_ENTER } from './world.js'
+
+function homeScenePosition(tables) {
+    const homeMapId = Number(tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
+    ensure(Number.isInteger(homeMapId) && homeMapId > 0, 'Missing home map id', 1007)
+
+    const point = tables
+        .get('world_borthpos')
+        .find((row) => row.cityId === homeMapId && Number(row.mainPoint) === 1)
+    const area = tables.get('world_area').find((row) => row.sceneId === homeMapId)
+    ensure(point && area, 'Missing home scene spawn configuration', 1007)
+
+    return { ...tables.position(point), area_id: area.id }
+}
+
 export function registerHome(on, tables) {
     const change = (c) => {
         c.state.homeRevision = (c.state.homeRevision || 0) + 1
@@ -60,7 +76,15 @@ export function registerHome(on, tables) {
     on('EnterHome', (c, r) => {
         ensure(!r.creator_id || r.creator_id === c.id, 'Visiting other homes is not implemented', 1021)
         ensureHome(tables, c.state)
+        const position = homeScenePosition(tables)
+        rememberMap(c, position.map_id)
+        Object.assign(c.state.world, position)
+        delete c.state.combat
         change(c)
+        const sceneContext = { ...c, push: c.pushBefore }
+        // The client starts SceneService.EnterScene from WorldMapSync cmd 256.
+        worldSync(sceneContext, r, WORLD_MAP_CMD_ENTER)
+        syncBattle(sceneContext)
         return {}
     })
     on('SetHomeName', (c, r) => {

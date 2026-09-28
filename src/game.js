@@ -50,6 +50,8 @@ import { registerTechnology } from './handlers/technology.js'
 import { registerBuildingPlacement } from './handlers/buildings.js'
 import { registerHome } from './handlers/home.js'
 import { ensureHome, homePayload } from './home.js'
+import { restoreLegacyHomeFormation } from './home-formation.js'
+import { repairMainHeroType } from './main-hero.js'
 import { upgradeEggState } from './eggs.js'
 import { registerShops } from './handlers/shops.js'
 import { registerItems } from './handlers/items.js'
@@ -341,6 +343,8 @@ export class Game {
                 repairPendingDuelEntry(state)
                 unlockAutomaticTasks(this.tables, state, now)
                 repairCharacterCreationMarker(state)
+                restoreLegacyHomeFormation(state)
+                repairMainHeroType(this.tables, state)
                 ensureArenaFormationManager(state)
                 reconcileFormationPets(state)
                 upgradeInventory(state)
@@ -452,6 +456,7 @@ export class Game {
                     state.player.basic_info.wardrobe = r.wardrobe_info
                     state.player.basic_info.sex = r.wardrobe_info.sex
                 }
+                repairMainHeroType(this.tables, state)
                 return this.loginPackets(state, session, r, frame, e.id)
             })
         }

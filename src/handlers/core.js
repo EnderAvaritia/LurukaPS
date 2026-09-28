@@ -1,5 +1,6 @@
 import { ensure, textValue, syncPlayer } from './common.js'
 import { initializeCharacterFormation } from '../character-creation.js'
+import { repairMainHeroType } from '../main-hero.js'
 export function registerCore(on) {
     on('SkipGuide', (c, r) => {
         c.state.player.basic_info.skip_guide = r.u32 ?? 1
@@ -16,7 +17,12 @@ export function registerCore(on) {
         }
         c.state.characterCustomized = true
         initializeCharacterFormation(c.tables, c.state)
-        syncPlayer(c, { basic_info: b, group_mgrs: c.state.player.group_mgrs })
+        repairMainHeroType(c.tables, c.state)
+        syncPlayer(c, {
+            basic_info: b,
+            group_mgrs: c.state.player.group_mgrs,
+            heros_info: c.state.player.heros_info,
+        })
         return {}
     })
     on('ChangeName', (c, r) => {
