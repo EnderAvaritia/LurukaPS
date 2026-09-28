@@ -32,6 +32,7 @@ const commonItemTypes = new Map(
         (row) => [row.id, row.type],
     ),
 )
+const productRows = new Map(shopTable('products').map((row) => [row.id, row]))
 const petGroups = new Map(
     JSON.parse(fs.readFileSync(new URL('../data/task-tables/pet_rank.json', import.meta.url), 'utf8')).map((row) => [
         row.petId,
@@ -109,6 +110,28 @@ export function guidedConditionValue(id, state, context) {
     // counter after a crop is harvested, as the task is about completed work.
     if (parts.length === 2 && parts[0] === 13020 && Number.isInteger(parts[1]) && parts[1] > 0)
         return state.home?.manualWaterCount ?? 0
+    // HomeProducts counts output collected from the configured recipe. Jobs
+    // still in a production queue do not count as completed food.
+    if (
+        parts.length === 5 && parts[0] === 12018 &&
+        parts.slice(1).every((value) => Number.isInteger(value) && value > 0) && row.formulaId > 0
+    ) {
+        const recipe = productRows.get(row.formulaId)
+        const [, , rewardType, itemId] = parts
+        const perCraft = String(recipe?.rewardId || '').split('|')
+            .map((entry) => entry.split('#').map(Number))
+            .filter(([type, id, count]) => type === rewardType && id === itemId && count > 0)
+            .reduce((sum, [, , count]) => sum + count, 0)
+        return perCraft * (state.home?.craftCounts?.[row.formulaId] ?? 0) +
+            (parts[1] === 10 && rewardType === 3 ? state.home?.cookCounts?.[itemId] ?? 0 : 0)
+    }
+    // KiboBoardFoodNum reads food actually stocked at placed pet tables.
+    if (parts.length === 3 && parts[0] === 15013 && parts.slice(1).every((value) =>
+        Number.isInteger(value) && value > 0))
+        return (state.home?.builds ?? []).reduce((total, build) =>
+            total + (build.build_type === 6 ? (build.pet_canteen?.foods ?? [])
+                .filter((food) => food.itemid === parts[1])
+                .reduce((sum, food) => sum + food.itemnum, 0) : 0), 0)
     // common_condition 12067 is PortableProduction. The table specifies the
     // produced reward type and ID; only settled quick-production output counts.
     if (
