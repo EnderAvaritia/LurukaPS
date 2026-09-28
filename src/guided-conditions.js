@@ -105,6 +105,10 @@ export function guidedConditionValue(id, state, context) {
             return total + quantity * (record.count || 0)
         }, 0)
     }
+    // WateringFrequency counts accepted player watering actions. Keep this
+    // counter after a crop is harvested, as the task is about completed work.
+    if (parts.length === 2 && parts[0] === 13020 && Number.isInteger(parts[1]) && parts[1] > 0)
+        return state.home?.manualWaterCount ?? 0
     // common_condition 12067 is PortableProduction. The table specifies the
     // produced reward type and ID; only settled quick-production output counts.
     if (
