@@ -68,6 +68,17 @@ export function conditionValue(condition, state, context) {
         const id = base.__type_TaskCondGuideData?.guideId
         return state.player.guide_infos?.infos?.some((g) => g.id === id && g.complete) ? 1 : 0
     }
+    if (condition.conditionId === 2507) {
+        const open = base.__type_TaskCondStoryOpenTaskData
+        if (!open || open.storyId || open.npcId || open.isNowCreate !== 1 ||
+            !Number.isInteger(open.npcData?.createNpcId) || open.npcData.createNpcId <= 0)
+            return 0
+        // A dynamically created quest NPC with no story or fixed NPC gate is
+        // offered by the client in its configured scene. TaskAccept carries
+        // only the task ID; the static prerequisites are checked separately.
+        const scene = open.npcData.sceneId || open.sceneId || base.mapData?.sceneId
+        return !scene || state.world.map_id === scene ? 1 : 0
+    }
     if (condition.conditionId === 2518) {
         const achievId = base.__type_TaskCondGuidedAchievementsData?.achievId
         return guidedConditionValue(achievId, state, context)
