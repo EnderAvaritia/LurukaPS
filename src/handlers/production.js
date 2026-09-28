@@ -44,7 +44,7 @@ export function registerProduction(on, tables) {
             1021,
         )
         ensure(
-            rewards.every((x) => [3, 10, 13, 14].includes(x.itemtype)),
+            rewards.every((x) => [3, 10, 13, 14, 25].includes(x.itemtype)),
             'Unsupported production reward',
             1021,
         )

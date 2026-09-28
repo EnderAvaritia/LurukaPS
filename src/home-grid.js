@@ -19,15 +19,17 @@ export function homeCondition(text, state) {
               .split('|')
               .map((s) => s.split('#').map(Number))
         : [String(text).split('|').map(Number)]
-    return terms.every(([id, n, level]) =>
-        id === 2004
-            ? state.player.basic_info.lv >= n
-            : id === 11009
-              ? (state.home?.level || 1) >= n
-              : id === 11012
-                ? (state.home?.technology?.levels[n]?.level || 0) >= (level || 1)
-                : false,
-    )
+    return terms.every(([id, n, level]) => {
+        if (id === 2004) return state.player.basic_info.lv >= n
+        if (id === 12045)
+            return (
+                (state.tasks ?? []).some((task) => task.task_id === n && task.finish_nodes?.includes(level)) ||
+                (state.taskRecords ?? []).some((record) => record.task_id === n && record.count > 0)
+            )
+        if (id === 11009) return (state.home?.level || 1) >= n
+        if (id === 11012) return (state.home?.technology?.levels[n]?.level || 0) >= (level || 1)
+        return false
+    })
 }
 export function buildingRect(tables, buildId, locate) {
     const config = tables.find('home_building', buildId),
@@ -35,23 +37,23 @@ export function buildingRect(tables, buildId, locate) {
     ensure(object, 'Missing building footprint', 1007)
     let size = String(object.homeItemSize).split('|').map(Number)
     ensure(size.length === 2 && size.every((n) => Number.isInteger(n) && n > 0), 'Invalid building footprint', 1007)
-    ensure(
-        locate && Number.isInteger(locate.direction) && locate.direction >= 0 && locate.direction <= 3,
-        'Invalid home rotation',
-    )
-    if (locate.direction & 1) size.reverse()
+    const direction = locate?.direction ?? 0
+    ensure(Number.isInteger(direction) && direction >= 0 && direction <= 3, 'Invalid home rotation')
+    if (direction & 1) size.reverse()
     const pos = gridPosition(locate.anchor)
     return { x: pos.x, y: pos.y, w: size[0], h: size[1] }
 }
 export function validatePlacement(tables, state, buildId, locate, ignoreGuid = 0) {
-    ensure(
-        locate && !locate.position && !locate.rotation && !locate.scale && !locate.center,
-        'Only grid placement is supported',
-        1021,
-    )
+    ensure(locate, 'Missing building placement')
+    for (const field of ['position', 'rotation', 'scale', 'center'])
+        if (locate[field])
+            ensure(
+                ['x', 'y', 'z'].every((axis) => locate[field][axis] === undefined || Number.isFinite(locate[field][axis])),
+                'Invalid building transform',
+            )
     const block = tables.find('home_block', locate.block_id)
     ensure(block, 'Unknown home block')
-    ensure(block.groupType === 1, 'This home block placement category is not implemented', 1021)
+    ensure(block.blockType === 0 && [1, 2].includes(block.groupType), 'Not a building placement block', 1021)
     ensure(homeCondition(block.unlockCondi, state), 'Home block is locked')
     const start = String(block.blockStartPos).split('|').map(Number),
         end = String(block.blockEndPos).split('|').map(Number)

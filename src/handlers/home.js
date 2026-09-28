@@ -119,6 +119,15 @@ export function registerHome(on, tables) {
                     ensure(tables.find(bar.type === 1 ? 'home_building' : 'common_item', id), 'Unknown shortcut item')
             }
             const index = home.shortcuts.findIndex((x) => x.type === bar.type)
+            if (bar.type === 1) {
+                const oldIds = new Set((home.shortcuts[index]?.item_id ?? []).filter((id) => id > 0))
+                const newIds = new Set(bar.item_id.filter((id) => id > 0))
+                const suppressed = new Set(home.suppressedBuildShortcuts ?? [])
+                for (const id of oldIds) if (!newIds.has(id)) suppressed.add(id)
+                for (const id of newIds) suppressed.delete(id)
+                home.suppressedBuildShortcuts = [...suppressed]
+                home.autoBuildShortcutIds = (home.autoBuildShortcutIds ?? []).filter((id) => !oldIds.has(id))
+            }
             if (index < 0) home.shortcuts.push(bar)
             else home.shortcuts[index] = bar
         }

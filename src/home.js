@@ -56,6 +56,53 @@ export function homePayload(tables, state) {
         home_level_new_base: { level: h.level, exp: h.exp, option_setting: 0 },
     }
 }
+
+function addBuildShortcut(home, id) {
+    let bar = home.shortcuts.find((entry) => entry.type === 1)
+    if (!bar) {
+        bar = { type: 1, item_id: [] }
+        home.shortcuts.push(bar)
+    }
+    if (bar.item_id.includes(id)) return false
+    const empty = bar.item_id.findIndex((item) => item <= 0)
+    if (empty >= 0) bar.item_id[empty] = id
+    else if (bar.item_id.length < 32) bar.item_id.push(id)
+    else return false
+    return true
+}
+
+export function refreshAutoBuildShortcut(home, id) {
+    const available = home.inventory.find((building) => building.build_id === id)
+    const autoIds = (home.autoBuildShortcutIds ??= [])
+    const bar = home.shortcuts.find((entry) => entry.type === 1)
+    if (available?.unlock && available.total_num > available.used_num) {
+        if (!home.suppressedBuildShortcuts?.includes(id) && addBuildShortcut(home, id)) autoIds.push(id)
+    } else if (autoIds.includes(id)) {
+        if (bar) bar.item_id = bar.item_id.map((item) => item === id ? 0 : item)
+        home.autoBuildShortcutIds = autoIds.filter((item) => item !== id)
+    }
+}
+
+export function reconcileHomeBuildShortcuts(tables, state) {
+    const home = ensureHome(tables, state)
+    if (home.buildShortcutVersion === 2) return
+    if (home.buildShortcutVersion === 1) {
+        const bar = home.shortcuts.find((entry) => entry.type === 1)
+        if (bar) {
+            bar.item_id = bar.item_id.map((id) => {
+                const building = home.inventory.find((entry) => entry.build_id === id)
+                return building?.unlock && building.total_num > building.used_num ? id : 0
+            })
+            home.autoBuildShortcutIds = bar.item_id.filter((id) => id > 0)
+        }
+    }
+    for (const building of home.inventory)
+        if (building.unlock && building.total_num > building.used_num && tables.find('home_building', building.build_id))
+            refreshAutoBuildShortcut(home, building.build_id)
+    home.buildShortcutVersion = 2
+    state.homeRevision = (state.homeRevision || 0) + 1
+}
+
 export function addHomeBuildings(tables, state, id, count) {
     const config = tables.find('home_building', id)
     ensure(config, 'Unknown building reward', 1007)
@@ -67,5 +114,7 @@ export function addHomeBuildings(tables, state, id, count) {
     }
     ensure(row.total_num + count <= 0xffffffff, 'Building quantity overflow')
     row.total_num += count
+    if (count > 0) row.unlock = true
+    if (count > 0) refreshAutoBuildShortcut(home, id)
     state.homeRevision = (state.homeRevision || 0) + 1
 }

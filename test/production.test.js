@@ -114,6 +114,25 @@ test('production validates station, material stock, recipe unlock and unique cla
         store.close()
     }
 })
+test('completed task unlocks a type-25 saddle recipe supported by grantRewards', () => {
+    const { store, session, call, advance } = setup()
+    try {
+        store.transact(session.id, 0, (state) => {
+            state.taskRecords ??= []
+            state.taskRecords.push({ task_id: 206016, count: 1, time: 1800000000 })
+            state.player.sbag_infos.items.push(
+                { itemid: 302001, itemnum: 20 },
+                { itemid: 317001, itemnum: 20 },
+            )
+        })
+        call('ProductStart', { build_guid: 1, product_id: 600007, count: 1 })
+        advance(30)
+        const packets = call('ProductFinish', { guid: 1, is_all: true })
+        const result = p.decode('SCProductFinish', packets.find((packet) => packet.id === 6111).payload)
+        assert(result.reward.rewards.some((item) => item.itemtype === 25 && item.itemid === 500022))
+        assert(store.load(session.id).state.mountSaddles.includes(500022))
+    } finally { store.close() }
+})
 test('absolute queue timestamps survive SQLite restart and offline time', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azurjs-production-')),
         file = path.join(dir, 'state.sqlite')

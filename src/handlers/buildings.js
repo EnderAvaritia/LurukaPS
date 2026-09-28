@@ -1,4 +1,4 @@
-import { ensureHome } from '../home.js'
+import { ensureHome, refreshAutoBuildShortcut } from '../home.js'
 import { validatePlacement } from '../home-grid.js'
 import { ensure } from './common.js'
 function inactive(build) {
@@ -11,7 +11,7 @@ function inactive(build) {
     )
 }
 export function registerBuildingPlacement(on, tables) {
-    on('BuildLocate', (c, r) => {
+    const placeBuild = (c, r) => {
         const home = ensureHome(tables, c.state)
         home.storedBuilds ??= []
         let build = r.guid
@@ -34,15 +34,18 @@ export function registerBuildingPlacement(on, tables) {
             home.nextBuildGuid = guid + 1
             build = { guid, build_id: id, build_type: group.type, status: 1 }
         }
-        build.locate = { ...r.locate }
+        build.locate = { ...r.locate, direction: r.locate.direction ?? 0 }
         if (!placed) {
             home.storedBuilds = home.storedBuilds.filter((b) => b.guid !== build.guid)
             home.builds.push(build)
             inventory.used_num++
+            refreshAutoBuildShortcut(home, id)
         }
         c.state.homeRevision = (c.state.homeRevision || 0) + 1
         return build
-    })
+    }
+    on('BuildLocate', placeBuild)
+    on('BuildCreate', placeBuild)
     on('BuildUnlocate', (c, r) => {
         const home = ensureHome(tables, c.state),
             build = home.builds.find((b) => b.guid === r.guid)
@@ -54,6 +57,7 @@ export function registerBuildingPlacement(on, tables) {
         const inventory = home.inventory.find((x) => x.build_id === build.build_id)
         ensure(inventory && inventory.used_num > 0, 'Invalid building inventory')
         inventory.used_num--
+        refreshAutoBuildShortcut(home, build.build_id)
         home.builds = home.builds.filter((b) => b.guid !== r.guid)
         home.storedBuilds ??= []
         const stored = { ...build }

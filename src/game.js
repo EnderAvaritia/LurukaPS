@@ -49,7 +49,7 @@ import { simpleProductionDue, settleSimpleProducts, simpleProductSnapshot } from
 import { registerTechnology } from './handlers/technology.js'
 import { registerBuildingPlacement } from './handlers/buildings.js'
 import { registerHome } from './handlers/home.js'
-import { ensureHome, homePayload } from './home.js'
+import { ensureHome, homePayload, reconcileHomeBuildShortcuts } from './home.js'
 import { restoreLegacyHomeFormation } from './home-formation.js'
 import { repairMainHeroType } from './main-hero.js'
 import { upgradeEggState } from './eggs.js'
@@ -364,6 +364,7 @@ export class Game {
                 upgradeSkillState(this.tables, state)
                 upgradeEggState(state)
                 ensureHome(this.tables, state)
+                reconcileHomeBuildShortcuts(this.tables, state)
                 refreshProduction(state, now)
                 for (const [id, capture] of Object.entries(state.petCaptureResults ?? {}))
                     if (capture.map_id === state.world.map_id && state.combat?.entities?.[id]?.captured !== true)
