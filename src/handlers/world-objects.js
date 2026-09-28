@@ -1,6 +1,22 @@
 import { ensure, syncPlayer } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards } from '../rewards.js'
+function worldCondition(value, state) {
+    if (!value) return true
+    return String(value).split('|').every((part) => {
+        const [kind, a, b, ...extra] = part.split('#').map(Number)
+        ensure(!extra.length && [kind, a].every(Number.isInteger), 'Invalid world object condition', 1007)
+        if (kind === 2004) return state.player.basic_info.lv >= a
+        if (kind === 2007)
+            return (state.taskRecords ?? []).some((record) => record.task_id === a && record.count > 0)
+        if (kind === 12045) {
+            ensure(Number.isInteger(b) && b > 0, 'Invalid task-step appearance condition', 1007)
+            return (state.tasks ?? []).some((task) => task.task_id === a && task.finish_nodes?.includes(b)) ||
+                (state.taskRecords ?? []).some((record) => record.task_id === a && record.count > 0)
+        }
+        ensure(false, `Unsupported world object condition ${kind}`, 1007)
+    })
+}
 function stateData(input, depth = 0) {
     ensure(depth < 8 && (input.children ?? []).length <= 64, 'World state nesting limit')
     const result = {}
@@ -80,9 +96,9 @@ export function registerWorldObjects(on, tables) {
                     nearObject(input.obj?.pos)
                 ensure(delta <= 5000 ** 2 || remoteStateOnly, 'Object is too far away')
                 ensure(
-                    !row.appearCond && !row.disappearCond,
-                    'Conditional world interaction needs event validation',
-                    1007,
+                    worldCondition(row.appearCond, c.state) &&
+                        (!row.disappearCond || !worldCondition(row.disappearCond, c.state)),
+                    'World object is not currently visible',
                 )
                 if (drops.length) {
                     const index = full ? drops.length - 1 : Math.max(0, step - 1)
