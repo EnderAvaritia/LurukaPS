@@ -52,7 +52,7 @@ import { registerFarming } from './handlers/farming.js'
 import { registerCanteen } from './handlers/canteen.js'
 import { registerCooking } from './handlers/cooking.js'
 import { registerHome } from './handlers/home.js'
-import { ensureHome, homePayload, reconcileHomeBuildShortcuts, reconcileHomeCropShortcuts } from './home.js'
+import { ensureHome, ensureHomeCanteens, homePayload, reconcileHomeBuildShortcuts, reconcileHomeCropShortcuts } from './home.js'
 import { restoreLegacyHomeFormation } from './home-formation.js'
 import { repairMainHeroType } from './main-hero.js'
 import { upgradeEggState } from './eggs.js'
@@ -371,6 +371,7 @@ export class Game {
                 upgradeSkillState(this.tables, state)
                 upgradeEggState(state)
                 ensureHome(this.tables, state)
+                ensureHomeCanteens(this.tables, state)
                 reconcileHomeBuildShortcuts(this.tables, state)
                 reconcileHomeCropShortcuts(this.tables, state)
                 refreshProduction(state, now)

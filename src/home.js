@@ -38,6 +38,28 @@ export function ensureHome(tables, state) {
     state.homeRevision = (state.homeRevision || 0) + 1
     return state.home
 }
+
+export function ensureHomeCanteens(tables, state) {
+    const home = ensureHome(tables, state)
+    let changed = false
+    for (const build of home.builds) {
+        const config = tables.find('home_building', build.build_id)
+        const group = config && tables.get('home_building_group').find((row) => row.groupId === config.groupId)
+        if (group?.type !== 6 || build.pet_canteen) continue
+        // The client only creates HomeBuildSatiety for type-6 builds carrying
+        // pet_canteen. Without this empty object it reports capacity 0/0.
+        build.pet_canteen = {
+            pets: [],
+            food_value: 0,
+            foods: [],
+            food_extra_ids: [],
+            food_extra_values: [],
+        }
+        changed = true
+    }
+    if (changed) state.homeRevision = (state.homeRevision || 0) + 1
+    return changed
+}
 export function homePayload(tables, state) {
     const h = ensureHome(tables, state)
     // The CBT3 client's getBeltItems starts zero-filling at #list, overwriting

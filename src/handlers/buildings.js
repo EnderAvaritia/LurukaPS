@@ -1,4 +1,4 @@
-import { ensureHome, refreshAutoBuildShortcut } from '../home.js'
+import { ensureHome, ensureHomeCanteens, refreshAutoBuildShortcut } from '../home.js'
 import { validatePlacement } from '../home-grid.js'
 import { ensure } from './common.js'
 function inactive(build) {
@@ -41,6 +41,7 @@ export function registerBuildingPlacement(on, tables) {
             inventory.used_num++
             refreshAutoBuildShortcut(home, id)
         }
+        ensureHomeCanteens(tables, c.state)
         c.state.homeRevision = (c.state.homeRevision || 0) + 1
         return build
     }
