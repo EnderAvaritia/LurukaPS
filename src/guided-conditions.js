@@ -68,6 +68,26 @@ export function guidedConditionValue(id, state, context) {
         [parts[1], parts[2], parts[3]].every((n) => Number.isInteger(n) && n > 0)
     )
         return state.simpleProduced?.[`${parts[1]}:${parts[2]}`] ?? 0
+    // BuildingCollectionSituation counts products collected from the configured
+    // building recipe. craftCounts advances only when ProductFinish grants the
+    // output, so already collected items remain credited after they are used.
+    if (
+        parts.length === 4 &&
+        parts[0] === 13025 &&
+        [parts[1], parts[2], parts[3], row.formulaId].every((n) => Number.isInteger(n) && n > 0)
+    )
+        return state.home?.craftCounts?.[row.formulaId] ?? 0
+    // HomeHubKibo mode 1 counts pets actually stationed in the home hub.
+    if (
+        parts.length === 3 &&
+        parts[0] === 12070 &&
+        parts[1] === 1 &&
+        Number.isInteger(parts[2]) &&
+        parts[2] > 0
+    ) {
+        const stationed = new Set((state.home?.stationPets ?? []).map(String))
+        return (state.pets ?? []).filter((pet) => stationed.has(String(pet.guid)) && pet.work_status === 7).length
+    }
     // common_condition 12040 is HavePet. Its rows identify a pet group,
     // optional exact pet ID (0 means any within the group), and count.
     if (
