@@ -31,7 +31,7 @@ function wireAttributes(map) {
             return { attr_id, attr_val: String(value) }
         })
 }
-function heroSkills(config, hero) {
+function heroSkills(tables, config, hero) {
     const skills = new Map()
     const system = String(config.skillSystem || '')
         .split('|')
@@ -54,6 +54,16 @@ function heroSkills(config, hero) {
             .filter(Boolean)
             .map(Number))
             add(id)
+    // Home skills belong to the selected clothing's battle info. The avatar
+    // hero rows cross-reference the opposite sex's home skills in CBT3.
+    const clothingId = hero.hero_skin || hero.conf_id
+    const clothing = tables.get('hero_clothing').find((row) => row.clothingid === clothingId)
+    const battleInfo = clothing && tables.find('hero_battle_info', clothing.battleInfo)
+    for (const id of String(battleInfo?.homeSkillList || '')
+        .split('|')
+        .filter(Boolean)
+        .map(Number))
+        add(id)
     return [...skills.values()]
 }
 export function heroModules(tables, state, hero) {
@@ -72,7 +82,7 @@ export function heroModules(tables, state, hero) {
                 {
                     sub_module_id: 0,
                     attrs: { attrs: wireAttributes(attributes) },
-                    skills: { skills: heroSkills(config, hero) },
+                    skills: { skills: heroSkills(tables, config, hero) },
                 },
             ],
         },

@@ -48,6 +48,7 @@ import { refreshProduction, productionDue } from './production.js'
 import { simpleProductionDue, settleSimpleProducts, simpleProductSnapshot } from './simple-production.js'
 import { registerTechnology } from './handlers/technology.js'
 import { registerBuildingPlacement } from './handlers/buildings.js'
+import { registerFarming } from './handlers/farming.js'
 import { registerHome } from './handlers/home.js'
 import { ensureHome, homePayload, reconcileHomeBuildShortcuts } from './home.js'
 import { restoreLegacyHomeFormation } from './home-formation.js'
@@ -65,6 +66,7 @@ import { seedPlayer } from './player.js'
 import { repairPetProfiles } from './pets.js'
 import { mountPayload, repairMountSelection } from './mounts.js'
 import { GameError, ensure, textValue } from './handlers/common.js'
+
 import { registerCore } from './handlers/core.js'
 import { registerCollection } from './handlers/collection.js'
 import { registerWorld, repairLegacyMountState } from './handlers/world.js'
@@ -218,6 +220,7 @@ export class Game {
         registerShops(on, tables)
         registerHome(on, tables)
         registerBuildingPlacement(on, tables)
+        registerFarming(on, tables)
         registerTechnology(on, tables)
         registerProduction(on, tables)
         registerSimpleProduction(on, tables)

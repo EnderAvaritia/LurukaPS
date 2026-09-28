@@ -10,13 +10,13 @@ const buildingGroups = new Map(
         (row) => [row.id, row.groupId],
     ),
 )
+const fieldGroups = new Set([2016, 2033])
 const petGroups = new Map(
     JSON.parse(fs.readFileSync(new URL('../data/task-tables/pet_rank.json', import.meta.url), 'utf8')).map((row) => [
         row.petId,
         row.petGroup,
     ]),
 )
-const specialFarmland = new Set([2016, 2017])
 
 export function guidedRequirement(id) {
     const param = Number(conditions.get(id)?.param)
@@ -45,15 +45,16 @@ export function guidedConditionValue(id, state, context) {
     )
         return (state.world?.points ?? []).includes(parts[1]) ? 1 : 0
     // CBT3 conditionNode_12027 reads HomeStore buildingBag.used_num by group.
-    // Dry farmland groups use a separate plowed-field counter in the client.
     if (
         parts.length === 3 &&
         parts[0] === 12027 &&
         Number.isInteger(parts[1]) &&
-        !specialFarmland.has(parts[1]) &&
         Number.isInteger(parts[2]) &&
         parts[2] > 0
     ) {
+        // The client counts dry and fertile fields from placed home builds.
+        if (fieldGroups.has(parts[1]))
+            return (state.home?.builds ?? []).filter((build) => buildingGroups.get(build.build_id) === parts[1]).length
         return (state.home?.inventory ?? []).reduce(
             (sum, entry) =>
                 sum + (buildingGroups.get(entry.build_id) === parts[1] ? Math.max(0, Number(entry.used_num) || 0) : 0),
