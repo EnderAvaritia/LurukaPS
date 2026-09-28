@@ -5,6 +5,7 @@ import { ensure } from './handlers/common.js'
 import { pairs } from './battle.js'
 import { initialPetComprehension, repairPetComprehension } from './pet-comprehension.js'
 import { randomMountSpeed } from './mounts.js'
+import { refreshPetCaressPeriod } from './pet-caress.js'
 
 // The localized export corrupts pet.gradeScore. Use the numeric CBT3 table.
 const petScores = new Map(
@@ -130,11 +131,13 @@ export function petGrade(tables, pet) {
     const minimum = Number(game.find((row) => row.title === 'PET_GRADE_SCORE_MIN')?.value) || 1
     return Math.min(99999, Math.max(minimum, Math.floor(score)))
 }
-export function repairPetProfiles(tables, state) {
+export function repairPetProfiles(tables, state, now) {
     let changed = false
     for (const pet of state.pets) {
         const config = tables.find('pet', pet.config_id)
         if (!config) continue
+        if (ensurePetName(tables, pet, config)) changed = true
+        if (now !== undefined && refreshPetCaressPeriod(tables, state, pet, now)) changed = true
         // PetDuelStore.getPetName indexes by PetItem:isSpecialPet(), which returns
         // this numeric color field directly. An omitted normal color becomes nil.
         if (!Number.isInteger(pet.color)) {
@@ -174,11 +177,18 @@ export function repairPetProfiles(tables, state) {
     if (changed) state.petRevision = (state.petRevision || 0) + 1
     return changed
 }
+export function ensurePetName(tables, pet, config = tables.find('pet', pet.config_id)) {
+    if (pet.pet_name) return false
+    ensure(config && typeof config.name === 'string' && config.name.trim(), 'Missing pet name', 1007)
+    pet.pet_name = Buffer.from(config.name, 'utf8').toString('base64')
+    return true
+}
 export function petData(tables, configId, guid, box, builderRuleId = 1001) {
     const config = tables.find('pet', configId)
     ensure(config && tables.find('template_value', configId), 'Missing pet configuration', 1007)
     const pet = {
         guid: String(guid),
+        pet_name: Buffer.from(config.name, 'utf8').toString('base64'),
         config_id: configId,
         feature: 1,
         color: 0,

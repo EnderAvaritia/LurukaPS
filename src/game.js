@@ -359,7 +359,7 @@ export class Game {
                 repairSoulEssenceStars(state)
                 refundPendingCatchCards(state)
                 syncCurrencyMirrors(state.player)
-                repairPetProfiles(this.tables, state)
+                repairPetProfiles(this.tables, state, now)
                 repairMountSelection(this.tables, state)
                 upgradeSkillState(this.tables, state)
                 upgradeEggState(state)

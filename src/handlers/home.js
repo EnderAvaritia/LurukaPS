@@ -1,4 +1,6 @@
 import { ensure, textValue, pet } from './common.js'
+import { ensurePetName } from '../pets.js'
+import { caressPet } from '../pet-caress.js'
 import { ensureHome } from '../home.js'
 import { homeCondition } from '../home-grid.js'
 import { reconcileFormationPets } from '../formation-pets.js'
@@ -23,6 +25,17 @@ export function registerHome(on, tables) {
     const change = (c) => {
         c.state.homeRevision = (c.state.homeRevision || 0) + 1
     }
+    on('PetCaress', (c, r) => {
+        const homeMapId = Number(tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
+        ensure(c.state.world.map_id === homeMapId, 'Pet caress requires the home scene')
+        const target = pet(c.state, r.u64),
+            named = ensurePetName(tables, target),
+            result = caressPet(tables, c.state, target, c.now)
+        if (named || result.changed) {
+            c.state.petRevision = (c.state.petRevision || 0) + 1
+        }
+        return result.response
+    })
     on('PetStationInHomeHub', (c, r) => {
         const p = pet(c.state, r.pet_guid),
             home = ensureHome(tables, c.state),
