@@ -64,6 +64,39 @@ function playerStatusSync(c, cmd) {
         map_info: { creator_id: c.id, map_id: w.map_id, exist: true, area_id: w.area_id, players: [player] },
     })
 }
+function transientMarkGuid(state, requested) {
+    if (requested > 0) return requested
+    const used = new Set((state.worldMarks ?? []).map((mark) => mark.guid))
+    let guid = Number(state.worldMarkNextGuid ?? 1)
+    while (used.has(guid)) {
+        guid++
+        ensure(guid <= 0xffffffff, 'Map mark identity exhausted')
+    }
+    return guid
+}
+function teleportFromTestMark(c, mark) {
+    if (mark.notes !== '/tp') return null
+    const x = Number(mark.pos_x),
+        y = Number(mark.pos_y),
+        z = Number(mark.pos_z)
+    ensure([x, y, z].every(Number.isFinite), 'Invalid test teleport mark position')
+    const height = Number(c.tables.get('game').find((row) => row.title === 'MAP_MARK_HEIGHT_DIFFERENCE')?.value ?? 4.5)
+    ensure(Number.isFinite(height) && height > 0, 'Invalid map mark teleport height', 1007)
+    const guid = transientMarkGuid(c.state, mark.guid ?? 0)
+    if (mark.guid) deleteWorldMarks(c.state, [mark.guid])
+    c.state.world.pos = {
+        x: Math.round(x * 100),
+        y: Math.round((y + height) * 100),
+        z: Math.round(z * 100),
+    }
+    c.state.world.angle = 0
+    worldSync(c)
+    // The response is transient too: remove a possible client-side echo of
+    // the command marker immediately after the teleport sync.
+    c.push('CSProtoWorldMapMarkListSync', worldMarkPayload(c.state, [guid]))
+    syncBattle(c)
+    return { ...mark, guid }
+}
 export function repairLegacyMountState(state) {
     const w = state.world
     if (w.pendingMountExit) delete w.pendingMountExit
@@ -230,6 +263,8 @@ export function registerWorld(on) {
         c.state.world.last_point_ack = { map_id: c.state.world.map_id, point_id: c.state.world.point_id, time: c.now }
     })
     on('WorldMapMarkAdd', (c, r) => {
+        const testTeleport = teleportFromTestMark(c, r)
+        if (testTeleport) return testTeleport
         const mark = addWorldMark(c.state, r)
         c.push('CSProtoWorldMapMarkListSync', worldMarkPayload(c.state))
         return mark

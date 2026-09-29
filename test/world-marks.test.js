@@ -84,3 +84,27 @@ test('world map marks add, update, trace, delete and persist through map entry',
         f.close()
     }
 })
+test('a /tp marker teleports above its point and is not saved', () => {
+    const f = fixture()
+    try {
+        const height = Number(tables.get('game').find((row) => row.title === 'MAP_MARK_HEIGHT_DIFFERENCE')?.value ?? 4.5)
+        const packets = f.call('WorldMapMarkAdd', {
+            guid: 0,
+            map_id: 100000,
+            mark_id: 1,
+            pos: '12,34,56',
+            notes: '/tp',
+            pos_x: 12,
+            pos_y: 34,
+            pos_z: 56,
+            is_set_pos_y: true,
+        })
+        const state = f.state(), response = packets.find((packet) => packet.id === 9127), markSyncs = packets.filter((packet) => packet.id === 9126)
+        assert(response)
+        assert.equal((state.worldMarks ?? []).length, 0)
+        assert.deepEqual(state.world.pos, { x: 1200, y: Math.round((34 + height) * 100), z: 5600 })
+        assert(markSyncs.at(-1).data.del_mark_list.includes(response.data.guid))
+    } finally {
+        f.close()
+    }
+})
