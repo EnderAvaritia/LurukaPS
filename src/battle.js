@@ -150,19 +150,32 @@ export function refreshBattleState(tables, state) {
     return heros
 }
 export function syncBattle(c) {
+    if (c.state.combat) {
+        delete c.state.combat.energyActorKey
+        delete c.state.combat.energySpecs
+    }
     const heros = refreshBattleState(c.tables, c.state)
     const pets = [...c.state.pets, ...(c.state.trialGroup?.pets ?? [])]
         .filter((p) => c.tables.find('template_value', p.config_id))
         .map((p) => petModules(c.tables, c.state, p, heros))
     c.push('CSProtoHeroAttrInfoSync', { heros: [...heros, ...pets] })
+    const active = c.state.player.group_mgrs.find((manager) => manager.type === 1),
+        formation = active?.groups.find((entry) => entry.id === active.cur_group),
+        heroIds = new Set((formation?.heros ?? []).map((entry) => entry.hero_id)),
+        petSp = c.state.combat?.map_id === c.state.world.map_id ? c.state.combat.petSp ?? {} : {}
     c.push('CSProtoObjBattleInfoSync', {
-        infos: c.state.player.heros_info.battle_infos.map((h) => ({
-            uuid: h.hero_id,
-            hp: h.hp,
-            sp: h.sp,
-            alive_state: h.alive_state,
-            reason: 1,
-        })),
+        infos: [
+            ...c.state.player.heros_info.battle_infos.map((h) => ({
+                uuid: h.hero_id,
+                hp: h.hp,
+                sp: h.sp,
+                alive_state: h.alive_state,
+                reason: 1,
+            })),
+            ...[...c.state.pets, ...(c.state.trialGroup?.pets ?? [])]
+                .filter((pet) => heroIds.has(pet.hero_id))
+                .map((pet) => ({ uuid: pet.guid, sp: petSp[pet.guid] ?? 0, reason: 1 })),
+        ],
     })
 }
 

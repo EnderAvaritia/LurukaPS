@@ -118,6 +118,9 @@ function forkBattleReport(base) {
                   entities: { ...base.combat.entities },
                   elements: { ...base.combat.elements },
                   bullets: { ...base.combat.bullets },
+                  petSp: { ...base.combat.petSp },
+                  energyRemainders: { ...base.combat.energyRemainders },
+                  energyTrace: base.combat.energyTrace?.slice(),
                   ...(base.combat.nearDeathReports ? { nearDeathReports: base.combat.nearDeathReports.slice() } : {}),
               }
             : undefined
@@ -153,6 +156,10 @@ function forkFastCombat(base, name, request) {
     // only touches a skill. Copy the map so a failed request cannot prune live data.
     battle.bullets = { ...battle.bullets }
     if (name === 'CSProtoSkillStart' || name === 'CSProtoSkillStop') battle.skills = { ...battle.skills }
+    if (name === 'CSProtoSkillStart') {
+        battle.petSp = { ...battle.petSp }
+        battle.energyRemainders = { ...battle.energyRemainders }
+    }
     if (name === 'CSProtoBulletActionChange')
         for (const action of request.action_info ?? []) {
             const id = String(action.bullet_id ?? '0')

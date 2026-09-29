@@ -1,7 +1,7 @@
 import { enemyDefinition } from '../enemy-state.js'
 import { isRetiredTrialActor } from '../trial-actors.js'
 import { ensure } from './common.js'
-import { heroModules, heroBattleLimits, pairs } from '../battle.js'
+import { heroModules, heroBattleLimits, petModules, pairs } from '../battle.js'
 import { u64, expandBattleReport, combatState, boundedSet } from '../combat-state.js'
 export function actor(c, value) {
     const id = u64(value)
@@ -33,6 +33,73 @@ function limits(c, id) {
     const hero = [...c.state.player.heros_info.heros, ...(c.state.trialGroup?.heroes ?? [])].find((h) => h.guid === id)
     return hero ? heroBattleLimits(heroModules(c.tables, c.state, hero)) : null
 }
+function energyActors(c, battle) {
+    const active = c.state.player.group_mgrs.find((manager) => manager.type === 1),
+        formation = active?.groups.find((entry) => entry.id === active.cur_group),
+        heroIds = new Set((formation?.heros ?? []).map((entry) => entry.hero_id).filter((id) => id && id !== '0')),
+        activePets = [...c.state.pets, ...(c.state.trialGroup?.pets ?? [])].filter((pet) =>
+            heroIds.has(pet.hero_id) && c.tables.find('template_value', pet.config_id),
+        ),
+        key = [...heroIds, ...activePets.map((pet) => pet.guid)].join(':')
+    if (battle.energyActorKey === key && battle.energySpecs) return new Map(Object.entries(battle.energySpecs))
+    const heroes = [...c.state.player.heros_info.heros, ...(c.state.trialGroup?.heroes ?? [])].filter((hero) =>
+            heroIds.has(hero.guid),
+        ),
+        modules = heroes.map((hero) => heroModules(c.tables, c.state, hero)),
+        specs = new Map()
+    const add = (id, info, kind) => {
+        const rate = info.modules.flatMap((module) => module.sub_modules).flatMap((sub) => sub.attrs?.attrs ?? [])
+            .filter((attr) => attr.attr_id === 110).reduce((sum, attr) => sum + Number(attr.attr_val), 0)
+        const maxSp = heroBattleLimits(info).sp
+        if (Number.isFinite(rate) && rate >= 0 && maxSp > 0)
+            specs.set(id, { kind, maxSp, rate: Math.min(20000, rate) })
+    }
+    for (const info of modules) add(info.hero_guid, info, 'hero')
+    for (const pet of activePets) add(pet.guid, petModules(c.tables, c.state, pet, modules), 'pet')
+    battle.petSp ??= {}
+    battle.energyRemainders ??= {}
+    battle.energyActorKey = key
+    battle.energySpecs = Object.fromEntries(specs)
+    return specs
+}
+function advanceEnergy(c, battle, changed) {
+    const specs = energyActors(c, battle),
+        previous = battle.energyUpdatedAt ?? c.now,
+        seconds = Math.max(0, Math.min(30, c.now - previous))
+    battle.energyUpdatedAt = c.now
+    const set = (id, spec, milli) => {
+        const hero = spec.kind === 'hero' && c.state.player.heros_info.battle_infos.find((info) => info.hero_id === id),
+            before = hero ? hero.sp : (battle.petSp[id] ?? 0),
+            bounded = Math.max(0, Math.min(spec.maxSp * 1000, Math.floor(milli))),
+            after = Math.floor(bounded / 1000)
+        battle.energyRemainders[id] = bounded % 1000
+        if (hero) hero.sp = after
+        else battle.petSp[id] = after
+        if (after !== before)
+            changed.set(id, hero
+                ? { uuid: id, hp: hero.hp, sp: after, alive_state: hero.alive_state, reason: 0 }
+                : { uuid: id, sp: after, reason: 0 })
+    }
+    const current = (id, spec) =>
+        (spec.kind === 'hero'
+            ? c.state.player.heros_info.battle_infos.find((info) => info.hero_id === id)?.sp ?? 0
+            : battle.petSp[id] ?? 0) * 1000 + (battle.energyRemainders[id] ?? 0)
+    if (seconds)
+        for (const [id, spec] of specs)
+            set(id, spec, current(id, spec) + spec.rate * seconds)
+    const reported = (id, snapshot, delta = 0) => {
+        const spec = specs.get(id)
+        if (!spec) return
+        const old = current(id, spec),
+            absolute = Number.isInteger(snapshot) && snapshot >= 0 ? snapshot * 10 : null,
+            change = Number.isInteger(delta) ? delta * 10 : 0
+        // The client can report an older SP snapshot after the server tick.
+        // Accept rising snapshots; a negative explicit delta can lower SP.
+        const next = absolute === null ? old + change : Math.max(old, absolute) + Math.min(0, change)
+        set(id, spec, next)
+    }
+    return reported
+}
 export function registerCombat(on) {
     on('SkillStart', (c, r) => {
         if (isRetiredTrialActor(c.state, r.unit_id)) return
@@ -54,9 +121,21 @@ export function registerCombat(on) {
             const value = c.state.player.heros_info.battle_infos.find((h) => h.hero_id === id)
             if (value) {
                 value.sp = 0
+                if (battle.energyRemainders) battle.energyRemainders[id] = 0
                 c.push('CSProtoObjBattleInfoSync', {
                     infos: [{ uuid: id, hp: value.hp, sp: 0, alive_state: value.alive_state, reason: 0 }],
                 })
+            }
+        }
+        const p = [...c.state.pets, ...(c.state.trialGroup?.pets ?? [])].find((pet) => pet.guid === id)
+        if (p) {
+            const signature = String(c.tables.find('pet', p.config_id)?.signatureSkillList ?? '')
+                .split('|')[0]?.split('#').map(Number)
+            if (signature?.[1] === r.skill.skill_id) {
+                battle.petSp ??= {}
+                battle.petSp[id] = 0
+                if (battle.energyRemainders) battle.energyRemainders[id] = 0
+                c.push('CSProtoObjBattleInfoSync', { infos: [{ uuid: id, sp: 0, reason: 0 }] })
             }
         }
     })
@@ -119,6 +198,7 @@ export function registerCombat(on) {
             changed = new Map(),
             maximums = new Map(),
             enemyHurts = []
+        const reportSp = advanceEnergy(c, battle, changed)
         const update = (id, values) => {
             if (id === '0') return
             const saved = c.state.player.heros_info.battle_infos.find((h) => h.hero_id === id)
@@ -126,7 +206,6 @@ export function registerCombat(on) {
                 if (!maximums.has(id)) maximums.set(id, limits(c, id))
                 const max = maximums.get(id)
                 if (values.delta !== undefined) saved.hp = Math.max(0, Math.min(max.hp, saved.hp + values.delta))
-                if (values.sp !== undefined) saved.sp = Math.max(0, Math.min(max.sp, values.sp))
                 saved.alive_state = saved.hp > 0 ? 0 : 1
                 changed.set(id, { uuid: id, hp: saved.hp, sp: saved.sp, alive_state: saved.alive_state, reason: 0 })
             } else {
@@ -146,7 +225,7 @@ export function registerCombat(on) {
                         ...values,
                         uuid: id,
                         hp,
-                        sp: values.sp ?? previous.sp ?? 0,
+                        sp: previous.sp ?? 0,
                         alive_state: hp > 0 ? 0 : 1,
                         updated_at: c.now,
                     }
@@ -169,6 +248,18 @@ export function registerCombat(on) {
                 if (c.state.petCaptureResults?.[h.from_id] || c.state.petCaptureResults?.[h.tar_id]) continue
                 if (h.tar_id !== '0') actor(c, h.tar_id)
                 if (h.from_id !== '0') actor(c, h.from_id)
+                if (h.from_sp !== undefined || h.tar_sp !== undefined || h.delta_sp !== undefined) {
+                    const trace = (battle.energyTrace ??= [])
+                    trace.push({
+                        time: c.now,
+                        from: h.from_id,
+                        target: h.tar_id,
+                        from_sp: h.from_sp,
+                        tar_sp: h.tar_sp,
+                        delta_sp: h.delta_sp,
+                    })
+                    if (trace.length > 24) trace.shift()
+                }
                 const storyBattle =
                     c.state.world.map_id === 104 &&
                     [1n, 5n].includes(BigInt(h.tar_id) >> 56n) &&
@@ -181,9 +272,9 @@ export function registerCombat(on) {
                 update(h.tar_id, {
                     ...(h.hp_change !== undefined ? { delta: h.hp_change } : {}),
                     ...(h.cur_hp !== undefined ? { reported_hp: h.cur_hp } : {}),
-                    ...(h.tar_sp >= 0 ? { sp: Math.floor(h.tar_sp / 100) } : {}),
                 })
-                if (h.from_sp >= 0) update(h.from_id, { sp: Math.floor(h.from_sp / 100) })
+                reportSp(h.from_id, h.from_sp)
+                reportSp(h.tar_id, h.tar_sp, h.tar_sp === undefined ? h.delta_sp : 0)
                 if (heroBefore !== undefined) {
                     const trace = (c.state.bossBattleTrace ??= [])
                     trace.push({
