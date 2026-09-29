@@ -5,7 +5,7 @@ import { Protocol } from '../src/protocol.js'
 import { Tables } from '../src/player.js'
 import { Store } from '../src/store.js'
 import { Game } from '../src/game.js'
-import { EntrustCatalog, settleEntrustVictory, entrustChestSnapshot, ensureEntrustSceneObjects } from '../src/entrust.js'
+import { EntrustCatalog, settleEntrustVictory, entrustChestSnapshot, ensureEntrustSceneObjects, campaignSnapshot } from '../src/entrust.js'
 import { TaskGraphs, makeNode } from '../src/tasks.js'
 import { enemyDefinition } from '../src/enemy-state.js'
 
@@ -74,6 +74,7 @@ test('commission first clear requires defeated configured enemies and advances t
         const campaign = entered.find((packet) => packet.id === protocol.byName.get('CSProtoCampaignInfoSync').id)
         const map = entered.find((packet) => packet.id === protocol.byName.get('CSProtoWorldMapSync').id)
         assert.equal(protocol.decode('CampaignInfo', campaign.payload).status, 2)
+        assert.equal(protocol.decode('CampaignInfo', campaign.payload).dungeon_instance_id, 3590)
         const sceneObjects = protocol.decode('WorldMapNotify', map.payload).map_info.objs
         const modeIndex = entered.findIndex((packet) => packet.id === protocol.byName.get('CSProtoOnlineModeChange').id)
         assert.ok(modeIndex > entered.indexOf(map))
@@ -263,6 +264,8 @@ test('commission first clear requires defeated configured enemies and advances t
         const restarted = call('ReEnterEntrust', { entrust_id: 1 })
         state = store.load(session.id).state
         assert.ok(state.entrust.run.instance_id > oldInstance)
+        assert.ok(restarted.filter((packet) => packet.id === protocol.byName.get('CSProtoCampaignInfoSync').id)
+            .every((packet) => protocol.decode('CampaignInfo', packet.payload).dungeon_instance_id === 3590))
         assert.equal(state.entrust.run.stage_index, 1)
         assert.equal(state.entrust.run.damage_total, '0')
         assert.equal(state.entrust.run.return_world.map_id, 100)
@@ -322,6 +325,32 @@ test('all configured area commissions have a mapped scene and victory objects', 
         assert.ok(catalog.victoryObjects(row.id).length > 0)
         assert.equal(catalog.stages(row.id)[0].type, 13)
         assert.equal(catalog.stages(row.id).at(-1).type, 30)
+    }
+})
+
+test('CBT3 client dungeon-level lookup uses the configuration ID, including later runs and commission 1-2', () => {
+    const catalog = new EntrustCatalog(tables)
+    for (const row of tables.get('dungeon_entrust')) {
+        const config = catalog.get(row.id)
+        const state = { world: { ...tables.position(config.point) }, entrust: { records: {}, run: {
+            entrust_id: row.id, dungeon_id: config.dungeon.id, map_id: config.scene.id,
+            instance_id: 20, status: 2, start_time: 1800000000,
+        } } }
+        ensureEntrustSceneObjects(tables, state, 1800000000)
+        const packet = protocol.decode('CampaignInfo', protocol.encode('CampaignInfo', campaignSnapshot(state.entrust.run)))
+        // ServerDungeonInfo.RefreshBaseData -> DungeonManager.GetDungeonInstanceId
+        // -> EntityLevelUtility.GetEnemyLevelByDungeon uses this exact key.
+        const clientDungeon = tables.find('dungeon', packet.dungeon_instance_id)
+        assert.equal(clientDungeon?.id, config.dungeon.id, `entrust ${row.id}`)
+        assert.equal(state.entrust.run.instance_id, 20)
+        for (const enemy of Object.values(state.combat.entities)) {
+            const pack = tables.find('enemy_pack', enemy.pack_id)
+            if (pack.levelPolicy !== 3) continue
+            const clientLevel = tables.get('world_difficulty_obj_level').find((level) =>
+                level.groupid === pack.levelParameter && level.difficultLv === clientDungeon.diffType && level.mapid === 0)
+            assert.ok(clientLevel?.monsterLevel > 0, `entrust ${row.id}, pack ${pack.id}`)
+            assert.equal(clientLevel.monsterLevel, enemy.level)
+        }
     }
 })
 

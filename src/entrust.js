@@ -158,7 +158,10 @@ export function campaignSnapshot(run) {
         cur_scene_id: run.map_id,
         end_time: run.end_time ?? 0,
         dungeon_id: run.dungeon_id,
-        dungeon_instance_id: run.instance_id,
+        // CBT3 EntityLevelUtility looks up dungeon[GetDungeonInstanceId()].
+        // This wire field is a configuration ID, not our per-run serial.
+        // Keep instance_id server-side for cache isolation and fresh retries.
+        dungeon_instance_id: run.dungeon_id,
         scene_datas: [{
             scene_id: run.map_id,
             scene_status: run.status === 3 ? 1 : 0,
