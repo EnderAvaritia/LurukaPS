@@ -2,6 +2,7 @@ import { ensure, syncPlayer } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards } from '../rewards.js'
 import { randomInt } from 'node:crypto'
+import { completeEntrustObject, validateEntrustObjectInteraction } from './entrust.js'
 // World resource prefabs do not expose their drop ID in worldmap/world_spawner.
 // These IDs match the shipped resource variants and their configured drop pools.
 const collectionFinalDrops = new Map([
@@ -116,6 +117,7 @@ export function registerWorldObjects(on, tables) {
                 stage = !!incoming.complete,
                 stageAdvanced = step > (old.state_data.step ?? 0),
                 claim = full || stage
+            validateEntrustObjectInteraction(c, id, claim)
             const drops = String(row.statusReward || '')
                 .split('|')
                 .filter(Boolean)
@@ -223,6 +225,13 @@ export function registerWorldObjects(on, tables) {
                 interact_type: input.interact_type ?? 0,
                 tool_type: input.tool_type ?? 0,
             })
+            const entrustRewards = completeEntrustObject(c, id, claim)
+            const { claims: currentClaims, ...currentWire } = records[key]
+            output[output.length - 1].obj = currentWire
+            if (entrustRewards.length) {
+                output[output.length - 1].rewards.rewards.push(...entrustRewards)
+                awarded = true
+            }
         }
         if (awarded) syncPlayer({ ...c, push: c.pushBefore })
         return { objs: output }

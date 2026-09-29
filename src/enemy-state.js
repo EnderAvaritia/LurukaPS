@@ -70,7 +70,14 @@ export function enemyDefinition(tables, state, uuid) {
         parameter = pairs(pack.levelAreaParameter).get(area) ?? parameter
     }
     if (pack?.levelPolicy === 4) parameter = taskConfig?.levelParameter || parameter
-    const configured = [1, 4].includes(pack?.levelPolicy)
+    const dungeon = state.entrust?.run?.map_id === state.world.map_id
+        ? tables.find('dungeon', state.entrust.run.dungeon_id)
+        : null
+    const configured = pack?.levelPolicy === 3 && dungeon
+        ? tables.get('world_difficulty_obj_level').find((row) =>
+            row.groupid === parameter && row.difficultLv === dungeon.diffType && row.mapid === 0,
+        )?.monsterLevel
+        : [1, 4].includes(pack?.levelPolicy)
         ? tables
               .get('world_difficulty_obj_level')
               .find(
@@ -83,7 +90,11 @@ export function enemyDefinition(tables, state, uuid) {
           ? parameter
           : undefined
     const defaultLevel = Number(tables.get('game').find((r) => r.title === 'DEFAULT_MONSTER_LEVEL')?.value ?? 1)
-    const level = Math.max(1, state.combat?.entities?.[uuid]?.level ?? configured ?? defaultLevel),
+    const level = Math.max(1,
+            pack?.levelPolicy === 3 && dungeon
+                ? configured ?? state.combat?.entities?.[uuid]?.level ?? defaultLevel
+                : state.combat?.entities?.[uuid]?.level ?? configured ?? defaultLevel,
+        ),
         template = (3000 + (pack?.templateID || enemy.enemyType)) * 1000 + level
     const base = tables.find('template_value', property?.baseAttributeId),
         growth = tables.find('template_value', template)

@@ -56,6 +56,14 @@ export function guidedConditionValue(id, state, context) {
     // TODO: remove after server-side Kibo Duel condition 50002 is
     // implemented and its result is validated against the official server.
     if (context && parts[0] === 50002) return guidedRequirement(id)
+    // DungeonEntrustFinish checks the best star count of the configured
+    // commission. A mere EnterEntrust request never completes this condition.
+    if (
+        parts.length === 3 && parts[0] === 13044 &&
+        Number.isInteger(parts[1]) && parts[1] > 0 &&
+        Number.isInteger(parts[2]) && parts[2] > 0
+    )
+        return state.entrust?.records?.[parts[1]]?.entrust_star ?? 0
     // CBT3 common_condition 12030 is ActivationPoint. The local server seeds
     // all configured transfer points, so evaluate the configured point ID
     // against that authoritative unlocked-point list.

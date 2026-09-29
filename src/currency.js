@@ -1,4 +1,12 @@
 import { ensure } from './handlers/common.js'
+export function restoreMissingStamina(tables, state) {
+    const attrs = state.player.attr_infos.attrs
+    if (attrs.some((attr) => attr.attr_id === 3)) return false
+    const initial = Number(tables.get('game').find((row) => row.title === 'STAMINA_ACCOUNT_INITAIL')?.value)
+    ensure(Number.isSafeInteger(initial) && initial >= 0, 'Missing initial stamina configuration', 1007)
+    attrs.push({ attr_id: 3, attr_val: String(initial) })
+    return true
+}
 // CBT3 MyPlayerData.GetCurrencyNum06025a45 reads attribute values for both
 // ordinary coins (1,2) and paid/bonus stars (901,902). Keep the legacy basic
 // wallet fields and resource attributes in lockstep for old saves and UI.

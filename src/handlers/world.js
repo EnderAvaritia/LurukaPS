@@ -5,6 +5,7 @@ import { ensure, group, pet } from './common.js'
 import { mountPayload } from '../mounts.js'
 import { restoreLegacyHomeFormation } from '../home-formation.js'
 import { repairMainHeroType } from '../main-hero.js'
+import { campaignSnapshot, entrustChestSnapshot } from '../entrust.js'
 import {
     addWorldMark,
     deleteWorldMarks,
@@ -90,6 +91,17 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
     }
     const s = c.state,
         w = s.world
+    const departedEntrust = s.entrust?.run
+    if (departedEntrust && departedEntrust.map_id !== w.map_id) {
+        // Teleports/GM transfers may bypass CampaignQuit. Do not leave a
+        // commission manager alive after entering a different world.
+        c.push('CSProtoCurMultiCampaignInfoSync', {
+            dungeon_id: departedEntrust.dungeon_id, dungeon_scene_id: departedEntrust.map_id,
+            map_id: departedEntrust.map_id, status: 1,
+        })
+        c.push('CSProtoCampaignInfoSync', { status: 1, dungeon_id: departedEntrust.dungeon_id, cur_scene_id: departedEntrust.map_id })
+        delete s.entrust.run
+    }
     c.push('CSProtoWorldMapPointSync', { u32s: w.points })
     if (includeMarks) c.push('CSProtoWorldMapMarkListSync', worldMarkPayload(s))
     c.push('CSProtoWorldMapSync', {
@@ -114,6 +126,19 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
             players: [mapPlayer(c)],
         },
     })
+    // CutWorld creates the destination SceneProxy synchronously before its
+    // loading flow. Retain the dungeon AOI/preload protocol on reconnect;
+    // the entrust handler assigns the active group's control separately.
+    if ([WORLD_MAP_CMD_ENTER, 49].includes(cmd) && s.entrust?.run?.map_id === w.map_id) {
+        const single = c.tables.find('world_city', w.map_id)?.type === 2
+        c.push('CSProtoOnlineModeChange', { mode: single ? 5 : 4 })
+        // Disposing the previous scene can clear DungeonManager's cached
+        // server info. Rebind it after CutWorld selected the destination.
+        if (single) {
+            c.push('CSProtoCampaignInfoSync', campaignSnapshot(s.entrust.run))
+            if (s.entrust.run.battle_complete) c.push('CSProtoStaminaBoxSync', entrustChestSnapshot(c.tables, s))
+        }
+    }
 }
 export function rememberMap(c, destination) {
     const w = c.state.world

@@ -2,7 +2,7 @@ import { registerPetCatch } from './handlers/pet-catch.js'
 import { refundPendingCatchCards } from './handlers/pet-catch.js'
 import { repairCharacterCreationMarker } from './character-creation.js'
 import { reconcileFormationPets } from './formation-pets.js'
-import { syncCurrencyMirrors } from './currency.js'
+import { syncCurrencyMirrors, restoreMissingStamina } from './currency.js'
 import {
     registerTrialGroups,
     trialPayload,
@@ -25,6 +25,15 @@ import { registerChat, chatSnapshots } from './handlers/chat.js'
 import { registerPlayableEnemies } from './handlers/playable-enemies.js'
 import { registerGM } from './handlers/gm.js'
 import { registerWorldEvents } from './handlers/world-events.js'
+import { registerEntrust } from './handlers/entrust.js'
+import {
+    entrustInfoSnapshot,
+    entrustStarRewardSnapshot,
+    ensureEntrustSceneObjects,
+    entrustMultiSnapshot,
+    entrustMultiBaseSnapshot,
+    campaignSnapshot, entrustChestSnapshot, entrustDamageSnapshot,
+} from './entrust.js'
 import {
     registerKiboDuel,
     ensureArenaFormationManager,
@@ -34,6 +43,7 @@ import {
 import { registerProfileQueries } from './handlers/profile-queries.js'
 import { registerWorldObjects, reconcileWorldCollectionFinalDrops } from './handlers/world-objects.js'
 import { registerWorldCombat } from './handlers/world-combat.js'
+import { registerAIControl, clientAIReports } from './handlers/ai-control.js'
 import { retireCapturedEnemy } from './handlers/world-combat.js'
 import { registerEcology } from './handlers/ecology.js'
 import { registerMall } from './handlers/mall.js'
@@ -138,6 +148,9 @@ function forkBattleReport(base) {
         },
         tasks: structuredClone(base.tasks),
         taskEvents: structuredClone(base.taskEvents),
+        ...(base.entrust?.run ? {
+            entrust: { ...base.entrust, records: { ...base.entrust.records }, run: { ...base.entrust.run } },
+        } : {}),
     }
 }
 function forkFastCombat(base, name, request) {
@@ -212,9 +225,11 @@ export class Game {
         registerPlayableEnemies(on, tables, store)
         registerWorldEvents(on, tables)
         registerKiboDuel(on, tables, protocol)
+        registerEntrust(on, tables)
         registerProfileQueries(on, tables, store)
         registerWorldObjects(on, tables)
         registerWorldCombat(on)
+        registerAIControl(on)
         registerEcology(on, tables)
         registerMall(on, tables)
         registerCombat(on)
@@ -403,11 +418,13 @@ export class Game {
                 settleSimpleProducts(this.tables, state, now)
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
+                ensureEntrustSceneObjects(this.tables, state, now)
                 expireTaskTrialGroup(this.tables, state)
                 restoreMixedTrialGroup(this.tables, state)
                 repairSoulEssenceStars(state)
                 refundPendingCatchCards(state)
                 syncCurrencyMirrors(state.player)
+                restoreMissingStamina(this.tables, state)
                 repairPetProfiles(this.tables, state, now)
                 repairMountSelection(this.tables, state)
                 upgradeSkillState(this.tables, state)
@@ -519,6 +536,11 @@ export class Game {
         if (e.name === 'CSProtoRecycle') return [reply({})]
         const handler = this.handlers.get(e.id)
         if (!handler) throw new GameError(`Unsupported ${e.name}`, 1021)
+        if (clientAIReports.has(e.name)) {
+            session.aiControl = handler({ id: session.id, tables: this.tables,
+                state: this.store.load(session.id).state, aiControl: session.aiControl }, r)
+            return []
+        }
         if (fastCombatTelemetry.has(e.name) || e.name === 'CSProtoStateUpdate')
             return this.store.transact(
                 session.id,
@@ -828,6 +850,22 @@ export class Game {
                 smelt_num: state.ornamentSmeltNum || 0,
             }),
             this.packet('CSProtoRideMountInfo', mountPayload(this.tables, state)),
+            this.packet('CSProtoEntrustInfoSync', entrustInfoSnapshot(state)),
+            this.packet('CSProtoEntrustStarRewardSync', entrustStarRewardSnapshot(state)),
+            ...(state.entrust?.run?.map_id === state.world.map_id
+                ? [
+                    ...(this.tables.find('world_city', state.world.map_id)?.type === 2 ? [
+                        this.packet('CSProtoCurMultiCampaignInfoSync', { status: 1, dungeon_id: state.entrust.run.dungeon_id }),
+                        this.packet('CSProtoCampaignInfoSync', campaignSnapshot(state.entrust.run)),
+                    ] : [
+                    this.packet('CSProtoMultiCampaignBaseInfoSync', entrustMultiBaseSnapshot(state, session.id)),
+                    this.packet('CSProtoMultiCampaignInfoSync', { camp: [entrustMultiSnapshot(state.entrust.run)] }),
+                    this.packet('CSProtoCurMultiCampaignInfoSync', entrustMultiSnapshot(state.entrust.run)),
+                    ]),
+                    this.packet('SCProtoMultiCampaignPlayerDmgInfoSync', entrustDamageSnapshot(state, session.id)),
+                    this.packet('CSProtoStaminaBoxSync', entrustChestSnapshot(this.tables, state)),
+                ]
+                : []),
             this.packet('CSProtoTaskSync', taskSnapshot(this.tables, state)),
             this.packet('CSProtoMailSync', { mails: state.mail }),
             this.packet('CSProtoStorySync', { infos: { infos: state.storyIds || [] } }),

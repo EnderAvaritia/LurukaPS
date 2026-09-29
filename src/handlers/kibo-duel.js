@@ -2,6 +2,8 @@ import { ensure } from './common.js'
 import { rememberMap, worldSync } from './world.js'
 import { heroModules, petModules } from '../battle.js'
 import { petData, petGrade } from '../pets.js'
+import { ensureEntrustSceneObjects } from '../entrust.js'
+import { exitEntrust, syncEntrust } from './entrust.js'
 
 const ids = (text) =>
     String(text ?? '')
@@ -313,6 +315,14 @@ export function registerKiboDuel(on, tables, protocol) {
         return {}
     })
     on('StartDungeonClientOk', (c) => {
+        const entrust = c.state.entrust?.run
+        if (entrust && [2, 3].includes(entrust.status)) {
+            ensure(c.state.world.map_id === entrust.map_id, 'Entrust scene is not active')
+            ensureEntrustSceneObjects(tables, c.state)
+            entrust.loading_complete_at ??= c.now
+            syncEntrust(c, entrust)
+            return {}
+        }
         const info = c.state.multiCampaign
         ensure(info?.status >= 2 && c.state.world.map_id === info.map_id, 'No active dungeon')
         info.status = 3
@@ -321,6 +331,7 @@ export function registerKiboDuel(on, tables, protocol) {
         return {}
     })
     on('MultiCampaignPlayerLoadingPageComplete', (c) => {
+        if ([2, 3].includes(c.state.entrust?.run?.status)) return {}
         const info = c.state.multiCampaign
         ensure(info?.arena_status === 3 && c.state.world.map_id === info.map_id, 'No active arena loading')
         c.state.kiboDuelLoadingCompleteAt ??= c.now
@@ -360,6 +371,7 @@ export function registerKiboDuel(on, tables, protocol) {
         return {}
     })
     on('MultiCampaignQuit', (c) => {
+        if (c.state.entrust?.run) return exitEntrust(c)
         const info = c.state.multiCampaign
         ensure(info && info.status >= 2, 'No active dungeon')
         info.status = 1

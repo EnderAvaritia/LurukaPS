@@ -1,4 +1,6 @@
 import { enemyDefinition } from '../enemy-state.js'
+import { isPlayerDamageSource } from '../damage-owner.js'
+import { advanceEntrustCombat } from './entrust.js'
 import { isRetiredTrialActor } from '../trial-actors.js'
 import { ensure } from './common.js'
 import { heroModules, heroBattleLimits, petModules, pairs } from '../battle.js'
@@ -198,15 +200,21 @@ export function registerCombat(on) {
             changed = new Map(),
             maximums = new Map(),
             enemyHurts = []
+        const entrustRun = c.state.entrust?.run?.map_id === c.state.world.map_id && c.state.entrust.run.status === 2
+            ? c.state.entrust.run : null
+        let entrustDamageChanged = false
         const reportSp = advanceEnergy(c, battle, changed)
-        const update = (id, values) => {
+        const update = (id, values, source) => {
             if (id === '0') return
             const saved = c.state.player.heros_info.battle_infos.find((h) => h.hero_id === id)
             if (saved) {
+                const previousHp = saved.hp
                 if (!maximums.has(id)) maximums.set(id, limits(c, id))
                 const max = maximums.get(id)
                 if (values.delta !== undefined) saved.hp = Math.max(0, Math.min(max.hp, saved.hp + values.delta))
                 saved.alive_state = saved.hp > 0 ? 0 : 1
+                if (entrustRun && entrustRun.hero_deaths !== undefined && previousHp > 0 && saved.hp === 0)
+                    entrustRun.hero_deaths++
                 changed.set(id, { uuid: id, hp: saved.hp, sp: saved.sp, alive_state: saved.alive_state, reason: 0 })
             } else {
                 const previous = battle.entities[id] ?? { uuid: id },
@@ -228,6 +236,11 @@ export function registerCombat(on) {
                         sp: previous.sp ?? 0,
                         alive_state: hp > 0 ? 0 : 1,
                         updated_at: c.now,
+                    }
+                    const lost = Math.max(0, (previous.hp ?? definition.max_hp) - hp)
+                    if (entrustRun && lost > 0 && isPlayerDamageSource(c.state, source)) {
+                        entrustRun.damage_total = String(BigInt(entrustRun.damage_total ?? '0') + BigInt(lost))
+                        entrustDamageChanged = true
                     }
                     boundedSet(battle.entities, id, value, 512)
                     changed.set(id, { uuid: id, hp, sp: value.sp, alive_state: value.alive_state, reason: 0 })
@@ -272,7 +285,7 @@ export function registerCombat(on) {
                 update(h.tar_id, {
                     ...(h.hp_change !== undefined ? { delta: h.hp_change } : {}),
                     ...(h.cur_hp !== undefined ? { reported_hp: h.cur_hp } : {}),
-                })
+                }, h.from_id)
                 reportSp(h.from_id, h.from_sp)
                 reportSp(h.tar_id, h.tar_sp, h.tar_sp === undefined ? h.delta_sp : 0)
                 if (heroBefore !== undefined) {
@@ -358,6 +371,13 @@ export function registerCombat(on) {
                 })),
             })
         if (changed.size) c.push('CSProtoObjBattleInfoSync', { infos: [...changed.values()] })
+        advanceEntrustCombat(c)
+        if (entrustDamageChanged && entrustRun.last_damage_sync_at !== c.now) {
+            entrustRun.last_damage_sync_at = c.now
+            c.push('SCProtoMultiCampaignPlayerDmgInfoSync', {
+                info: [{ player_id: c.id, sum_dmg: entrustRun.damage_total }],
+            })
+        }
     })
     on('RequestHeroElement', (c, r) => {
         const ids = r.u64s ?? []
