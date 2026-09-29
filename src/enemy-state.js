@@ -70,9 +70,11 @@ export function enemyDefinition(tables, state, uuid) {
         parameter = pairs(pack.levelAreaParameter).get(area) ?? parameter
     }
     if (pack?.levelPolicy === 4) parameter = taskConfig?.levelParameter || parameter
-    const dungeon = state.entrust?.run?.map_id === state.world.map_id
-        ? tables.find('dungeon', state.entrust.run.dungeon_id)
-        : null
+    const dungeonId = state.entrust?.run?.map_id === state.world.map_id
+        ? state.entrust.run.dungeon_id
+        : state.storyCampaign?.map_id === state.world.map_id
+        ? state.storyCampaign.dungeon_id : null
+    const dungeon = dungeonId ? tables.find('dungeon', dungeonId) : null
     const configured = pack?.levelPolicy === 3 && dungeon
         ? tables.get('world_difficulty_obj_level').find((row) =>
             row.groupid === parameter && row.difficultLv === dungeon.diffType && row.mapid === 0,

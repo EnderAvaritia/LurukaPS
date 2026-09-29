@@ -4,6 +4,7 @@ import { grantRewards, parseRewards } from '../rewards.js'
 import { spendCurrency, spend } from '../inventory.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { worldSync } from './world.js'
+import { enterStoryCampaignScene, endStoryCampaignScene, exitStoryCampaign } from './story-campaign.js'
 import {
     getEntrustCatalog,
     entrustInfoSnapshot,
@@ -279,6 +280,7 @@ export function registerEntrust(on, tables) {
     on('EnterEntrust', (c, r) => start(c, r.entrust_id))
     on('ReEnterEntrust', (c, r) => start(c, r.entrust_id, true))
     on('EnterDungeonScene', (c, r) => {
+        if (c.state.storyCampaign) return enterStoryCampaignScene(c, r)
         const run = c.state.entrust?.run
         ensure(run && [2, 3].includes(run.status) && (!r.scene_id || r.scene_id === run.map_id), 'Entrust scene is not active', 10275)
         ensure(!r.creator_id || r.creator_id === c.id, 'Entrust creator mismatch')
@@ -306,6 +308,7 @@ export function registerEntrust(on, tables) {
         syncEntrustEnemyBattle(c)
     })
     on('EndDungeonScene', (c, r) => {
+        if (c.state.storyCampaign) return endStoryCampaignScene(c, r)
         const entrust = c.state.entrust,
             run = entrust?.run
         ensure(run && [2, 3].includes(run.status), 'No active entrust', 10276)
@@ -325,7 +328,7 @@ export function registerEntrust(on, tables) {
         sync(c, run)
         return {}
     })
-    on('CampaignQuit', exitEntrust)
+    on('CampaignQuit', (c) => c.state.storyCampaign ? exitStoryCampaign(c) : exitEntrust(c))
     on('StaminaBoxGet', (c, r) => {
         const run = c.state.entrust?.run
         ensure(run && r.box_id === catalog.chest(run.entrust_id).id, 'Invalid entrust chest claim')

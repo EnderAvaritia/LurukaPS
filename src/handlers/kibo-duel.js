@@ -3,6 +3,8 @@ import { rememberMap, worldSync } from './world.js'
 import { heroModules, petModules } from '../battle.js'
 import { petData, petGrade } from '../pets.js'
 import { ensureEntrustSceneObjects } from '../entrust.js'
+import { storyCampaignSnapshot } from '../story-campaign.js'
+import { syncStoryCampaignEnemies } from './story-campaign.js'
 import { exitEntrust, syncEntrust } from './entrust.js'
 
 const ids = (text) =>
@@ -315,6 +317,13 @@ export function registerKiboDuel(on, tables, protocol) {
         return {}
     })
     on('StartDungeonClientOk', (c) => {
+        if (c.state.storyCampaign) {
+            ensure(c.state.storyCampaign.map_id === c.state.world.map_id, 'Story dungeon scene is not active')
+            c.state.storyCampaign.loading_complete_at ??= c.now
+            c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+            syncStoryCampaignEnemies(c)
+            return {}
+        }
         const entrust = c.state.entrust?.run
         if (entrust && [2, 3].includes(entrust.status)) {
             ensure(c.state.world.map_id === entrust.map_id, 'Entrust scene is not active')

@@ -144,6 +144,7 @@ export function restoreMixedTrialGroup(tables, state) {
         forced = !!controller?.__type_TaskTeamController?.isForceChange
     }
     if (forced) return refreshTrialPetBindings(state) || repaired
+    const maxSlots = trial.story_campaign ? 4 : 3
     const positions = structuredClone(original.heros),
         used = new Set()
     for (let index = 0; index < (trial.heroes ?? []).length; index++) {
@@ -153,7 +154,7 @@ export function restoreMixedTrialGroup(tables, state) {
             requested >= 0
                 ? requested
                 : positions.findIndex((slot, i) => !used.has(i) && (!slot.hero_id || slot.hero_id === '0'))
-        if (pos < 0 && positions.length < 3) pos = positions.length
+        if (pos < 0 && positions.length < maxSlots) pos = positions.length
         if (pos < 0)
             for (let i = positions.length - 1; i >= 0; i--)
                 if (!used.has(i) && positions[i].hero_id !== original.control) {
@@ -166,13 +167,13 @@ export function restoreMixedTrialGroup(tables, state) {
                     pos = i
                     break
                 }
-        ensure(pos >= 0 && pos < 3 && !used.has(pos), 'Trial formation has no free slot')
+        ensure(pos >= 0 && pos < maxSlots && !used.has(pos), 'Trial formation has no free slot')
         while (positions.length <= pos) positions.push(emptySlot())
         positions[pos] = { ...positions[pos], hero_id: hero.guid }
         used.add(pos)
     }
     const pets = new Set((trial.pets ?? []).map((p) => p.guid))
-    for (let index = 0; index < active.heros.length && index < 3; index++) {
+    for (let index = 0; index < active.heros.length && index < maxSlots; index++) {
         const petId = active.heros[index].pet_id
         if (!pets.has(petId)) continue
         while (positions.length <= index) positions.push(emptySlot())
@@ -202,7 +203,12 @@ export function expireTaskTrialGroup(tables, state) {
         graphCaches.set(tables, graphs)
     }
     const task = state.tasks.find((t) => t.task_id === trial.task_id)
-    const valid =
+    const storyTrial = trial.story_campaign &&
+        state.storyCampaign?.map_id === state.world.map_id &&
+        task?.nodes.some((node) => node.node_id === 11) &&
+        trial.ids.every((id) => String(tables.find('dungeon_scene', state.world.map_id)?.extraTrialGroup ?? '')
+            .split('|').some((entry) => Number(entry.split('#')[0]) === id))
+    const valid = storyTrial ||
         task &&
         graphs.get(task.task_id).controllers.some((controller) => {
             const d = controller.__type_TaskTeamController
@@ -332,7 +338,8 @@ export function registerTrialGroups(on, tables) {
             return {}
         }
         const requested = r.trial_heros ?? [],
-            requestedPets = r.trial_pets ?? []
+            // The client includes id=0 as an empty pet slot in chapter 6200.
+            requestedPets = (r.trial_pets ?? []).filter((item) => item.id > 0)
         if (!requested.length && requestedPets.length) {
             ensure(
                 existing &&
@@ -352,9 +359,13 @@ export function registerTrialGroups(on, tables) {
             requested.length > 0 && requested.length <= 3 && requestedPets.length <= 6,
             'Unsupported trial formation shape',
         )
+        const story = c.state.storyCampaign?.map_id === c.state.world.map_id &&
+            c.state.tasks.some((task) => task.task_id === 106014 &&
+                task.nodes.some((node) => node.node_id === 11))
+        const maxSlots = story ? 4 : 3
         ensure(
             new Set(requested.map((x) => x.id)).size === requested.length &&
-                requested.every((x) => Number.isInteger(x.pos) && x.pos >= -1 && x.pos < 3),
+                requested.every((x) => Number.isInteger(x.pos) && x.pos >= -1 && x.pos < maxSlots),
             'Invalid trial slots',
         )
         const candidates = []
@@ -372,6 +383,15 @@ export function registerTrialGroups(on, tables) {
                 if (requested.every((r) => members.some((v) => v.memberId === r.id)))
                     candidates.push({ task, data, members })
             }
+        }
+        if (story) {
+            const task = c.state.tasks.find((entry) => entry.task_id === 106014)
+            const scene = tables.find('dungeon_scene', c.state.world.map_id)
+            const members = String(scene?.extraTrialGroup ?? '').split('|')
+                .map((entry) => ({ memberId: Number(entry.split('#')[0]) }))
+                .filter((entry) => entry.memberId > 0)
+            if (requested.every((entry) => members.some((member) => member.memberId === entry.id)))
+                candidates.push({ task, data: { isForceChange: 0 }, members })
         }
         ensure(candidates.length === 1, 'Trial formation does not match active task')
         const active = candidates[0]
@@ -416,7 +436,7 @@ export function registerTrialGroups(on, tables) {
                 resolved = positions.findIndex((x, i) => !occupied.has(i) && x.hero_id === heroes[index].guid)
                 if (resolved < 0)
                     resolved = positions.findIndex((x, i) => !occupied.has(i) && (!x.hero_id || x.hero_id === '0'))
-                if (resolved < 0 && positions.length < 3) resolved = positions.length
+                if (resolved < 0 && positions.length < maxSlots) resolved = positions.length
                 if (resolved < 0)
                     for (let i = positions.length - 1; i >= 0; i--)
                         if (!occupied.has(i) && positions[i].hero_id !== original.control) {
@@ -430,7 +450,7 @@ export function registerTrialGroups(on, tables) {
                             break
                         }
             }
-            ensure(resolved >= 0 && resolved < 3 && !occupied.has(resolved), 'Trial formation has no free slot')
+            ensure(resolved >= 0 && resolved < maxSlots && !occupied.has(resolved), 'Trial formation has no free slot')
             while (positions.length <= resolved) positions.push(emptySlot())
             positions[resolved] = { ...positions[resolved], hero_id: heroes[index].guid }
             occupied.add(resolved)
@@ -450,6 +470,7 @@ export function registerTrialGroups(on, tables) {
             pets: existing?.pets ?? [],
             petIds: existing?.petIds ?? [],
             force: !!r.force,
+            story_campaign: story,
             heroSlots: Object.fromEntries(requested.map((item) => [item.id, item.pos])),
         }
         if (requestedPets.length) attachTrialPets(c, tables, c.state.trialGroup, positions, requestedPets)

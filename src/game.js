@@ -26,6 +26,8 @@ import { registerPlayableEnemies } from './handlers/playable-enemies.js'
 import { registerGM } from './handlers/gm.js'
 import { registerWorldEvents } from './handlers/world-events.js'
 import { registerEntrust } from './handlers/entrust.js'
+import { registerStoryCampaign, settleStoryCampaignScene, recoverStoryCampaignClear } from './handlers/story-campaign.js'
+import { ensureStoryCampaignScene, storyCampaignSnapshot } from './story-campaign.js'
 import {
     entrustInfoSnapshot,
     entrustStarRewardSnapshot,
@@ -151,6 +153,8 @@ function forkBattleReport(base) {
         ...(base.entrust?.run ? {
             entrust: { ...base.entrust, records: { ...base.entrust.records }, run: { ...base.entrust.run } },
         } : {}),
+        ...(base.storyCampaign ? { storyCampaign: { ...base.storyCampaign,
+            completed_scenes: [...base.storyCampaign.completed_scenes] } } : {}),
     }
 }
 function forkFastCombat(base, name, request) {
@@ -226,6 +230,7 @@ export class Game {
         registerWorldEvents(on, tables)
         registerKiboDuel(on, tables, protocol)
         registerEntrust(on, tables)
+        registerStoryCampaign(on, tables)
         registerProfileQueries(on, tables, store)
         registerWorldObjects(on, tables)
         registerWorldCombat(on)
@@ -416,9 +421,13 @@ export class Game {
                 this.recoverClosedPetPageAfterChoice(state, session.id)
                 this.recoverFailedInvestigationPlayable(state, session.id, now)
                 settleSimpleProducts(this.tables, state, now)
+                recoverStoryCampaignClear({ state, tables: this.tables, now, pushBefore: () => {} })
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
+                ensureStoryCampaignScene(this.tables, state, now)
+                if (state.storyCampaign) settleStoryCampaignScene({ state, tables: this.tables,
+                    id: session.id, now, push: () => {} })
                 expireTaskTrialGroup(this.tables, state)
                 restoreMixedTrialGroup(this.tables, state)
                 repairSoulEssenceStars(state)
@@ -877,6 +886,8 @@ export class Game {
                     this.packet('CSProtoStaminaBoxSync', entrustChestSnapshot(this.tables, state)),
                 ]
                 : []),
+            ...(state.storyCampaign?.map_id === state.world.map_id
+                ? [this.packet('CSProtoCampaignInfoSync', storyCampaignSnapshot(state))] : []),
             this.packet('CSProtoTaskSync', taskSnapshot(this.tables, state)),
             this.packet('CSProtoMailSync', { mails: state.mail }),
             this.packet('CSProtoStorySync', { infos: { infos: state.storyIds || [] } }),

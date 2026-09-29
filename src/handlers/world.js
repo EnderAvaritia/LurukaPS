@@ -6,6 +6,7 @@ import { mountPayload } from '../mounts.js'
 import { restoreLegacyHomeFormation } from '../home-formation.js'
 import { repairMainHeroType } from '../main-hero.js'
 import { campaignSnapshot, entrustChestSnapshot } from '../entrust.js'
+import { storyCampaignSnapshot } from '../story-campaign.js'
 import {
     addWorldMark,
     deleteWorldMarks,
@@ -135,6 +136,11 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
         c.push('CSProtoCampaignInfoSync', { status: 1, dungeon_id: departedEntrust.dungeon_id, cur_scene_id: departedEntrust.map_id })
         delete s.entrust.run
     }
+    if (s.storyCampaign && s.storyCampaign.map_id !== w.map_id) {
+        c.push('CSProtoCampaignInfoSync', { ...storyCampaignSnapshot(s), status: 1 })
+        delete s.storyCampaign
+        delete s.combat
+    }
     c.push('CSProtoWorldMapPointSync', { u32s: w.points })
     if (includeMarks) c.push('CSProtoWorldMapMarkListSync', worldMarkPayload(s))
     c.push('CSProtoWorldMapSync', {
@@ -150,6 +156,7 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
             map_id: w.map_id,
             exist: true,
             area_id: w.area_id,
+            ...(r.campaign_start ? { campaign_start: r.campaign_start } : {}),
             objs: Object.entries(s.worldObjects ?? {})
                 .filter(([key]) => key.startsWith(w.map_id + ':'))
                 .map(([, record]) => {
@@ -171,6 +178,10 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
             c.push('CSProtoCampaignInfoSync', campaignSnapshot(s.entrust.run))
             if (s.entrust.run.battle_complete) c.push('CSProtoStaminaBoxSync', entrustChestSnapshot(c.tables, s))
         }
+    }
+    if ([WORLD_MAP_CMD_ENTER, 49].includes(cmd) && s.storyCampaign?.map_id === w.map_id) {
+        c.push('CSProtoOnlineModeChange', { mode: 5 })
+        c.push('CSProtoCampaignInfoSync', storyCampaignSnapshot(s))
     }
 }
 export function rememberMap(c, destination) {

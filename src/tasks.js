@@ -79,6 +79,11 @@ export function conditionValue(condition, state, context) {
         const scene = open.npcData.sceneId || open.sceneId || base.mapData?.sceneId
         return !scene || state.world.map_id === scene ? 1 : 0
     }
+    if (condition.conditionId === 12017) {
+        const dungeon = base.__type_TaskCondDungeonData
+        const clear = state.storyCampaignClears?.[dungeon?.dungeonId]
+        return dungeon?.isOver === 1 && clear && clear.count >= Math.max(1, dungeon.count ?? 1) ? 1 : 0
+    }
     if (condition.conditionId === 2518) {
         const achievId = base.__type_TaskCondGuidedAchievementsData?.achievId
         return guidedConditionValue(achievId, state, context)

@@ -1,6 +1,7 @@
 import { enemyDefinition } from '../enemy-state.js'
 import { isPlayerDamageSource } from '../damage-owner.js'
 import { advanceEntrustCombat } from './entrust.js'
+import { settleStoryCampaignScene } from './story-campaign.js'
 import { isRetiredTrialActor } from '../trial-actors.js'
 import { ensure } from './common.js'
 import { heroModules, heroBattleLimits, petModules, pairs } from '../battle.js'
@@ -372,6 +373,7 @@ export function registerCombat(on) {
             })
         if (changed.size) c.push('CSProtoObjBattleInfoSync', { infos: [...changed.values()] })
         advanceEntrustCombat(c)
+        settleStoryCampaignScene(c)
         if (entrustDamageChanged && entrustRun.last_damage_sync_at !== c.now) {
             entrustRun.last_damage_sync_at = c.now
             c.push('SCProtoMultiCampaignPlayerDmgInfoSync', {
