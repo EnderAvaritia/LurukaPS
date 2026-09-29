@@ -32,7 +32,7 @@ import {
     arenaAttributePayload,
 } from './handlers/kibo-duel.js'
 import { registerProfileQueries } from './handlers/profile-queries.js'
-import { registerWorldObjects } from './handlers/world-objects.js'
+import { registerWorldObjects, reconcileWorldCollectionFinalDrops } from './handlers/world-objects.js'
 import { registerWorldCombat } from './handlers/world-combat.js'
 import { retireCapturedEnemy } from './handlers/world-combat.js'
 import { registerEcology } from './handlers/ecology.js'
@@ -395,6 +395,7 @@ export class Game {
                 ensureArenaFormationManager(state)
                 reconcileFormationPets(state)
                 upgradeInventory(state)
+                reconcileWorldCollectionFinalDrops(this.tables, state)
                 repairLegacyMountState(state)
                 this.recoverFailedPetChoice(state, session.id, now)
                 this.recoverClosedPetPageAfterChoice(state, session.id)

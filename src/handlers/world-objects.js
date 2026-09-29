@@ -1,6 +1,17 @@
 import { ensure, syncPlayer } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards } from '../rewards.js'
+import { randomInt } from 'node:crypto'
+// World resource prefabs do not expose their drop ID in worldmap/world_spawner.
+// These IDs match the shipped resource variants and their configured drop pools.
+const collectionFinalDrops = new Map([
+    [650010, 44001], [650020, 44003], [650030, 44004],
+    [650170, 41091], [650180, 41092], [650190, 41001],
+    [650270, 43012], [650290, 43001], [650291, 43001],
+    [650310, 43004], [650320, 43005], [650340, 43002],
+    [650560, 42091], [650890, 41093], [650910, 44002],
+    [651004, 41095], [651006, 41094], [651013, 43011], [651014, 43011],
+])
 function worldCondition(value, state) {
     if (!value) return true
     return String(value).split('|').every((part) => {
@@ -29,6 +40,56 @@ function stateData(input, depth = 0) {
     if (input.children?.length) result.children = input.children.map((x) => stateData(x, depth + 1))
     return result
 }
+function collectingRows(catalog, spawnerId) {
+    return catalog.get('world_collecting').filter((row) =>
+        String(row.spawnerId).split('|').some((id) => Number(id) === spawnerId))
+}
+function collectionReward(catalog, spawner, collecting) {
+    const dropId = collectionFinalDrops.get(spawner.resourceId)
+    const primary = dropId && catalog.get('drop').find((row) =>
+        row.dropId === dropId && row.dropGroupId === 1 && row.type === 3 && row.itemId > 0)
+    const ordinary = primary
+        ? { itemtype: primary.type, itemid: primary.itemId, itemnum: 1 }
+        : collecting.length
+          ? { itemtype: collecting[0].itemType, itemid: collecting[0].itemId, itemnum: 1 }
+          : null
+    return { dropId, ordinary }
+}
+export function reconcileWorldCollectionFinalDrops(tables, state) {
+    const catalog = new WorldObjectCatalog(tables)
+    let changed = false
+    for (const [key, record] of Object.entries(state.worldObjects ?? {})) {
+        if (!record.complete || !record.claims?.complete) continue
+        const [map, id] = key.split(':').map(Number)
+        if (!Number.isInteger(map) || !Number.isInteger(id)) continue
+        let row
+        try {
+            row = catalog.find('worldmap_' + map, id)
+        } catch (error) {
+            if (error.code === 'ENOENT') continue
+            throw error
+        }
+        const spawner = row && catalog.find('world_spawner', row.spawnerId)
+        if (!spawner || row.statusReward) continue
+        const collecting = collectingRows(catalog, spawner.id)
+        const { dropId } = collectionReward(catalog, spawner, collecting)
+        if (!dropId) continue
+        if (!record.claims.finalDrop_v2) {
+            grantRewards(tables, state, catalog.drops(dropId, randomInt))
+            record.claims.finalDrop_v2 = true
+            changed = true
+        }
+        const lastStage = Math.min(4, Math.max(0, record.state_data?.step ?? 0))
+        for (let step = 1; step <= lastStage; step++) {
+            const stageKey = `step:${step}`
+            if (record.claims[stageKey]) continue
+            grantRewards(tables, state, catalog.drops(dropId, randomInt))
+            record.claims[stageKey] = true
+            changed = true
+        }
+    }
+    return changed
+}
 export function registerWorldObjects(on, tables) {
     const catalog = new WorldObjectCatalog(tables)
     on('WorldObjInteract', (c, r) => {
@@ -53,6 +114,7 @@ export function registerWorldObjects(on, tables) {
             ensure(step >= old.state_data.step, 'World state cannot move backwards')
             const full = !!input.obj.complete,
                 stage = !!incoming.complete,
+                stageAdvanced = step > (old.state_data.step ?? 0),
                 claim = full || stage
             const drops = String(row.statusReward || '')
                 .split('|')
@@ -70,16 +132,15 @@ export function registerWorldObjects(on, tables) {
                 pos,
                 complete: old.complete || full,
             }
-            const stageKey = full ? 'complete' : `step:${step}`
             const claims = old.claims ?? {}
             let rewards = [],
                 dropIds = []
-            if (claim && !old.complete && !claims[stageKey]) {
-                const collecting = !drops.length
-                    ? catalog
-                          .get('world_collecting')
-                          .find((x) => String(x.spawnerId).split('|').map(Number).includes(spawner.id))
-                    : null
+            const collecting = !drops.length ? collectingRows(catalog, spawner.id) : [],
+                stageKey = `step:${step}`,
+                pending = collecting.length
+                    ? (!full && (stage || stageAdvanced) && !claims[stageKey]) || (full && !claims.complete)
+                    : !claims[full ? 'complete' : stageKey]
+            if ((claim || (collecting.length && stageAdvanced)) && !old.complete && pending) {
                 const delta = ['x', 'y', 'z'].reduce((n, axis) => n + (c.state.world.pos[axis] - pos[axis]) ** 2, 0)
                 const nearObject = (value) =>
                     value &&
@@ -89,7 +150,7 @@ export function registerWorldObjects(on, tables) {
                 const remoteStateOnly =
                     spawner.objectType === 12 &&
                     !drops.length &&
-                    !collecting &&
+                    !collecting.length &&
                     input.interact_type === 2 &&
                     input.element_id > 0 &&
                     nearObject(input.pos) &&
@@ -108,19 +169,51 @@ export function registerWorldObjects(on, tables) {
                         rewards = catalog.drops(drops[index], c.randomInt)
                         claims[`drop:${index}`] = true
                     }
-                } else if (collecting) {
-                    ensure(full, 'Partial gathering reward needs step configuration', 1007)
-                    rewards = [{ itemtype: collecting.itemType, itemid: collecting.itemId, itemnum: 1 }]
+                } else if (collecting.length) {
+                    const { dropId, ordinary } = collectionReward(catalog, spawner, collecting)
+                    if (!full && (stage || stageAdvanced) && !claims[stageKey]) {
+                        if (dropId) {
+                            rewards.push(...catalog.drops(dropId, c.randomInt))
+                            dropIds.push(dropId)
+                        } else if (ordinary) rewards.push(ordinary)
+                        claims[stageKey] = true
+                    }
+                    if (full && !claims.complete) {
+                        if (dropId) {
+                            rewards.push(...catalog.drops(dropId, c.randomInt))
+                            dropIds.push(dropId)
+                            claims.finalDrop_v2 = true
+                        } else rewards.push(...collecting.map((entry) => ({
+                            itemtype: entry.itemType,
+                            itemid: entry.itemId,
+                            itemnum: 1,
+                        })))
+                        claims.complete = true
+                    }
                 }
                 if (rewards.length) {
                     rewards = grantRewards(c.tables, c.state, rewards)
                     awarded = true
                 }
-                claims[stageKey] = true
+                if (!collecting.length) claims[full ? 'complete' : stageKey] = true
                 record.last_reward_step = Math.max(old.last_reward_step, step)
             }
             record.claims = claims
             records[key] = record
+            if (collectionFinalDrops.has(spawner.resourceId)) {
+                const trace = (c.state.worldObjectRewardTrace ??= [])
+                trace.push({
+                    time: c.now,
+                    obj_id: id,
+                    old_step: old.state_data.step ?? 0,
+                    step,
+                    stage_complete: stage,
+                    obj_complete: full,
+                    cur_hp: incoming.cur_hp,
+                    drop_ids: dropIds,
+                })
+                if (trace.length > 64) trace.shift()
+            }
             const { claims: ignored, ...wire } = record
             output.push({
                 obj: wire,
