@@ -5,7 +5,7 @@ import { Tables } from '../src/player.js'
 import { Store } from '../src/store.js'
 import { Protocol } from '../src/protocol.js'
 import { Game } from '../src/game.js'
-import { TaskGraphs, makeNode, unlockAutomaticTasks, conditionSatisfied } from '../src/tasks.js'
+import { TaskGraphs, makeNode, unlockAutomaticTasks, conditionSatisfied, taskSnapshot } from '../src/tasks.js'
 const cfg = configuration(),
     tables = new Tables(cfg.tables),
     protocol = new Protocol(cfg.base)
@@ -202,7 +202,7 @@ test('fresh and existing empty accounts receive initial main quest once, with tr
         )
         assert.equal(state.tasks[0].client_trace, true)
         const sync = protocol.decode('SCTaskSync', t.packets.find((p) => p.id === 9853).payload)
-        assert.equal(sync.next_main_id, 106001)
+        assert.equal(sync.next_main_id, 0)
         assert.deepEqual(sync.trace_list, [106001])
         assert.deepEqual(state.tasks[0].finish_nodes, [1])
         assert.equal(state.tasks[0].nodes[0].node_id, 5)
@@ -219,6 +219,76 @@ test('fresh and existing empty accounts receive initial main quest once, with tr
             t.state().tasks.map((t) => t.task_id),
             [106001],
         )
+    } finally {
+        t.store.close()
+    }
+})
+
+test('completed story shows the next level-gated main quest and accepts it at the configured level', () => {
+    const t = setup()
+    try {
+        t.edit((state) => {
+            state.tasks = []
+            state.taskRecords = [106001, 106002, 106009, 106010, 106012, 106013, 996001]
+                .map((task_id) => ({ task_id, count: 1, time: 1 }))
+            state.player.basic_info.lv = 14
+        })
+        let packets = t.login()
+        let sync = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
+        assert.equal(sync.next_main_id, 106014)
+        assert.ok(!sync.tasks.some((task) => task.task_id === 106014))
+        assert.ok(!t.state().tasks.some((task) => task.task_id === 106014))
+        assert.throws(() => t.call('TaskAccept', { u32: 106014 }), /prerequisites/)
+
+        t.edit((state) => { state.player.basic_info.lv = 15 })
+        packets = t.login()
+        sync = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
+        assert.equal(sync.next_main_id, 0)
+        assert.ok(sync.tasks.some((task) => task.task_id === 106014))
+        assert.equal(t.state().taskEpochs[106014], 1)
+
+        t.edit((state) => {
+            state.tasks = []
+            state.taskRecords.push({ task_id: 106014, count: 1, time: 1 },
+                { task_id: 106015, count: 1, time: 1 })
+            state.player.basic_info.lv = 19
+        })
+        assert.equal(taskSnapshot(tables, t.state()).next_main_id, 106016)
+        t.edit((state) => { state.taskRecords = state.taskRecords.filter((record) => record.task_id !== 106015) })
+        assert.equal(taskSnapshot(tables, t.state()).next_main_id, 0)
+    } finally {
+        t.store.close()
+    }
+})
+
+test('an old underleveled active main is shown as a level placeholder until leveling', () => {
+    const t = setup()
+    try {
+        t.edit((state) => {
+            state.player.basic_info.lv = 8
+            state.taskRecords = [106001, 106002, 106009, 106010, 106012, 106013, 996001]
+                .map((task_id) => ({ task_id, count: 1, time: 1 }))
+            state.tasks = [{ task_id: 106014, nodes: [{ node_id: 3, node_values: [0] }],
+                finish_nodes: [1], reward_nodes: [], client_trace: true, start_time: 1 }]
+            state.taskEpochs[106014] = 1
+        })
+        const packets = t.login()
+        const sync = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
+        assert.equal(sync.next_main_id, 106014)
+        assert.ok(!sync.tasks.some((task) => task.task_id === 106014))
+        assert.deepEqual(sync.del_tasks, [106014])
+        assert.deepEqual(sync.del_trace_list, [106014])
+        assert.ok(t.state().tasks.some((task) => task.task_id === 106014))
+
+        const encode = (value) => Buffer.from(String(value)).toString('base64')
+        const upgraded = t.call('GMCommand', { command: encode('level'), args: [encode(15)] })
+        const taskPackets = upgraded.filter((packet) => packet.id === 9853)
+        assert.ok(taskPackets.length > 0)
+        const restored = protocol.decode('SCTaskSync', taskPackets.at(-1).payload)
+        assert.ok(restored.tasks.some((task) => task.task_id === 106014))
+        assert.equal(restored.next_main_id, 0)
+        assert.deepEqual(restored.new_task_ids, [106014])
+        assert.equal(t.state().taskEpochs[106014], 1)
     } finally {
         t.store.close()
     }

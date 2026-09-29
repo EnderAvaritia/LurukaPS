@@ -266,8 +266,45 @@ export function unlockAutomaticTasks(tables, state, now) {
     }
     return added
 }
+function requiredTaskLevel(config) {
+    const levels = String(config?.unlockcondition ?? '').split('|')
+        .filter((rule) => rule.startsWith('2004#')).map((rule) => Number(rule.slice(5)))
+    return levels.length && levels.every((level) => Number.isSafeInteger(level) && level > 0)
+        ? Math.max(...levels) : 0
+}
+export function taskVisibleAtLevel(tables, state, task) {
+    const required = requiredTaskLevel(tables.find('task', task.task_id))
+    return !required || state.player.basic_info.lv >= required
+}
+function nextLevelLockedMain(tables, state) {
+    const level = state.player.basic_info.lv
+    let graphs = automaticGraphs.get(tables)
+    if (!graphs) {
+        graphs = new TaskGraphs(tables)
+        automaticGraphs.set(tables, graphs)
+    }
+    const candidates = []
+    for (const config of tables.get('task')) {
+        if (config.type !== 1 || config.autoAccept !== 1 || config.canRepeat === 1 ||
+            state.tasks.some((task) => task.task_id === config.id) ||
+            (state.taskRecords ?? []).some((record) => record.task_id === config.id && record.count > 0)) continue
+        const requiredLevel = requiredTaskLevel(config)
+        if (level >= requiredLevel) continue
+        // Evaluate the full graph at the required level. This keeps the
+        // placeholder hidden until every non-level prerequisite is met.
+        const atRequiredLevel = { ...state, player: { ...state.player,
+            basic_info: { ...state.player.basic_info, lv: requiredLevel } } }
+        if (taskUnlocked(graphs.get(config.id), atRequiredLevel))
+            candidates.push({ id: config.id, requiredLevel })
+    }
+    candidates.sort((a, b) => a.requiredLevel - b.requiredLevel || a.id - b.id)
+    return candidates[0]?.id ?? 0
+}
 export function taskSnapshot(tables, state) {
-    const main = state.tasks.find((t) => tables.find('task', t.task_id)?.type === 1)
+    const visibleTasks = state.tasks.filter((task) => taskVisibleAtLevel(tables, state, task))
+    const hiddenTasks = state.tasks.filter((task) => !visibleTasks.includes(task))
+    const main = visibleTasks.find((task) => tables.find('task', task.task_id)?.type === 1)
+    const hiddenMain = hiddenTasks.find((task) => tables.find('task', task.task_id)?.type === 1)
     const taskRecords = (state.taskRecords ?? []).map((record) => ({ ...record }))
     if (state.world?.unlockAllMaps) {
         const unlockTaskIds = new Set()
@@ -287,10 +324,14 @@ export function taskSnapshot(tables, state) {
         }
     }
     return {
-        tasks: state.tasks,
+        tasks: visibleTasks,
+        del_tasks: hiddenTasks.map((task) => task.task_id),
         task_records: taskRecords,
-        trace_list: state.tasks.filter((t) => t.client_trace).map((t) => t.task_id),
-        next_main_id: main?.task_id ?? 0,
+        trace_list: visibleTasks.filter((task) => task.client_trace).map((task) => task.task_id),
+        del_trace_list: hiddenTasks.filter((task) => task.client_trace).map((task) => task.task_id),
+        // The client treats next_main_id as an unaccepted placeholder. An
+        // accepted main must clear it, even when it is the same story ID.
+        next_main_id: main ? 0 : hiddenMain?.task_id ?? nextLevelLockedMain(tables, state),
     }
 }
 

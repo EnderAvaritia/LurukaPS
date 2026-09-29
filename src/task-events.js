@@ -1,4 +1,4 @@
-import { TaskGraphs, activeTask, nodeConditions, conditionValue, reconcileTaskBefore } from './tasks.js'
+import { TaskGraphs, activeTask, nodeConditions, conditionValue, reconcileTaskBefore, taskVisibleAtLevel } from './tasks.js'
 import { deliveryKey } from './task-delivery.js'
 import { ensure } from './handlers/common.js'
 import fs from 'node:fs'
@@ -60,7 +60,7 @@ function recordScopedEvent(c, r, graphs) {
         events = (c.state.taskEvents ??= {})
     events[key] = Math.max(events[key] ?? 0, fractal ? a[3] : 1)
     node.node_values[index] = conditionValue(q, c.state, { taskId: task.task_id, nodeId: node.node_id, index })
-    c.push('CSProtoTaskSync', { tasks: [task] })
+    if (taskVisibleAtLevel(c.tables, c.state, task)) c.push('CSProtoTaskSync', { tasks: [task] })
     return true
 }
 export function recordTaskBehaviour(c, r) {
@@ -137,6 +137,6 @@ export function recordTaskBehaviour(c, r) {
     events[key] = Math.min(required, (events[key] ?? 0) + 1)
     node.node_values[index] = conditionValue(condition, c.state, { taskId, nodeId, index })
     reconcileTaskBefore(c.tables, graph, task, node, c.state)
-    c.push('CSProtoTaskSync', { tasks: [task] })
+    if (taskVisibleAtLevel(c.tables, c.state, task)) c.push('CSProtoTaskSync', { tasks: [task] })
     return true
 }

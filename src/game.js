@@ -11,7 +11,7 @@ import {
 } from './handlers/trial-groups.js'
 import { prepareTaskScenes } from './task-scenes.js'
 import { worldSync } from './handlers/world.js'
-import { unlockAutomaticTasks, taskSnapshot, refreshTaskProgress } from './tasks.js'
+import { unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
 import { deliveryKey } from './task-delivery.js'
 import { repairSoulEssenceStars } from './equipment.js'
 import { registerPlayableLifecycle, playableSnapshot } from './handlers/playable-lifecycle.js'
@@ -638,10 +638,20 @@ export class Game {
                 if (e.name === 'CSProtoPlayerCustomData') this.finishPendingCharacterTask(context)
                 syncCurrencyMirrors(state.player)
                 const updatedTasks = refreshTaskProgress(this.tables, state)
-                if (updatedTasks.length) context.push('CSProtoTaskSync', { tasks: updatedTasks })
-                const newTasks = battleReport ? [] : unlockAutomaticTasks(this.tables, state, now)
+                const visibleUpdates = updatedTasks.filter((task) => taskVisibleAtLevel(this.tables, state, task))
+                if (visibleUpdates.length) context.push('CSProtoTaskSync', { tasks: visibleUpdates })
+                const levelChanged = state.player.basic_info.lv !== playerLevelBefore
+                const newTasks = battleReport && !levelChanged ? [] : unlockAutomaticTasks(this.tables, state, now)
                 if (newTasks.length)
                     context.push('CSProtoTaskSync', { ...taskSnapshot(this.tables, state), new_task_ids: newTasks })
+                else if (levelChanged) {
+                    const newlyVisible = state.tasks.filter((task) =>
+                        taskVisibleAtLevel(this.tables, state, task) &&
+                        !taskVisibleAtLevel(this.tables, { ...state, player: { ...state.player,
+                            basic_info: { ...state.player.basic_info, lv: playerLevelBefore } } }, task),
+                    ).map((task) => task.task_id)
+                    context.push('CSProtoTaskSync', { ...taskSnapshot(this.tables, state), new_task_ids: newlyVisible })
+                }
                 if (state.home?.technology && state.player.basic_info.lv !== playerLevelBefore)
                     state.homeRevision = (state.homeRevision || 0) + 1
                 if (!battleReport && prepareTaskScenes(this.tables, state)) {
@@ -800,7 +810,8 @@ export class Game {
                         }),
                     )
                     const updated = refreshTaskProgress(this.tables, state)
-                    if (updated.length) packets.push(this.packet('CSProtoTaskSync', { tasks: updated }))
+                    const visible = updated.filter((task) => taskVisibleAtLevel(this.tables, state, task))
+                    if (visible.length) packets.push(this.packet('CSProtoTaskSync', { tasks: visible }))
                 }
             }
             return packets
