@@ -200,4 +200,31 @@ export function registerPlayableLifecycle(on, tables) {
         sync(c)
         return { playId: row.id, reward: { rewards: [] }, drop_id: [], pos: c.state.world.pos }
     })
+    on('PlayableScoreReward', (c, r) => {
+        const row = config(r.play_id),
+            finish = c.state.playableFinishes?.[row.id]
+        ensure(finish && finish.map_id === c.state.world.map_id, 'Playable reward is not available')
+        const mask = BigInt(r.reward_info ?? '0'),
+            claimed = BigInt(finish.reward_info ?? 0),
+            dropIds = String(row.statusReward || '').split('|'),
+            scores = String(row.playScore || '').split('|').filter(Boolean).map(Number)
+        ensure(mask > 0n && mask < 1n << 32n && !(mask & 1n), 'Invalid playable reward mask')
+        const available = dropIds.reduce((bits, token, index) =>
+            token && Number(token) > 0 && (!scores.length || finish.score >= scores[index])
+                ? bits | (1n << BigInt(index + 1))
+                : bits, 0n)
+        ensure((mask & ~available) === 0n, 'Playable reward tier not achieved')
+        const fresh = mask & ~claimed,
+            awarded = []
+        for (let index = 0; index < dropIds.length; index++)
+            if (fresh & (1n << BigInt(index + 1))) awarded.push(Number(dropIds[index]))
+        const rewards = awarded.length
+            ? grantRewards(tables, c.state, awarded.flatMap((id) => world.drops(id, c.randomInt)))
+            : []
+        if (fresh) {
+            finish.reward_info = Number(claimed | fresh)
+            sync(c)
+        }
+        return { play_id: row.id, rewards: { rewards }, drop_id: awarded }
+    })
 }

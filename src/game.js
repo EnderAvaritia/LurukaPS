@@ -576,12 +576,14 @@ export class Game {
                 }
                 const petIdsBefore = state.pets.map((p) => p.guid)
                 const eggIdsBefore = (state.petEggs || []).map((e) => e.guid)
+                const ornamentIdsBefore = (state.ornaments || []).map((entry) => entry.guid)
                 const petRevision = state.petRevision || 0
                 const playerLevelBefore = state.player.basic_info.lv
                 const homeBuildIdsBefore = (state.home?.builds || []).map((b) => b.guid)
                 const homeWishIdsBefore = (state.home?.wishlist || []).map((x) => x.uid)
                 const homeRevision = state.homeRevision || 0
                 const eggRevision = state.eggRevision || 0
+                const ornamentRevision = state.ornamentRevision || 0
                 const before = []
                 const pushes = []
                 const context = {
@@ -660,6 +662,20 @@ export class Game {
                               }),
                           ]
                         : []
+                const ornamentSync =
+                    (state.ornamentRevision || 0) !== ornamentRevision
+                        ? [
+                              this.packet('CSProtoUpdateOrnament', {
+                                  ornaments: (state.ornaments || []).filter(
+                                      (entry) => !ornamentIdsBefore.includes(entry.guid),
+                                  ),
+                                  guid: ornamentIdsBefore.filter(
+                                      (id) => !(state.ornaments || []).some((entry) => entry.guid === id),
+                                  ),
+                                  smelt_num: state.ornamentSmeltNum || 0,
+                              }),
+                          ]
+                        : []
                 const homeSync =
                     (state.homeRevision || 0) !== homeRevision
                         ? [
@@ -706,6 +722,7 @@ export class Game {
                     ...petSync,
                     ...before,
                     ...eggSync,
+                    ...ornamentSync,
                     ...homeSync,
                     ...packets,
                     ...pushes,
@@ -805,6 +822,10 @@ export class Game {
                 egg_infos: { eggs: state.petEggs || [] },
             }),
             this.packet('CSProtoPetBoxInfoSync', { box_infos: state.petBoxes }),
+            this.packet('CSProtoAllEquipOrnamentSync', {
+                ornaments: state.ornaments || [],
+                smelt_num: state.ornamentSmeltNum || 0,
+            }),
             this.packet('CSProtoRideMountInfo', mountPayload(this.tables, state)),
             this.packet('CSProtoTaskSync', taskSnapshot(this.tables, state)),
             this.packet('CSProtoMailSync', { mails: state.mail }),

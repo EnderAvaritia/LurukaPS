@@ -3,6 +3,7 @@ import { addHomeBuildings, refreshAutoCropShortcut } from './home.js'
 import { ensure } from './handlers/common.js'
 import { addItems } from './inventory.js'
 import { createEggs } from './eggs.js'
+import { createCustomOrnaments } from './ornaments.js'
 import { syncCurrencyMirrors } from './currency.js'
 import { heroData } from './player.js'
 import { mainHeroConfigId } from './main-hero.js'
@@ -92,6 +93,10 @@ export function grantRewards(tables, state, rewards, depth = 0) {
         } else if (itemtype === 14) {
             const eggs = createEggs(tables, state, itemid, itemnum)
             granted.push(...eggs.map((e) => ({ itemtype: 14, itemid, itemnum: 1, guid: String(e.guid) })))
+            continue
+        } else if (itemtype === 33) {
+            const ornaments = createCustomOrnaments(tables, state, itemid, itemnum)
+            granted.push(...ornaments.map((entry) => ({ itemtype: 33, itemid, itemnum: 1, guid: String(entry.guid) })))
             continue
         } else if (itemtype === 10) {
             const basic = state.player.basic_info

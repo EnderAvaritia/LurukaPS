@@ -13,6 +13,23 @@ function wire(record) {
 }
 export function registerWorldEvents(on, tables) {
     const drops = new WorldObjectCatalog(tables)
+    const configuredDrops = new Set(drops.get('drop').map((entry) => entry.dropId))
+    const eventRewards = (c, row) => {
+        const rewards = []
+        for (const token of String(row.dropID || '').split('|').filter(Boolean)) {
+            const id = Number(token)
+            ensure(Number.isInteger(id) && id > 0, 'Invalid world event drop', 1007)
+            if (!configuredDrops.has(id)) {
+                // CBT3 keeps disabled placeholder events (100/107/108/109/117)
+                // with drop IDs absent from the shipped drop table.
+                ensure(row.probability === 0 && row.weight === 0,
+                    'Active world event references an unknown drop', 1007)
+                continue
+            }
+            rewards.push(...drops.drops(id, c.randomInt))
+        }
+        return grantRewards(c.tables, c.state, rewards)
+    }
     const config = (c, id) => {
         const row = tables.find('world_event', id)
         ensure(row && row.worldMapID === c.state.world.map_id, 'Event not in current map')
@@ -24,12 +41,21 @@ export function registerWorldEvents(on, tables) {
         const events = (c.state.worldEvents ??= {}),
             key = `${row.worldMapID}:${row.id}`
         let event = events[key]
-        if (event?.completed && event.step === row.stepCount - 1) event.completed = false
-        if (event && event.step < row.stepCount && row.overtime > 0 && c.now >= event.begin_time + row.overtime) {
+        if (event?.rewarded && row.dropID && event.step === row.stepCount - 1) {
+            // Old servers awarded the drop one step early. Preserve that
+            // receipt; the client's final callback still needs an ack.
+            event.completed = true
+            event.expired = false
+        } else if (event?.completed && event.step === row.stepCount - 1) event.completed = false
+        if (event && !event.completed && event.step < row.stepCount && row.overtime > 0 && c.now >= event.begin_time + row.overtime) {
             event.step = row.overtimeResult
             event.expired = true
         }
-        if (!event || ((event.completed || event.expired) && c.now >= event.next_trigger_time)) {
+        const failedRetry = event?.expired && !event.rewarded &&
+            c.now >= event.begin_time + Math.max(0, row.overtime) + Math.max(0, row.checkCD)
+        if (!event || failedRetry || ((event.completed || event.expired) && c.now >= event.next_trigger_time)) {
+            const recoverFinalUntil = row.id === 203 && event?.expired && event.generation === 1 &&
+                c.now - event.begin_time >= 86400 ? c.now + 600 : 0
             event = {
                 cfg_id: row.id,
                 step: 1,
@@ -39,6 +65,7 @@ export function registerWorldEvents(on, tables) {
                 completed: false,
                 expired: false,
                 rewarded: false,
+                ...(recoverFinalUntil ? { recoverFinalUntil } : {}),
             }
             events[key] = event
         }
@@ -60,6 +87,41 @@ export function registerWorldEvents(on, tables) {
         // stepCount includes the initial step. The client reports the last
         // transition as stepCount (event 201: start + three monster waves).
         ensure(Number.isInteger(step) && step >= 1 && step <= row.stepCount, 'Invalid event transition')
+        if (event.rewarded && row.dropID && event.step === row.stepCount - 1) {
+            event.completed = true
+            event.expired = false
+            if (step === row.stepCount) event.step = step
+            ensure(step === event.step, 'Event restart must follow cooldown')
+            c.pushBefore('CSProtoWorldEventInfo', { infos: [wire(event)] })
+            return { rewards: [] }
+        }
+        if (
+            row.id === 203 &&
+            !event.rewarded && (
+                (event.expired && event.generation === 1 && c.now - event.begin_time >= 86400) ||
+                (event.generation === 2 && event.step === 1 && event.recoverFinalUntil >= c.now)
+            ) &&
+            step === row.stepCount && r.event_type === row.triggerType && !r.reset_start
+        ) {
+            // An old server retained a failed egg event for its full 70-hour
+            // reward cooldown. The client finished a fresh nearby event, but
+            // its final step was compared with that stale generation.
+            const targetId = Number(String(row.targetParamList).split(/[|#]/)[0]),
+                target = drops.object(row.worldMapID, targetId).pos,
+                near = (pos) => pos && ['x', 'y', 'z'].every((axis) => Number.isFinite(pos[axis])) &&
+                    ['x', 'y', 'z'].reduce((sum, axis) => sum + (pos[axis] - target[axis]) ** 2, 0) <= 10000 ** 2
+            ensure(near(c.state.world.pos) && near({
+                x: Math.round(r.pos?.x * 100),
+                y: Math.round(r.pos?.y * 100),
+                z: Math.round(r.pos?.z * 100),
+            }), 'Stale egg event is not nearby')
+            event.expired = false
+            event.step = row.stepCount - 1
+            event.begin_time = c.now
+            event.next_trigger_time = c.now + Math.max(0, row.refreshCD)
+            event.generation++
+            delete event.recoverFinalUntil
+        }
         // Older servers marked stepCount - 1 as complete. Let an interrupted
         // event advance to the real final step without restarting the waves.
         if (event.completed && event.step === row.stepCount - 1) event.completed = false
@@ -86,12 +148,7 @@ export function registerWorldEvents(on, tables) {
             let rewards = []
             if (step === row.stepCount) {
                 if (!event.rewarded) {
-                    for (const id of String(row.dropID || '')
-                        .split('|')
-                        .filter(Boolean)
-                        .map(Number))
-                        rewards.push(...drops.drops(id, c.randomInt))
-                    rewards = grantRewards(c.tables, c.state, rewards)
+                    rewards = eventRewards(c, row)
                     event.rewarded = true
                 }
                 event.completed = true
@@ -105,6 +162,7 @@ export function registerWorldEvents(on, tables) {
         let rewards = []
         if (step !== event.step) {
             event.step = step
+            delete event.recoverFinalUntil
             if (r.reset_start) {
                 event.begin_time = c.now
                 event.next_trigger_time = c.now + Math.max(0, row.refreshCD)
@@ -112,12 +170,7 @@ export function registerWorldEvents(on, tables) {
         }
         if (step === row.stepCount) {
             if (!event.rewarded) {
-                for (const id of String(row.dropID || '')
-                    .split('|')
-                    .filter(Boolean)
-                    .map(Number))
-                    rewards.push(...drops.drops(id, c.randomInt))
-                rewards = grantRewards(c.tables, c.state, rewards)
+                rewards = eventRewards(c, row)
                 event.rewarded = true
             }
             event.completed = true
