@@ -14,6 +14,7 @@ import { worldSync } from './handlers/world.js'
 import { unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
 import { deliveryKey } from './task-delivery.js'
 import { recoverFailedSpecialNpcEvents } from './task-event-recovery.js'
+import { recoverCachedTaskTimeEvent } from './task-events.js'
 import { repairSoulEssenceStars } from './equipment.js'
 import { registerPlayableLifecycle, playableSnapshot, recoverInterruptedFlyTravel } from './handlers/playable-lifecycle.js'
 import { registerPetSkill } from './handlers/pet-skill.js'
@@ -430,6 +431,7 @@ export class Game {
                 recoverStoryCampaignClear({ state, tables: this.tables, now, pushBefore: () => {} })
                 recoverFailedSpecialNpcEvents({ state, tables: this.tables, id: session.id, now },
                     this.protocol, this.taskEventDiagnosticsFile)
+                recoverCachedTaskTimeEvent({ state, tables: this.tables, id: session.id, now })
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)

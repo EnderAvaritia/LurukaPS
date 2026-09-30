@@ -63,13 +63,77 @@ function recordScopedEvent(c, r, graphs) {
     if (taskVisibleAtLevel(c.tables, c.state, task)) c.push('CSProtoTaskSync', { tasks: [task] })
     return true
 }
+function timeReportMatches(data, hour) {
+    if (!data || ![0, 1, 2, 3].includes(data.checkNameType)) return false
+    if (data.checkNameType === 3) return hour === 0 && data.delayTime >= 0
+    const start = data.checkNameType === 1 ? 0 : data.startTime
+    const end = data.checkNameType === 0 ? 48 : data.endTime
+    return Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end <= 48 &&
+        end > start && hour >= start && hour < end
+}
+
+function recordTimeEvent(c, r, graphs) {
+    const [hour, count, ...extra] = r.args ?? []
+    ensure(!extra.length && Number.isInteger(hour) && hour >= 0 && hour < 24 && count === 1,
+        'Invalid task time event arguments')
+    const matches = []
+    let hasTimeNode = false
+    for (const task of c.state.tasks ?? []) for (const node of task.nodes) {
+        nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).forEach((q, index) => {
+            const data = q.__type_TaskConditionBaseData?.__type_TaskCondTimeTriggerData
+            if (q.conditionId !== 1100) return
+            hasTimeNode = true
+            if (timeReportMatches(data, hour)) matches.push({ task, node, q, index })
+        })
+    }
+    if (!matches.length && Object.values(c.state.taskTimeReports ?? {}).some(report => report.hour === hour)) return true
+    if (!hasTimeNode) return false
+    ensure(matches.length === 1, 'Task time event has no unique active condition')
+    const { task, node, q, index } = matches[0]
+    const key = deliveryKey(c.state, task.task_id, node.node_id, index)
+    if (c.state.taskEvents?.[key]) return true
+    // The client checks elapsed task days/jumpDay before emitting this report.
+    // ReqDoTaskStep carries only [passHour,1], not taskId/day; route it only
+    // when one active configured time condition matches. WorldTimeSync alone
+    // cannot attest that tomorrow was selected or the local delay elapsed.
+    ;(c.state.taskEvents ??= {})[key] = 1
+    ;(c.state.taskTimeReports ??= {})[key] = { hour, time: c.now }
+    node.node_values[index] = conditionValue(q, c.state, { taskId: task.task_id, nodeId: node.node_id, index })
+    if (taskVisibleAtLevel(c.tables, c.state, task)) c.push('CSProtoTaskSync', { tasks: [task] })
+    return true
+}
+
+export function recoverCachedTaskTimeEvent(c) {
+    const graphs = new TaskGraphs(c.tables)
+    const active = (c.state.tasks ?? []).filter(task => task.nodes.some(node =>
+        nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some(q => q.conditionId === 1100)))
+    if (active.length !== 1) return false
+    const task = active[0], graph = graphs.get(task.task_id)
+    // A generic cache has no task ID. Recover only the first time condition
+    // of this task epoch, with no already-finished timer to confuse it with.
+    if ((task.finish_nodes ?? []).some(id => nodeConditions(graph.nodes.get(id)).some(q => q.conditionId === 1100)))
+        return false
+    const event = [...(c.state.clientBehaviour ?? [])].reverse().find(record => record.key === 1100 &&
+        record.time >= (task.start_time ?? Infinity) && record.time <= c.now)
+    if (!event) return false
+    // An already completed timer quest after this cached report makes its
+    // original owner uncertain. Do not credit the active task in that case.
+    try {
+        if ((c.state.taskRecords ?? []).some(record => record.time >= event.time &&
+            [...graphs.get(record.task_id).nodes.values()].some(node => nodeConditions(node).some(q => q.conditionId === 1100))))
+            return false
+    } catch { return false }
+    try { return recordTimeEvent({ ...c, push: () => {} }, event, graphs) }
+    catch { return false }
+}
 export function recordTaskBehaviour(c, r) {
-    if (!indexed.has(r.key) && ![2508, 2526].includes(r.key)) return false
+    if (!indexed.has(r.key) && ![1100, 2508, 2526].includes(r.key)) return false
     let graphs = catalogs.get(c.tables)
     if (!graphs) {
         graphs = new TaskGraphs(c.tables)
         catalogs.set(c.tables, graphs)
     }
+    if (r.key === 1100) return recordTimeEvent(c, r, graphs)
     if (!indexed.has(r.key)) return recordScopedEvent(c, r, graphs)
     const a = r.args ?? [],
         photo = r.key === 2512

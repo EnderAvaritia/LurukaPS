@@ -34,7 +34,7 @@ test('logged dynamic and fixed NPC quests208007,206036,208013 accept after their
     } finally {store.close()}
 })
 
-test('fixed NPC208013 offer checks its actual scene and configured20m interaction range', () => {
+test('fixed NPC208013 offer retains prerequisites without rejecting the client range callback using stale position', () => {
     const graph=graphs.get(208013),state={world:{map_id:200,pos:{x:662,y:1645,z:3334}},
         player:{basic_info:{lv:16}},tasks:[],taskRecords:[{task_id:106013,count:1}]}
     const context={tables,accepting:true}
@@ -44,7 +44,7 @@ test('fixed NPC208013 offer checks its actual scene and configured20m interactio
     state.world.world_time=23*60*60
     assert.equal(taskUnlocked(graph,state,context),true)
     state.world.pos.x+=5000
-    assert.equal(taskUnlocked(graph,state,context),false)
+    assert.equal(taskUnlocked(graph,state,context),true)
     state.world.pos={x:662,y:1645,z:3334}
     state.world.map_id=100
     assert.equal(taskUnlocked(graph,state,context),false)

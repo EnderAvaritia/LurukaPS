@@ -79,19 +79,13 @@ export function conditionValue(condition, state, context) {
         const scene = dynamic ? open.npcData.sceneId || state.world.map_id
             : open.sceneId || base.mapData?.sceneId || state.world.map_id
         if (state.world.map_id !== scene) return 0
-        // TaskAccept attests the client-owned interaction. Fixed NPC offers
-        // can additionally be checked against exact worldmap coordinates.
+        // rangeCheck is registered on the client's live InteractionComponent.
+        // TaskAccept carries only taskId, with no interaction position or time.
+        // Rechecking against static worldmap coordinates and the last saved
+        // player position can reject valid automatic/range-boundary callbacks.
         if (!dynamic && context?.accepting && context.tables) {
             const npc = context.tables.find(`worldmap_${scene}`, open.npcId)
             if (!npc) return 0
-            if (open.isRangeCheck === 1) {
-                const pos = String(npc.position).split('|').map(value => Math.round(Number(value) * 100))
-                const range = open.rangeLength * 100
-                if (pos.length !== 3 || !pos.every(Number.isFinite) || !(range > 0)) return 0
-                const distance = ['x', 'y', 'z'].reduce((sum, axis, index) =>
-                    sum + (state.world.pos[axis] - pos[index]) ** 2, 0)
-                if (distance > range ** 2) return 0
-            }
         }
         return 1
     }
@@ -117,7 +111,7 @@ export function conditionValue(condition, state, context) {
         const group = base.__type_TaskCondPetCheckData?.petId
         return Number.isInteger(group) && state.taskPetChoices?.[context.taskId] === group ? 1 : 0
     }
-    if ([2508, 2526].includes(condition.conditionId) && context)
+    if ([1100, 2508, 2526].includes(condition.conditionId) && context)
         return state.taskEvents?.[deliveryKey(state, context.taskId, context.nodeId, context.index)] ?? 0
     if ([2501, 2513, 2514].includes(condition.conditionId)) return deliveryComplete(state, condition, context) ? 1 : 0
     if (condition.conditionId === 2519 && base.__type_TaskCondInSceneData) {
