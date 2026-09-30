@@ -70,12 +70,14 @@ export function conditionValue(condition, state, context) {
     }
     if (condition.conditionId === 2507) {
         const open = base.__type_TaskCondStoryOpenTaskData
-        if (!open || open.storyId || open.npcId || open.isNowCreate !== 1 ||
+        if (!open || open.storyId || open.isNowCreate !== 1 ||
             !Number.isInteger(open.npcData?.createNpcId) || open.npcData.createNpcId <= 0)
             return 0
-        // A dynamically created quest NPC with no story or fixed NPC gate is
+        // A dynamically created quest NPC with no story gate is
         // offered by the client in its configured scene. TaskAccept carries
         // only the task ID; the static prerequisites are checked separately.
+        // npcId can name its source object/template even when isNowCreate=1;
+        // it does not turn this dynamic offer into a second fixed-NPC gate.
         const scene = open.npcData.sceneId || open.sceneId || base.mapData?.sceneId
         return !scene || state.world.map_id === scene ? 1 : 0
     }
@@ -201,6 +203,9 @@ export function taskUnlocked(graph, state) {
     return (
         rules.every((rule) => {
             const [kind, id, ...rest] = rule.split('#').map(Number)
+            if (kind === 12045)
+                return Number.isInteger(id) && id > 0 && rest.length === 1 &&
+                    Number.isInteger(rest[0]) && rest[0] > 0 && taskNodeCompleted(state, id, rest[0])
             if (rest.length || !Number.isInteger(id) || id <= 0) return false
             if (kind === 2004) return state.player.basic_info.lv >= id
             if (kind === 2007) return (state.taskRecords ?? []).some((t) => t.task_id === id && t.count > 0)
@@ -270,6 +275,10 @@ export function unlockAutomaticTasks(tables, state, now) {
         added.push(config.id)
     }
     return added
+}
+export function taskNodeCompleted(state, taskId, nodeId) {
+    return (state.tasks ?? []).some((task) => task.task_id === taskId && task.finish_nodes?.includes(nodeId)) ||
+        (state.taskRecords ?? []).some((task) => task.task_id === taskId && task.count > 0)
 }
 function requiredTaskLevel(config) {
     const levels = String(config?.unlockcondition ?? '').split('|')

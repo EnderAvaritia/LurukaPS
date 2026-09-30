@@ -6,6 +6,7 @@ import { mountPayload } from '../mounts.js'
 import { restoreLegacyHomeFormation } from '../home-formation.js'
 import { repairMainHeroType } from '../main-hero.js'
 import { campaignSnapshot, entrustChestSnapshot } from '../entrust.js'
+import { u64 } from '../combat-state.js'
 import { storyCampaignSnapshot } from '../story-campaign.js'
 import {
     addWorldMark,
@@ -192,6 +193,15 @@ export function rememberMap(c, destination) {
     if (history.length > 8) history.shift()
 }
 export function registerWorld(on) {
+    on('WorldMapExtraStatus', (c, r) => {
+        const status = r.status ?? 0
+        ensure(Number.isInteger(status) && status >= 0 && status < 6, 'Invalid extra player status')
+        const arg = u64(r.arg)
+        // 9119 acknowledges temporary modes such as SIGHTSEE. The client owns
+        // its temporary mount; echoing 9117/WMCT_PLAYER_STATUS here would rebuild it.
+        c.setExtraStatus({ status, arg, time: c.now })
+        return {}
+    })
     on('WorldMapActiveBehavior', (c, r) => {
         ensure(r.type === 3, 'Active behavior type is not implemented', 1021)
         // TaskHelper.SendActiveBehavior sends PAB_NEAR_TRANS_POINT after the white

@@ -3,6 +3,7 @@ import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards } from '../rewards.js'
 import { randomInt } from 'node:crypto'
 import { completeEntrustObject, validateEntrustObjectInteraction } from './entrust.js'
+import { taskNodeCompleted } from '../tasks.js'
 // World resource prefabs do not expose their drop ID in worldmap/world_spawner.
 // These IDs match the shipped resource variants and their configured drop pools.
 const collectionFinalDrops = new Map([
@@ -23,8 +24,7 @@ function worldCondition(value, state) {
             return (state.taskRecords ?? []).some((record) => record.task_id === a && record.count > 0)
         if (kind === 12045) {
             ensure(Number.isInteger(b) && b > 0, 'Invalid task-step appearance condition', 1007)
-            return (state.tasks ?? []).some((task) => task.task_id === a && task.finish_nodes?.includes(b)) ||
-                (state.taskRecords ?? []).some((record) => record.task_id === a && record.count > 0)
+            return taskNodeCompleted(state, a, b)
         }
         ensure(false, `Unsupported world object condition ${kind}`, 1007)
     })

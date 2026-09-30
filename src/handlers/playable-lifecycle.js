@@ -20,6 +20,28 @@ export function playableSnapshot(state) {
         all_sync: true,
     }
 }
+const recoveryGraphs = new WeakMap()
+export function recoverInterruptedFlyTravel(tables, state) {
+    const id = 62035, run = state.playableRuns?.[id]
+    if (!run || run.map_id !== state.world.map_id || run.status !== 1 || run.finish_step !== 0 ||
+        run.sub_datas?.length || state.playableFinishes?.[id]) return false
+    let graphs = recoveryGraphs.get(tables)
+    if (!graphs) recoveryGraphs.set(tables, (graphs = new TaskGraphs(tables)))
+    const active = (state.tasks ?? []).some((task) => task.nodes.some((node) =>
+        nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some((condition) => {
+            const data = condition.__type_TaskConditionBaseData?.__type_TaskCondCompletePlayableData
+            return condition.conditionId === 2525 && data?.playableId === id &&
+                data.playableData?.sceneId === run.map_id
+        })))
+    if (!active) return false
+    // This flight's temporary mount and start callback live only in its graph.
+    // Reopening a zero-step RUNNING receipt cannot restore those objects.
+    // Return the still-active task to its start interaction; never mark it done.
+    // TODO(62035, task106015/8): persist/resume temporary flight runtime if the
+    // client protocol exposes a checkpoint; currently only zero-step runs reset.
+    delete state.playableRuns[id]
+    return true
+}
 export function registerPlayableLifecycle(on, tables) {
     const world = new WorldObjectCatalog(tables),
         graphs = new TaskGraphs(tables)
@@ -33,7 +55,10 @@ export function registerPlayableLifecycle(on, tables) {
     // five local investigation interactions).
     const requiredStep = (row) => Math.max(1, row.stepMax)
     const stepLimit = (row) => (row.stepMax > 0 ? row.stepMax : 1024)
-    const sync = (c) => c.pushBefore('CSProtoPlayableSync', playableSnapshot(c.state))
+    // All-sync recycles every unit and destroys graph start subscriptions.
+    // Ordinary lifecycle updates must keep the graph waiting for OnRealStart.
+    // Login still uses playableSnapshot's full snapshot to rebuild the world.
+    const sync = (c) => c.pushBefore('CSProtoPlayableSync', { ...playableSnapshot(c.state), all_sync: false })
     const taskForPlayable = (state, playId) =>
         state.tasks?.find((task) => {
             const graph = graphs.get(task.task_id)

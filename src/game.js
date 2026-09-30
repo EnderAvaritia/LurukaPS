@@ -14,7 +14,7 @@ import { worldSync } from './handlers/world.js'
 import { unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
 import { deliveryKey } from './task-delivery.js'
 import { repairSoulEssenceStars } from './equipment.js'
-import { registerPlayableLifecycle, playableSnapshot } from './handlers/playable-lifecycle.js'
+import { registerPlayableLifecycle, playableSnapshot, recoverInterruptedFlyTravel } from './handlers/playable-lifecycle.js'
 import { registerPetSkill } from './handlers/pet-skill.js'
 import { registerRoulette, roulettePayload } from './handlers/roulette.js'
 import { upgradeInventory } from './inventory.js'
@@ -420,6 +420,7 @@ export class Game {
                 this.recoverFailedPetChoice(state, session.id, now)
                 this.recoverClosedPetPageAfterChoice(state, session.id)
                 this.recoverFailedInvestigationPlayable(state, session.id, now)
+                recoverInterruptedFlyTravel(this.tables, state)
                 settleSimpleProducts(this.tables, state, now)
                 recoverStoryCampaignClear({ state, tables: this.tables, now, pushBefore: () => {} })
                 refreshTaskProgress(this.tables, state)
@@ -545,6 +546,10 @@ export class Game {
         if (e.name === 'CSProtoRecycle') return [reply({})]
         const handler = this.handlers.get(e.id)
         if (!handler) throw new GameError(`Unsupported ${e.name}`, 1021)
+        if (e.name === 'CSProtoWorldMapExtraStatus') {
+            const response = handler({ now, setExtraStatus: (value) => { session.worldExtraStatus = value } }, r)
+            return [reply(response)]
+        }
         if (clientAIReports.has(e.name)) {
             session.aiControl = handler({ id: session.id, tables: this.tables,
                 state: this.store.load(session.id).state, aiControl: session.aiControl }, r)
