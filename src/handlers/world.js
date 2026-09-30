@@ -7,6 +7,7 @@ import { restoreLegacyHomeFormation } from '../home-formation.js'
 import { repairMainHeroType } from '../main-hero.js'
 import { campaignSnapshot, entrustChestSnapshot } from '../entrust.js'
 import { u64 } from '../combat-state.js'
+import { recoverFormationHp } from '../transpoint-recovery.js'
 import { storyCampaignSnapshot } from '../story-campaign.js'
 import {
     addWorldMark,
@@ -204,20 +205,7 @@ export function registerWorld(on) {
     })
     on('WorldMapActiveBehavior', (c, r) => {
         ensure(r.type === 3, 'Active behavior type is not implemented', 1021)
-        // TaskHelper.SendActiveBehavior sends PAB_NEAR_TRANS_POINT after the white
-        // mask. cmd19 drives the native same-map transfer and its flow-end event.
-        const w = c.state.world,
-            unlocked = new Set(w.points ?? [])
-        const points = c.tables.get('world_borthpos').filter((p) => p.cityId === w.map_id && unlocked.has(p.id))
-        ensure(points.length, 'No unlocked transfer point in current scene')
-        const distance = (p) => {
-            const pos = c.tables.position(p).pos
-            return ['x', 'y', 'z'].reduce((sum, key) => sum + (pos[key] - w.pos[key]) ** 2, 0)
-        }
-        points.sort((a, b) => distance(a) - distance(b) || a.id - b.id)
-        Object.assign(w, c.tables.position(points[0]))
-        worldSync(c, {}, 19)
-        syncBattle(c)
+        recoverFormationHp(c)
         return {}
     })
     on('EnterWorldMap', (c, r) => {

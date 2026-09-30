@@ -161,7 +161,7 @@ test('CBT3 one-way WorldPointAck records flow completion without moving or rewar
         f.store.close()
     }
 })
-test('prologue active behavior3 emits the configured same-scene transfer without advancing the story', () => {
+test('prologue active behavior3 recovers HP in place without injecting a transfer or advancing the story', () => {
     const f = setup()
     try {
         const graph = new TaskGraphs(tables).get(106002)
@@ -170,14 +170,16 @@ test('prologue active behavior3 emits the configured same-scene transfer without
             s.taskRecords = [{ task_id: 106001, count: 1, time: 1 }]
             Object.assign(s.world, tables.position(tables.find('world_borthpos', 10401)))
             s.world.pos.x += 800
+            const manager = s.player.group_mgrs.find(entry => entry.type === 1)
+            manager.groups.find(entry => entry.id === manager.cur_group).heros[0].hero_id =
+                s.player.heros_info.heros[0].guid
         })
         const before = f.state(),
-            packets = f.call('WorldMapActiveBehavior', { type: 3 }),
-            map = packets.find((x) => x.id === 9103).data
-        assert.equal(map.cmd, 19)
-        assert.equal(map.map_id, 104)
+            packets = f.call('WorldMapActiveBehavior', { type: 3 })
+        assert.ok(!packets.some(x => x.id === 9103))
+        assert.ok(packets.some(x => x.id === protocol.byName.get('CSProtoObjBattleInfoSync').id))
         assert.equal(f.state().world.point_id, 10401)
-        assert.deepEqual(f.state().world.pos, tables.position(tables.find('world_borthpos', 10401)).pos)
+        assert.deepEqual(f.state().world.pos, before.world.pos)
         assert.equal(f.state().tasks[0].nodes[0].node_id, 59)
         assert.deepEqual(f.state().player.sbag_infos, before.player.sbag_infos)
         const saved = f.state()
