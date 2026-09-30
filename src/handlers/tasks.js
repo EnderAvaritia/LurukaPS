@@ -1,4 +1,5 @@
 import { submitTaskItems, deliveryKey, deliveryComplete } from '../task-delivery.js'
+import { applyTaskItemActions } from '../task-items.js'
 import { grantRewards, parseRewards } from '../rewards.js'
 import { ensure } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
@@ -162,7 +163,8 @@ export function registerTasks(register, tables) {
         })
     on('TaskClientBefore', (c, r) => {
         if (finished(c, r)) return {}
-        const { node } = current(c, r)
+        const { node, config } = current(c, r)
+        applyTaskItemActions(tables, c.state, r.task_id, r.node_id, config, 'before')
         if (node.client_before) return {}
         node.client_before = true
         sync(c)
@@ -235,6 +237,7 @@ export function registerTasks(register, tables) {
         if (c.state.pendingCharacterTask?.task_id === r.task_id && c.state.pendingCharacterTask.node_id === r.node_id)
             delete c.state.pendingCharacterTask
         const rewards = rewardNode(c, task, r.node_id)
+        applyTaskItemActions(tables, c.state, r.task_id, r.node_id, config, 'after')
         c.state.taskAfterReceipts ??= {}
         c.state.taskAfterReceipts[deliveryKey(c.state, r.task_id, r.node_id, 'after')] = rewards
         if (config.nodeType === 50) {

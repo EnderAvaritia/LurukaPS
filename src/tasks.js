@@ -1,5 +1,6 @@
 import { WorldObjectCatalog } from './world-objects.js'
 import { deliveryComplete, deliveryKey } from './task-delivery.js'
+import { taskItemSnapshot } from './task-items.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { ensure } from './handlers/common.js'
@@ -348,6 +349,7 @@ export function taskSnapshot(tables, state) {
     }
     return {
         tasks: visibleTasks,
+        ...taskItemSnapshot(state),
         del_tasks: hiddenTasks.map((task) => task.task_id),
         task_records: taskRecords,
         trace_list: visibleTasks.filter((task) => task.client_trace).map((task) => task.task_id),

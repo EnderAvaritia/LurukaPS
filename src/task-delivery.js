@@ -1,6 +1,7 @@
 import { ensure } from './handlers/common.js'
 import { spend } from './inventory.js'
 import { syncCurrencyMirrors } from './currency.js'
+import { taskItemCount, changeTaskItem } from './task-items.js'
 export function deliveryKey(state, taskId, nodeId, index) {
     return `${taskId}:${state.taskEpochs?.[taskId] || 0}:${nodeId}:${index}`
 }
@@ -47,7 +48,7 @@ export function deliveryComplete(state, condition, context) {
 export function submitTaskItems(c, condition, context, items) {
     const spec = deliveryRequirements(condition),
         { data, requirements } = spec
-    ensure([3, 10].includes(data.itemBigType), 'This task item category is not implemented', 1021)
+    ensure([3, 10, 20].includes(data.itemBigType), 'This task item category is not implemented', 1021)
     const mapId = data.mapId || condition.__type_TaskConditionBaseData?.mapData?.sceneId
     ensure(!mapId || c.state.world.map_id === mapId, 'Task submission is in a different map')
     ensure(Array.isArray(items) && items.length <= 100, 'Invalid submission list')
@@ -102,12 +103,14 @@ export function submitTaskItems(c, condition, context, items) {
             'Task item requirement already fulfilled',
         )
     const costs = new Map(),
-        wallet = []
+        wallet = [], taskCosts = []
     for (const [key, n] of amounts) {
         const [type, id] = key.split(':').map(Number)
         if (type === 3) costs.set(id, n)
+        else if (type === 20) taskCosts.push([id, n])
         else wallet.push([id, n])
     }
+    for (const [id, n] of taskCosts) ensure(taskItemCount(c.state, id) >= n, 'Insufficient task items')
     for (const [id, n] of wallet) {
         const value =
             id === 1
@@ -118,6 +121,7 @@ export function submitTaskItems(c, condition, context, items) {
         ensure(BigInt(value) >= BigInt(n), 'Insufficient task currency')
     }
     const changed = costs.size ? spend(c.state, costs, 0, c.now) : []
+    for (const [id, n] of taskCosts) changeTaskItem(c.tables, c.state, id, -n)
     for (const [id, n] of wallet) {
         if (id === 1) c.state.player.basic_info.diamond -= n
         else if (id === 2) c.state.player.basic_info.gold -= n

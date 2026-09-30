@@ -11,7 +11,8 @@ import {
 } from './handlers/trial-groups.js'
 import { prepareTaskScenes } from './task-scenes.js'
 import { worldSync } from './handlers/world.js'
-import { unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
+import { TaskGraphs, unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
+import { recoverMissingTaskItems, taskItemSnapshot } from './task-items.js'
 import { deliveryKey } from './task-delivery.js'
 import { recoverFailedSpecialNpcEvents } from './task-event-recovery.js'
 import { recoverCachedTaskTimeEvent } from './task-events.js'
@@ -432,6 +433,7 @@ export class Game {
                 recoverFailedSpecialNpcEvents({ state, tables: this.tables, id: session.id, now },
                     this.protocol, this.taskEventDiagnosticsFile)
                 recoverCachedTaskTimeEvent({ state, tables: this.tables, id: session.id, now })
+                recoverMissingTaskItems(this.tables, new TaskGraphs(this.tables), state)
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
@@ -626,6 +628,7 @@ export class Game {
                 const ornamentIdsBefore = (state.ornaments || []).map((entry) => entry.guid)
                 const petRevision = state.petRevision || 0
                 const playerLevelBefore = state.player.basic_info.lv
+                const taskItemRevision = state.taskItemRevision ?? 0
                 const homeBuildIdsBefore = (state.home?.builds || []).map((b) => b.guid)
                 const homeWishIdsBefore = (state.home?.wishlist || []).map((x) => x.uid)
                 const homeRevision = state.homeRevision || 0
@@ -660,6 +663,8 @@ export class Game {
                 }
                 const response = recoveredChoice ? {} : handler(context, r)
                 if (e.name === 'CSProtoPlayerCustomData') this.finishPendingCharacterTask(context)
+                if ((state.taskItemRevision ?? 0) !== taskItemRevision)
+                    context.pushBefore('CSProtoTaskSync', taskItemSnapshot(state))
                 syncCurrencyMirrors(state.player)
                 const updatedTasks = refreshTaskProgress(this.tables, state)
                 const visibleUpdates = updatedTasks.filter((task) => taskVisibleAtLevel(this.tables, state, task))

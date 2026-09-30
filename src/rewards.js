@@ -7,6 +7,7 @@ import { createCustomOrnaments } from './ornaments.js'
 import { syncCurrencyMirrors } from './currency.js'
 import { heroData } from './player.js'
 import { mainHeroConfigId } from './main-hero.js'
+import { changeTaskItem } from './task-items.js'
 export function parseRewards(value, allowZero = false) {
     if (!value) return []
     return String(value)
@@ -56,6 +57,8 @@ export function grantRewards(tables, state, rewards, depth = 0) {
             ensure(tables.find('common_item', itemid), 'Unknown reward item', 1007)
             addItems(state, [reward])
             if (state.home) refreshAutoCropShortcut(tables, state, itemid)
+        } else if (itemtype === 20) {
+            changeTaskItem(tables, state, itemid, itemnum)
         } else if (itemtype === 5) {
             const pets = createPets(tables, state, itemid, itemnum)
             granted.push(...pets.map((p) => ({ itemtype: 5, itemid, itemnum: 1, guid: p.guid })))
