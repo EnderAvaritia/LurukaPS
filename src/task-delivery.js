@@ -50,7 +50,21 @@ export function submitTaskItems(c, condition, context, items) {
     ensure([3, 10].includes(data.itemBigType), 'This task item category is not implemented', 1021)
     const mapId = data.mapId || condition.__type_TaskConditionBaseData?.mapData?.sceneId
     ensure(!mapId || c.state.world.map_id === mapId, 'Task submission is in a different map')
-    ensure(Array.isArray(items) && items.length > 0 && items.length <= 100, 'Invalid submission list')
+    ensure(Array.isArray(items) && items.length <= 100, 'Invalid submission list')
+    // Fixed-item9854 requests omit items in CBT3. Only this mode can resolve
+    // its exact remaining costs from the graph; choice/category deliveries
+    // still require the client's explicit selection.
+    if (!items.length && spec.mode === 'exact') {
+        const record = c.state.taskDeliveries?.[deliveryKey(c.state, context.taskId, context.nodeId, context.index)] ?? {}
+        items = [...requirements].flatMap(([key, count]) => {
+            const remaining = count - (record[key] ?? 0)
+            if (remaining <= 0) return []
+            const [item_type, item_id] = key.split(':').map(Number)
+            return [{ item_type, item_id, item_count: remaining }]
+        })
+        if (!items.length) return
+    }
+    ensure(items.length > 0 && items.length <= 100, 'Invalid submission list')
     const amounts = new Map()
     for (const item of items) {
         ensure(

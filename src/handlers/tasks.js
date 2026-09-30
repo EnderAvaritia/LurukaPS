@@ -1,4 +1,4 @@
-import { submitTaskItems, deliveryKey } from '../task-delivery.js'
+import { submitTaskItems, deliveryKey, deliveryComplete } from '../task-delivery.js'
 import { grantRewards, parseRewards } from '../rewards.js'
 import { ensure } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
@@ -128,6 +128,23 @@ export function registerTasks(register, tables) {
         ['TaskSubmitItemChoose', 2514],
     ])
         on(name, (c, r) => {
+            if (conditionId === 2501 && !(r.items ?? []).length) {
+                const graph = graphs.get(r.task_id), index = r.node_index ?? 0
+                const config = graph.nodes.get(r.node_id)
+                ensure(config, 'Unknown fixed submission node')
+                const condition = nodeConditions(config)[index]
+                ensure(Number.isInteger(index) && index >= 0 && condition?.conditionId === 2501,
+                    'Invalid fixed submission condition')
+                const context = { taskId: r.task_id, nodeId: r.node_id, index }
+                if (deliveryComplete(c.state, condition, context)) {
+                    const task = c.state.tasks.find(task => task.task_id === r.task_id)
+                    ensure(task?.nodes.some(node => node.node_id === r.node_id) || task?.finish_nodes.includes(r.node_id) ||
+                        (!task && c.state.taskRecords?.some(record => record.task_id === r.task_id && record.count > 0)),
+                    'Task submission receipt is not active/completed')
+                    sync(c)
+                    return {}
+                }
+            }
             const { node, config } = current(c, r)
             ensure(node.client_before, 'Task node pre-action not acknowledged')
             const conditions = nodeConditions(config),

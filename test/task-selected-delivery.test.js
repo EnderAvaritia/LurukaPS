@@ -56,6 +56,8 @@ test('real quest206022 accepts one configured choice, consumes it once and syncs
     const f = setup(206022, 14, 101)
     try {
         const before = f.state()
+        assert.throws(() => f.call('TaskSubmitItemChoose', f.request([])), /Invalid submission list/)
+        assert.deepEqual(f.state(), before)
         assert.throws(() => f.call('TaskSubmitItemChoose', f.request([[400000, 1]])), /not requested/)
         assert.deepEqual(f.state(), before)
         assert.throws(() => f.call('TaskSubmitItem', f.request([[9002901, 1]])), /protocol/)
