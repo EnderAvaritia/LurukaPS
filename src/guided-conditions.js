@@ -51,6 +51,26 @@ export function guidedConditionValue(id, state, context) {
     const parts = String(row.condition || '')
         .split('|')
         .map(Number)
+    // HomePetStation: pet group, exact pet ID, EStationType, capacity, count.
+    // EStationType.Crop=3 counts occupied, placed field-house work slots.
+    if (parts.length === 6 && parts[0] === 12032 && parts[3] === 3 &&
+        [parts[1], parts[2], parts[4]].every(value => Number.isInteger(value) && value >= 0) &&
+        Number.isInteger(parts[5]) && parts[5] > 0) {
+        const stationed = new Set()
+        for (const build of state.home?.builds ?? []) {
+            if (build.build_type !== 16 || !build.locate) continue
+            for (const [capacity, field] of [[1001, 'plant_pet'], [1002, 'water_pet'], [1003, 'harvest_pet']]) {
+                if (parts[4] && capacity !== parts[4]) continue
+                const id = build.auto_info?.[field]
+                const pet = (state.pets ?? []).find(pet => pet.guid === id && pet.work_status === 5 &&
+                    pet.work_build === build.guid && pet.capacity_id === capacity)
+                if (!pet || (parts[1] && petGroups.get(pet.config_id) !== parts[1]) ||
+                    (parts[2] && pet.config_id !== parts[2])) continue
+                stationed.add(id)
+            }
+        }
+        return stationed.size
+    }
     // TODO: remove this local bypass after Kibo Duel condition50002 has a
     // server implementation and its result has been verified against CBT3.
     // TODO: remove after server-side Kibo Duel condition 50002 is
@@ -132,6 +152,17 @@ export function guidedConditionValue(id, state, context) {
             .reduce((sum, [, , count]) => sum + count, 0)
         return perCraft * (state.home?.craftCounts?.[row.formulaId] ?? 0) +
             (parts[1] === 10 && rewardType === 3 ? state.home?.cookCounts?.[itemId] ?? 0 : 0)
+    }
+    // KiboBoardFoodType counts distinct foods stocked at placed pet tables.
+    // A bag item or an empty/removable table does not satisfy this condition.
+    if (parts.length === 2 && parts[0] === 12211 && Number.isInteger(parts[1]) && parts[1] > 0) {
+        const types = new Set()
+        for (const build of state.home?.builds ?? []) {
+            if (build.build_type !== 6 || !build.locate) continue
+            for (const food of build.pet_canteen?.foods ?? [])
+                if (food.itemnum > 0 && commonItemTypes.get(food.itemid) === 355) types.add(food.itemid)
+        }
+        return types.size
     }
     // KiboBoardFoodNum reads food actually stocked at placed pet tables.
     if (parts.length === 3 && parts[0] === 15013 && parts.slice(1).every((value) =>

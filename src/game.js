@@ -62,6 +62,7 @@ import { simpleProductionDue, settleSimpleProducts, simpleProductSnapshot } from
 import { registerTechnology } from './handlers/technology.js'
 import { registerBuildingPlacement } from './handlers/buildings.js'
 import { registerFarming } from './handlers/farming.js'
+import { registerFarmWorkers } from './handlers/farm-workers.js'
 import { registerCanteen } from './handlers/canteen.js'
 import { registerCooking } from './handlers/cooking.js'
 import { registerHome } from './handlers/home.js'
@@ -253,6 +254,7 @@ export class Game {
         registerHome(on, tables)
         registerBuildingPlacement(on, tables)
         registerFarming(on, tables)
+        registerFarmWorkers(on, tables)
         registerCanteen(on, tables)
         registerCooking(on, tables)
         registerTechnology(on, tables)

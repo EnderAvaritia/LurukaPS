@@ -1,0 +1,89 @@
+import { ensureHome, ensureHomeFarmHouses } from '../home.js'
+import { homeCondition } from '../home-grid.js'
+import { reconcileFormationPets } from '../formation-pets.js'
+import { repairMountSelection, mountPayload } from '../mounts.js'
+import { ensure, pet } from './common.js'
+
+export const farmWorkSlots = new Map([[1001, 'plant_pet'], [1002, 'water_pet'], [1003, 'harvest_pet']])
+
+export function clearFarmPetSlots(state, guid) {
+    let changed = false
+    for (const build of state.home?.builds ?? []) for (const field of farmWorkSlots.values()) {
+        if (build.auto_info?.[field] !== guid) continue
+        build.auto_info[field] = '0'
+        changed = true
+    }
+    return changed
+}
+
+export function registerFarmWorkers(on, tables) {
+    const capacities = new Map(tables.get('home_labor_capacity').map(row => [row.laborCapacityId, row]))
+    on('ChoseAutoWorkPet', (c, r) => {
+        ensure(c.state.world.map_id === Number(tables.get('game').find(row => row.title === 'HOME_ID')?.value),
+            'Farm dispatch requires the home scene')
+        ensure((r.operate_type ?? 0) === 0, 'Unsupported farm dispatch operation', 1021)
+        const home = ensureHome(tables, c.state), build = home.builds.find(item => item.guid === r.build_guid)
+        const config = build && tables.find('home_building', build.build_id)
+        const type = config && tables.get('home_building_group').find(row => row.groupId === config.groupId)?.type
+        ensure(build?.locate && type === 16 && build.status === 1, 'Farm house is not owned/ready')
+        const field = farmWorkSlots.get(r.work_type), capacity = capacities.get(r.work_type)
+        ensure(field && capacity, 'Unknown farm work slot')
+        ensureHomeFarmHouses(tables, c.state)
+        const id = String(r.pet_guid ?? '0'), chosen = id === '0' ? null : pet(c.state, id)
+        if (chosen) {
+            ensure(chosen.labor_infos?.some(info => info.labor_id === capacity.laborType && info.labor_grade > 0),
+                'Pet lacks required farming ability')
+            ensure(!chosen.work_status || [5, 7].includes(chosen.work_status), 'Pet is working elsewhere')
+            if (chosen.work_status === 5)
+                ensure(home.builds.some(item => item.guid === chosen.work_build &&
+                    [...farmWorkSlots.values()].some(slot => item.auto_info?.[slot] === chosen.guid)),
+                'Field worker record is inconsistent')
+        }
+        const oldId = build.auto_info[field] ?? '0'
+        if ((!chosen && oldId === '0') || (chosen && oldId === chosen.guid &&
+            chosen.work_status === 5 && chosen.work_build === build.guid && chosen.capacity_id === r.work_type)) return {}
+        if (chosen) clearFarmPetSlots(c.state, chosen.guid)
+        if (oldId !== '0' && oldId !== chosen?.guid) {
+            const old = pet(c.state, oldId)
+            clearFarmPetSlots(c.state, oldId)
+            old.work_status = r.out_hub ? 0 : 7
+            old.work_build = 0
+            old.capacity_id = 0
+            if (r.out_hub) home.stationPets = (home.stationPets ?? []).filter(guid => guid !== oldId)
+        }
+        build.auto_info[field] = chosen?.guid ?? '0'
+        if (chosen) {
+            const station = (home.stationPets ??= [])
+            if (!station.includes(chosen.guid)) {
+                const limit = Math.max(0, ...tables.get('home_freeworkposition')
+                    .filter(row => homeCondition(row.unlockCondition, c.state)).map(row => row.num))
+                ensure(station.length < limit, 'Home-hub pet slots are full')
+                station.push(chosen.guid)
+            }
+            const bound = c.state.player.heros_info.heros.filter(hero => hero.pet_id === chosen.guid)
+            for (const hero of bound) hero.pet_id = '0'
+            if (bound.length || (chosen.hero_id && chosen.hero_id !== '0')) {
+                chosen.hero_id = '0'
+                reconcileFormationPets(c.state)
+                c.pushBefore('CSProtoSyncPlayerData', {
+                    heros_info: c.state.player.heros_info, group_mgrs: c.state.player.group_mgrs,
+                })
+            }
+            if (c.state.world.mount === chosen.guid) {
+                c.state.world.mount = '0'
+                c.state.world.status = 0
+                c.state.world.mount_status = 0
+                c.state.world.status_arg = '0'
+            }
+            chosen.roulette_pos = 0
+            chosen.work_status = 5 // PSWST_FIELD_WORK, distinct from home-center idle (7).
+            chosen.work_build = build.guid
+            chosen.capacity_id = r.work_type
+            if (repairMountSelection(tables, c.state))
+                c.pushBefore('CSProtoRideMountInfo', mountPayload(tables, c.state))
+        }
+        c.state.petRevision = (c.state.petRevision || 0) + 1
+        c.state.homeRevision = (c.state.homeRevision || 0) + 1
+        return {}
+    })
+}

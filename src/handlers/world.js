@@ -370,7 +370,7 @@ export function registerWorld(on) {
         if (r.status === 1) {
             delete w.pendingMountExit
             const mount = pet(c.state, arg)
-            ensure(!mount.work_status || mount.work_status !== 7, 'Stationed pet cannot be mounted')
+            ensure(!mount.work_status, 'Stationed pet cannot be mounted')
             w.mount = mount.guid
             if (c.state.mountRideId !== mount.guid) {
                 c.state.mountRideId = mount.guid
