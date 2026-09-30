@@ -52,6 +52,7 @@ export async function startServer(config, logger = console) {
             crcDelay: config.crcDelay ?? 0,
             gmEnabled: config.gmEnabled ?? true,
             offlinePayments: config.offlinePayments ?? true,
+            taskEventDiagnosticsFile: config.diagnosticsFile,
         })
     const diagnostics = new ProtocolDiagnostics(
         config.database === ':memory:' && !config.diagnosticsForTests ? null : config.diagnosticsFile,

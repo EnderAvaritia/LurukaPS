@@ -21,33 +21,33 @@ function setup() {
     call('EnterGame', { open_id: 'tech' })
     return { store, session, call }
 }
-test('technology query exposes roots; study spends shared points and unlocks recipe condition', () => {
+test('technology query exposes roots; manual study spends shared points and updates its level condition', () => {
     const { store, session, call } = setup()
     try {
         const info = p.decode('SCTechnologyTypeInfo', call('HomeTechnologyTypeInfo', { type: 1 })[0].payload).info
         assert.equal(info.list.find((x) => x.subType === 10002).subLevel, 1)
-        assert.equal(info.list.find((x) => x.subType === 11005).subLevel, 0)
+        assert.equal(info.list.find((x) => x.subType === 10020).subLevel, 0)
         let before = store.load(session.id)
-        assert.throws(() => call('HomeTechnologyLevelUp', { type: 1, subType: 11005 }), /requirement/)
+        assert.throws(() => call('HomeTechnologyLevelUp', { type: 1, subType: 10020 }), /requirement/)
         assert.deepEqual(store.load(session.id), before)
         store.transact(session.id, 0, (s) => {
             s.player.basic_info.lv = 6
         })
-        const out = call('HomeTechnologyLevelUp', { type: 1, subType: 11005 })
+        const out = call('HomeTechnologyLevelUp', { type: 1, subType: 10020 })
         assert.equal(out[0].id, 6102)
         const home = p.decode('SCHomeSync', out[0].payload)
         assert.equal(home.technology.totalPoint, 1)
         assert.equal(home.technology.point, 0)
         const state = store.load(session.id).state
         assert.equal(state.home.technology.spent, 1)
-        assert(homeCondition('11012#11005#1', state))
+        assert(homeCondition('11012#10020#1', state))
         assert(!state.player.attr_infos.attrs.some((x) => x.attr_id === 201))
         before = store.load(session.id)
-        assert.throws(() => call('HomeTechnologyLevelUp', { type: 1, subType: 11005 }), /maximum/)
+        assert.throws(() => call('HomeTechnologyLevelUp', { type: 1, subType: 10020 }), /maximum/)
         assert.deepEqual(store.load(session.id), before)
         const relog = call('EnterGame', { open_id: 'tech' }, {})
         const saved = p.decode('SCHomeSync', relog.find((x) => x.id === 6102).payload)
-        assert.equal(saved.technology.list.find((x) => x.type === 1).list.find((x) => x.subType === 11005).subLevel, 1)
+        assert.equal(saved.technology.list.find((x) => x.type === 1).list.find((x) => x.subType === 10020).subLevel, 1)
     } finally {
         store.close()
     }
@@ -59,15 +59,15 @@ test('technology category, prerequisite and point checks are atomic', () => {
             s.player.basic_info.lv = 5
         })
         let before = store.load(session.id)
-        assert.throws(() => call('HomeTechnologyLevelUp', { type: 1, subType: 11005 }), /points/)
+        assert.throws(() => call('HomeTechnologyLevelUp', { type: 1, subType: 10020 }), /points/)
         assert.deepEqual(store.load(session.id), before)
         store.transact(session.id, 0, (s) => {
             s.player.basic_info.lv = 50
         })
         before = store.load(session.id)
         for (const r of [
-            { type: 2, subType: 11005 },
-            { type: 1, subType: 11015 },
+            { type: 2, subType: 10020 },
+            { type: 1, subType: 10025 },
             { type: 1, subType: 999999 },
         ]) {
             assert.throws(() => call('HomeTechnologyLevelUp', r))

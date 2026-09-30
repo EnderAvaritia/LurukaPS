@@ -13,6 +13,7 @@ import { prepareTaskScenes } from './task-scenes.js'
 import { worldSync } from './handlers/world.js'
 import { unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
 import { deliveryKey } from './task-delivery.js'
+import { recoverFailedSpecialNpcEvents } from './task-event-recovery.js'
 import { repairSoulEssenceStars } from './equipment.js'
 import { registerPlayableLifecycle, playableSnapshot, recoverInterruptedFlyTravel } from './handlers/playable-lifecycle.js'
 import { registerPetSkill } from './handlers/pet-skill.js'
@@ -64,7 +65,7 @@ import { registerFarming } from './handlers/farming.js'
 import { registerCanteen } from './handlers/canteen.js'
 import { registerCooking } from './handlers/cooking.js'
 import { registerHome } from './handlers/home.js'
-import { ensureHome, ensureHomeCanteens, homePayload, reconcileHomeBuildShortcuts, reconcileHomeCropShortcuts } from './home.js'
+import { ensureHome, ensureHomeCanteens, ensureHomeFarmHouses, homePayload, reconcileHomeBuildShortcuts, reconcileHomeCropShortcuts } from './home.js'
 import { restoreLegacyHomeFormation } from './home-formation.js'
 import { repairMainHeroType } from './main-hero.js'
 import { upgradeEggState } from './eggs.js'
@@ -199,6 +200,7 @@ export class Game {
             crcDelay = 0,
             gmEnabled = true,
             offlinePayments = true,
+            taskEventDiagnosticsFile = null,
         } = {},
     ) {
         this.clock = clock
@@ -208,6 +210,7 @@ export class Game {
         this.protocol = protocol
         this.store = store
         this.tables = tables
+        this.taskEventDiagnosticsFile = taskEventDiagnosticsFile
         this.handlers = new Map()
         const on = (name, handler) => {
             const e = protocol.byName.get(name) || protocol.byName.get(`CSProto${name}`)
@@ -423,6 +426,8 @@ export class Game {
                 recoverInterruptedFlyTravel(this.tables, state)
                 settleSimpleProducts(this.tables, state, now)
                 recoverStoryCampaignClear({ state, tables: this.tables, now, pushBefore: () => {} })
+                recoverFailedSpecialNpcEvents({ state, tables: this.tables, id: session.id, now },
+                    this.protocol, this.taskEventDiagnosticsFile)
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
@@ -441,6 +446,7 @@ export class Game {
                 upgradeEggState(state)
                 ensureHome(this.tables, state)
                 ensureHomeCanteens(this.tables, state)
+                ensureHomeFarmHouses(this.tables, state)
                 reconcileHomeBuildShortcuts(this.tables, state)
                 reconcileHomeCropShortcuts(this.tables, state)
                 refreshProduction(state, now)

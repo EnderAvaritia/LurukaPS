@@ -60,8 +60,29 @@ export function ensureHomeCanteens(tables, state) {
     if (changed) state.homeRevision = (state.homeRevision || 0) + 1
     return changed
 }
+export function ensureHomeFarmHouses(tables, state) {
+    const home = ensureHome(tables, state)
+    let changed = false
+    for (const build of [...home.builds, ...(home.storedBuilds ?? [])]) {
+        const config = tables.find('home_building', build.build_id)
+        const group = config && tables.get('home_building_group').find(row => row.groupId === config.groupId)
+        if (group?.type !== 16 || build.auto_info) continue
+        // CBT3 HomeBuildData.Populate calls HomeBuildAutoData.Populate without
+        // a null check for field houses. An unstaffed house still needs this
+        // empty message in both placement replies and home snapshots.
+        build.auto_info = {
+            plant_pet: '0', water_pet: '0', harvest_pet: '0',
+            seeds: [], crops: [], got_crops: [], water_target: 0,
+            slot_satiety_reduce: [],
+        }
+        changed = true
+    }
+    if (changed) state.homeRevision = (state.homeRevision || 0) + 1
+    return changed
+}
 export function homePayload(tables, state) {
     const h = ensureHome(tables, state)
+    ensureHomeFarmHouses(tables, state)
     // The CBT3 client's getBeltItems starts zero-filling at #list, overwriting
     // the last entry unless the wire list already has the full slot count.
     const shortcutSlots = Math.max(

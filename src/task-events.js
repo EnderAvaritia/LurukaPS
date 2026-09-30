@@ -101,15 +101,16 @@ export function recordTaskBehaviour(c, r) {
         scene ??
         base.__type_TaskCondNPCTriggerData ??
         base.__type_TaskCondActiveNPCTriggerData ??
+        base.__type_TaskCondActiveSpecialNPCTriggerData ??
         base.__type_TaskCondEnemiesGroupData ??
         base.__type_TaskCondPhotoSceneData ??
         base.__type_TaskCondPackageDownloadCompleteData
-    ensure(data, 'Task event configuration unavailable', 1007)
+    ensure(data, `Task event configuration unavailable (${taskId}/${nodeId}/${index}, content ${condition.contentType})`, 1007)
     // The exported NPC-trigger payload calls its storyId `sceneId`; the CBT3
     // TaskCondNPCTriggerData/TaskCondActiveNPCTriggerData classes confirm that
     // field identifies a story, not a world map. Use only actual map fields.
     const npc = base.__type_TaskCondNPCTriggerData,
-        activeNpc = base.__type_TaskCondActiveNPCTriggerData
+        activeNpc = base.__type_TaskCondActiveNPCTriggerData ?? base.__type_TaskCondActiveSpecialNPCTriggerData
     const map =
         scene?.sceneId ??
         (base.mapData?.sceneId ||

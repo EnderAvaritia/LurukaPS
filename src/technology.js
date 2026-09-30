@@ -3,22 +3,34 @@ import { homeCondition } from './home-grid.js'
 export function technologyState(tables, state) {
     ensure(state.home, 'Home state missing', 1007)
     if (!state.home.technology) {
-        const levels = {}
-        for (const tree of tables.get('home_technology_tree')) {
-            const row = tables.get('home_technology').find((r) => r.type === tree.id && r.level === 1)
-            if (
-                tree.isAutoUnlock === 1 &&
-                !tree.pretechnologyTypeId &&
-                row &&
-                row.point === 0 &&
-                homeCondition(row.unlockCondi1, state)
-            )
-                levels[tree.id] = { level: 1, lastTime: 0 }
-        }
-        state.home.technology = { levels, spent: 0 }
+        state.home.technology = { levels: {}, spent: 0 }
         state.homeRevision = (state.homeRevision || 0) + 1
     }
+    reconcileAutomaticTechnology(tables, state)
     return state.home.technology
+}
+const automaticRows = new WeakMap()
+export function reconcileAutomaticTechnology(tables, state) {
+    const tech = state.home?.technology
+    if (!tech) return false
+    let rows = automaticRows.get(tables)
+    if (!rows) {
+        rows = tables.get('home_technology_tree').filter(tree => tree.isAutoUnlock === 1)
+            .map(tree => ({ tree, row: tables.get('home_technology').find(row => row.type === tree.id && row.level === 1) }))
+        automaticRows.set(tables, rows)
+    }
+    let changed = false, added
+    do {
+        added = false
+        for (const { tree, row } of rows) {
+            if (tech.levels[tree.id]?.level > 0 || !row || !technologyParents(tree, tech) ||
+                !homeCondition(row.unlockCondi1, state)) continue
+            tech.levels[tree.id] = { level: 1, lastTime: 0, isOpened: false }
+            added = changed = true
+        }
+    } while (added)
+    if (changed) state.homeRevision = (state.homeRevision || 0) + 1
+    return changed
 }
 export function technologyPoints(tables, state) {
     const tech = technologyState(tables, state)
@@ -54,7 +66,7 @@ export function technologyType(tables, state, type) {
                 lastTime: record?.lastTime || 0,
                 maxSubLevel: Math.max(0, ...rows.map((r) => r.level)),
                 isOpened:
-                    !!record ||
+                    tree.isAutoUnlock === 1 ? !!record && (record.isOpened ?? true) : !!record ||
                     (technologyParents(tree, tech) &&
                         homeCondition(rows.find((r) => r.level === 1)?.unlockCondi1, state)),
             }

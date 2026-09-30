@@ -128,6 +128,7 @@ export function conditionValue(condition, state, context) {
         const data =
             base.__type_TaskCondNPCTriggerData ??
             base.__type_TaskCondActiveNPCTriggerData ??
+            base.__type_TaskCondActiveSpecialNPCTriggerData ??
             base.__type_TaskCondEnemiesGroupData ??
             base.__type_TaskCondPhotoSceneData ??
             base.__type_TaskCondPackageDownloadCompleteData
