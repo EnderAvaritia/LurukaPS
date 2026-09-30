@@ -70,7 +70,7 @@ export function registerTasks(register, tables) {
             g.config.canRepeat === 1 || !(c.state.taskRecords || []).some((t) => t.task_id === r.u32 && t.count > 0),
             'Task already completed',
         )
-        ensure(taskUnlocked(g, c.state), 'Task prerequisites not met')
+        ensure(taskUnlocked(g, c.state, { tables, accepting: true }), `Task prerequisites not met (task ${r.u32})`)
         acceptTask(g, c.state, c.now)
         sync(c)
         return {}

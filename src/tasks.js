@@ -70,16 +70,30 @@ export function conditionValue(condition, state, context) {
     }
     if (condition.conditionId === 2507) {
         const open = base.__type_TaskCondStoryOpenTaskData
-        if (!open || open.storyId || open.isNowCreate !== 1 ||
-            !Number.isInteger(open.npcData?.createNpcId) || open.npcData.createNpcId <= 0)
-            return 0
-        // A dynamically created quest NPC with no story gate is
-        // offered by the client in its configured scene. TaskAccept carries
-        // only the task ID; the static prerequisites are checked separately.
-        // npcId can name its source object/template even when isNowCreate=1;
-        // it does not turn this dynamic offer into a second fixed-NPC gate.
-        const scene = open.npcData.sceneId || open.sceneId || base.mapData?.sceneId
-        return !scene || state.world.map_id === scene ? 1 : 0
+        if (!open || open.storyId) return 0
+        const dynamic = open.isNowCreate === 1
+        if (dynamic ? !Number.isSafeInteger(open.npcData?.createNpcId) || open.npcData.createNpcId <= 0
+            : open.isNowCreate !== 0 || !Number.isInteger(open.npcId) || open.npcId <= 0) return 0
+        // CBT3 GetRegisterSceneId: dynamic NPC override owns its scene;
+        // fixed NPC uses the entry scene, then mapData, then the current map.
+        const scene = dynamic ? open.npcData.sceneId || state.world.map_id
+            : open.sceneId || base.mapData?.sceneId || state.world.map_id
+        if (state.world.map_id !== scene) return 0
+        // TaskAccept attests the client-owned interaction. Fixed NPC offers
+        // can additionally be checked against exact worldmap coordinates.
+        if (!dynamic && context?.accepting && context.tables) {
+            const npc = context.tables.find(`worldmap_${scene}`, open.npcId)
+            if (!npc) return 0
+            if (open.isRangeCheck === 1) {
+                const pos = String(npc.position).split('|').map(value => Math.round(Number(value) * 100))
+                const range = open.rangeLength * 100
+                if (pos.length !== 3 || !pos.every(Number.isFinite) || !(range > 0)) return 0
+                const distance = ['x', 'y', 'z'].reduce((sum, axis, index) =>
+                    sum + (state.world.pos[axis] - pos[index]) ** 2, 0)
+                if (distance > range ** 2) return 0
+            }
+        }
+        return 1
     }
     if (condition.conditionId === 12017) {
         const dungeon = base.__type_TaskCondDungeonData
@@ -196,7 +210,7 @@ export function advancePetChoiceBranch(graph, task, state) {
     return changed
 }
 
-export function taskUnlocked(graph, state) {
+export function taskUnlocked(graph, state, context) {
     const rules = String(graph.config.unlockcondition || '')
         .split('|')
         .filter(Boolean)
@@ -210,7 +224,7 @@ export function taskUnlocked(graph, state) {
             if (kind === 2004) return state.player.basic_info.lv >= id
             if (kind === 2007) return (state.taskRecords ?? []).some((t) => t.task_id === id && t.count > 0)
             return false
-        }) && graph.requirements.every((req) => conditionValue(req, state) > 0)
+        }) && graph.requirements.every((req) => conditionValue(req, state, context) > 0)
     )
 }
 export function acceptTask(graph, state, now) {
