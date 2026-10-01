@@ -32,6 +32,28 @@ export function actor(c, value) {
         )
     return id
 }
+const itemSkillCatalogs = new WeakMap()
+function skillActorKey(c, request, skillId, stopping = false) {
+    if (u64(request.unit_id) !== '0') return actor(c, request.unit_id)
+    let skills = itemSkillCatalogs.get(c.tables)
+    if (!skills) {
+        skills = new Set(c.tables.get('battlefield_item').flatMap(item => [...pairs(item.skillList).values()]))
+        itemSkillCatalogs.set(c.tables, skills)
+    }
+    // Scene battle items can have selfId=0. Match the configured item skill,
+    // then track its cast by verify index, never by the player's current hero.
+    ensure(skills.has(skillId), 'Missing combat actor')
+    const verify = request.verify_info
+    // Battle.proto SkillVerifyType describes the trigger (skill, effect,
+    // bullet, behavior, etc.), not actor ownership. Chained item casts use
+    // Skill=1 and related_index; source_id is provenance, not a unit GUID.
+    const sourceType = verify?.source_type ?? 0
+    ensure(verify && Number.isInteger(sourceType) && sourceType >= 0 && sourceType <= 12,
+        'Invalid local item skill source')
+    const index = u64(stopping ? verify.related_index : verify.battle_index)
+    ensure(index !== '0', 'Missing local item skill index')
+    return `local-item:${index}`
+}
 function limits(c, id) {
     const hero = [...c.state.player.heros_info.heros, ...(c.state.trialGroup?.heroes ?? [])].find((h) => h.guid === id)
     return hero ? heroBattleLimits(heroModules(c.tables, c.state, hero)) : null
@@ -106,14 +128,14 @@ function advanceEnergy(c, battle, changed) {
 export function registerCombat(on) {
     on('SkillStart', (c, r) => {
         if (isRetiredTrialActor(c.state, r.unit_id)) return
-        const id = actor(c, r.unit_id)
+        const id = skillActorKey(c, r, r.skill?.skill_id)
         if (c.state.petCaptureResults?.[id]) return
         ensure(r.skill?.skill_id > 0, 'Missing skill')
         const battle = combatState(c.state, c.now)
         boundedSet(
             battle.skills,
             id,
-            { skill: structuredClone(r.skill), op_time: u64(r.op_time), updated_at: c.now },
+            { unit_id: u64(r.unit_id), skill: structuredClone(r.skill), op_time: u64(r.op_time), updated_at: c.now },
             256,
         )
         const hero = [...c.state.player.heros_info.heros, ...(c.state.trialGroup?.heroes ?? [])].find(
@@ -144,7 +166,7 @@ export function registerCombat(on) {
     })
     on('SkillStop', (c, r) => {
         if (isRetiredTrialActor(c.state, r.unit_id)) return
-        const id = actor(c, r.unit_id),
+        const id = skillActorKey(c, r, Number(u64(r.skill_id)), true),
             battle = combatState(c.state, c.now),
             active = battle.skills[id]
         if (active && String(active.skill.skill_id) === u64(r.skill_id)) delete battle.skills[id]
