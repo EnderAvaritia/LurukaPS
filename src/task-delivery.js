@@ -56,7 +56,8 @@ export function submitTaskItems(c, condition, context, items) {
     // its exact remaining costs from the graph; choice/category deliveries
     // still require the client's explicit selection.
     if (!items.length && spec.mode === 'exact') {
-        const record = c.state.taskDeliveries?.[deliveryKey(c.state, context.taskId, context.nodeId, context.index)] ?? {}
+        const record =
+            c.state.taskDeliveries?.[deliveryKey(c.state, context.taskId, context.nodeId, context.index)] ?? {}
         items = [...requirements].flatMap(([key, count]) => {
             const remaining = count - (record[key] ?? 0)
             if (remaining <= 0) return []
@@ -103,7 +104,8 @@ export function submitTaskItems(c, condition, context, items) {
             'Task item requirement already fulfilled',
         )
     const costs = new Map(),
-        wallet = [], taskCosts = []
+        wallet = [],
+        taskCosts = []
     for (const [key, n] of amounts) {
         const [type, id] = key.split(':').map(Number)
         if (type === 3) costs.set(id, n)

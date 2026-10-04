@@ -23,7 +23,9 @@ export function taskActions(node, phase = 'before') {
     )
 }
 export function taskBirthPoint(tables, id, map) {
-    points ??= JSON.parse(fs.readFileSync(new URL('../configs/task-tables/world_borthpos.json', import.meta.url), 'utf8'))
+    points ??= JSON.parse(
+        fs.readFileSync(new URL('../configs/task-tables/world_borthpos.json', import.meta.url), 'utf8'),
+    )
     const point = id ? points.find((p) => p.id === id) : points.find((p) => p.cityId === map && p.mainPoint === 1)
     ensure(point && (!map || point.cityId === map), 'Task scene birth point unavailable', 1007)
     return point
@@ -52,9 +54,7 @@ export function prepareTaskScenes(tables, state, { login = false } = {}) {
                 config = graph.nodes.get(node.node_id),
                 actions = taskActions(config)
             const team = actions.find((a) => a.__type_TaskTeamChangeData?.changeScene > 0)?.__type_TaskTeamChangeData
-            const transfers = actions
-                .map((a) => a.__type_TaskTransferBaseData)
-                .filter((a) => a?.transferPointId > 0)
+            const transfers = actions.map((a) => a.__type_TaskTransferBaseData).filter((a) => a?.transferPointId > 0)
             // Multi-transfer story nodes must run their configured scene/story
             // sequence in order on the client. Prepositioning at the first point
             // can leave the rest of that sequence in the same scene.

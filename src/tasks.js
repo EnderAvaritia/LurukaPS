@@ -73,11 +73,16 @@ export function conditionValue(condition, state, context) {
         const open = base.__type_TaskCondStoryOpenTaskData
         if (!open || open.storyId) return 0
         const dynamic = open.isNowCreate === 1
-        if (dynamic ? !Number.isSafeInteger(open.npcData?.createNpcId) || open.npcData.createNpcId <= 0
-            : open.isNowCreate !== 0 || !Number.isInteger(open.npcId) || open.npcId <= 0) return 0
+        if (
+            dynamic
+                ? !Number.isSafeInteger(open.npcData?.createNpcId) || open.npcData.createNpcId <= 0
+                : open.isNowCreate !== 0 || !Number.isInteger(open.npcId) || open.npcId <= 0
+        )
+            return 0
         // CBT3 GetRegisterSceneId: dynamic NPC override owns its scene;
         // fixed NPC uses the entry scene, then mapData, then the current map.
-        const scene = dynamic ? open.npcData.sceneId || state.world.map_id
+        const scene = dynamic
+            ? open.npcData.sceneId || state.world.map_id
             : open.sceneId || base.mapData?.sceneId || state.world.map_id
         if (state.world.map_id !== scene) return 0
         // rangeCheck is registered on the client's live InteractionComponent.
@@ -214,8 +219,14 @@ export function taskUnlocked(graph, state, context) {
         rules.every((rule) => {
             const [kind, id, ...rest] = rule.split('#').map(Number)
             if (kind === 12045)
-                return Number.isInteger(id) && id > 0 && rest.length === 1 &&
-                    Number.isInteger(rest[0]) && rest[0] > 0 && taskNodeCompleted(state, id, rest[0])
+                return (
+                    Number.isInteger(id) &&
+                    id > 0 &&
+                    rest.length === 1 &&
+                    Number.isInteger(rest[0]) &&
+                    rest[0] > 0 &&
+                    taskNodeCompleted(state, id, rest[0])
+                )
             if (rest.length || !Number.isInteger(id) || id <= 0) return false
             if (kind === 2004) return state.player.basic_info.lv >= id
             if (kind === 2007) return (state.taskRecords ?? []).some((t) => t.task_id === id && t.count > 0)
@@ -287,14 +298,17 @@ export function unlockAutomaticTasks(tables, state, now) {
     return added
 }
 export function taskNodeCompleted(state, taskId, nodeId) {
-    return (state.tasks ?? []).some((task) => task.task_id === taskId && task.finish_nodes?.includes(nodeId)) ||
+    return (
+        (state.tasks ?? []).some((task) => task.task_id === taskId && task.finish_nodes?.includes(nodeId)) ||
         (state.taskRecords ?? []).some((task) => task.task_id === taskId && task.count > 0)
+    )
 }
 function requiredTaskLevel(config) {
-    const levels = String(config?.unlockcondition ?? '').split('|')
-        .filter((rule) => rule.startsWith('2004#')).map((rule) => Number(rule.slice(5)))
-    return levels.length && levels.every((level) => Number.isSafeInteger(level) && level > 0)
-        ? Math.max(...levels) : 0
+    const levels = String(config?.unlockcondition ?? '')
+        .split('|')
+        .filter((rule) => rule.startsWith('2004#'))
+        .map((rule) => Number(rule.slice(5)))
+    return levels.length && levels.every((level) => Number.isSafeInteger(level) && level > 0) ? Math.max(...levels) : 0
 }
 export function taskVisibleAtLevel(tables, state, task) {
     const required = requiredTaskLevel(tables.find('task', task.task_id))
@@ -309,17 +323,23 @@ function nextLevelLockedMain(tables, state) {
     }
     const candidates = []
     for (const config of tables.get('task')) {
-        if (config.type !== 1 || config.autoAccept !== 1 || config.canRepeat === 1 ||
+        if (
+            config.type !== 1 ||
+            config.autoAccept !== 1 ||
+            config.canRepeat === 1 ||
             state.tasks.some((task) => task.task_id === config.id) ||
-            (state.taskRecords ?? []).some((record) => record.task_id === config.id && record.count > 0)) continue
+            (state.taskRecords ?? []).some((record) => record.task_id === config.id && record.count > 0)
+        )
+            continue
         const requiredLevel = requiredTaskLevel(config)
         if (level >= requiredLevel) continue
         // Evaluate the full graph at the required level. This keeps the
         // placeholder hidden until every non-level prerequisite is met.
-        const atRequiredLevel = { ...state, player: { ...state.player,
-            basic_info: { ...state.player.basic_info, lv: requiredLevel } } }
-        if (taskUnlocked(graphs.get(config.id), atRequiredLevel))
-            candidates.push({ id: config.id, requiredLevel })
+        const atRequiredLevel = {
+            ...state,
+            player: { ...state.player, basic_info: { ...state.player.basic_info, lv: requiredLevel } },
+        }
+        if (taskUnlocked(graphs.get(config.id), atRequiredLevel)) candidates.push({ id: config.id, requiredLevel })
     }
     candidates.sort((a, b) => a.requiredLevel - b.requiredLevel || a.id - b.id)
     return candidates[0]?.id ?? 0
@@ -356,7 +376,7 @@ export function taskSnapshot(tables, state) {
         del_trace_list: hiddenTasks.filter((task) => task.client_trace).map((task) => task.task_id),
         // The client treats next_main_id as an unaccepted placeholder. An
         // accepted main must clear it, even when it is the same story ID.
-        next_main_id: main ? 0 : hiddenMain?.task_id ?? nextLevelLockedMain(tables, state),
+        next_main_id: main ? 0 : (hiddenMain?.task_id ?? nextLevelLockedMain(tables, state)),
     }
 }
 

@@ -132,10 +132,16 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
         // Teleports/GM transfers may bypass CampaignQuit. Do not leave a
         // commission manager alive after entering a different world.
         c.push('CSProtoCurMultiCampaignInfoSync', {
-            dungeon_id: departedEntrust.dungeon_id, dungeon_scene_id: departedEntrust.map_id,
-            map_id: departedEntrust.map_id, status: 1,
+            dungeon_id: departedEntrust.dungeon_id,
+            dungeon_scene_id: departedEntrust.map_id,
+            map_id: departedEntrust.map_id,
+            status: 1,
         })
-        c.push('CSProtoCampaignInfoSync', { status: 1, dungeon_id: departedEntrust.dungeon_id, cur_scene_id: departedEntrust.map_id })
+        c.push('CSProtoCampaignInfoSync', {
+            status: 1,
+            dungeon_id: departedEntrust.dungeon_id,
+            cur_scene_id: departedEntrust.map_id,
+        })
         delete s.entrust.run
     }
     if (s.storyCampaign && s.storyCampaign.map_id !== w.map_id) {

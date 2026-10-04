@@ -22,17 +22,31 @@ export function playableSnapshot(state) {
 }
 const recoveryGraphs = new WeakMap()
 export function recoverInterruptedFlyTravel(tables, state) {
-    const id = 62035, run = state.playableRuns?.[id]
-    if (!run || run.map_id !== state.world.map_id || run.status !== 1 || run.finish_step !== 0 ||
-        run.sub_datas?.length || state.playableFinishes?.[id]) return false
+    const id = 62035,
+        run = state.playableRuns?.[id]
+    if (
+        !run ||
+        run.map_id !== state.world.map_id ||
+        run.status !== 1 ||
+        run.finish_step !== 0 ||
+        run.sub_datas?.length ||
+        state.playableFinishes?.[id]
+    )
+        return false
     let graphs = recoveryGraphs.get(tables)
     if (!graphs) recoveryGraphs.set(tables, (graphs = new TaskGraphs(tables)))
-    const active = (state.tasks ?? []).some((task) => task.nodes.some((node) =>
-        nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some((condition) => {
-            const data = condition.__type_TaskConditionBaseData?.__type_TaskCondCompletePlayableData
-            return condition.conditionId === 2525 && data?.playableId === id &&
-                data.playableData?.sceneId === run.map_id
-        })))
+    const active = (state.tasks ?? []).some((task) =>
+        task.nodes.some((node) =>
+            nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some((condition) => {
+                const data = condition.__type_TaskConditionBaseData?.__type_TaskCondCompletePlayableData
+                return (
+                    condition.conditionId === 2525 &&
+                    data?.playableId === id &&
+                    data.playableData?.sceneId === run.map_id
+                )
+            }),
+        ),
+    )
     if (!active) return false
     // This flight's temporary mount and start callback live only in its graph.
     // Reopening a zero-step RUNNING receipt cannot restore those objects.
@@ -232,19 +246,29 @@ export function registerPlayableLifecycle(on, tables) {
         const mask = BigInt(r.reward_info ?? '0'),
             claimed = BigInt(finish.reward_info ?? 0),
             dropIds = String(row.statusReward || '').split('|'),
-            scores = String(row.playScore || '').split('|').filter(Boolean).map(Number)
+            scores = String(row.playScore || '')
+                .split('|')
+                .filter(Boolean)
+                .map(Number)
         ensure(mask > 0n && mask < 1n << 32n && !(mask & 1n), 'Invalid playable reward mask')
-        const available = dropIds.reduce((bits, token, index) =>
-            token && Number(token) > 0 && (!scores.length || finish.score >= scores[index])
-                ? bits | (1n << BigInt(index + 1))
-                : bits, 0n)
+        const available = dropIds.reduce(
+            (bits, token, index) =>
+                token && Number(token) > 0 && (!scores.length || finish.score >= scores[index])
+                    ? bits | (1n << BigInt(index + 1))
+                    : bits,
+            0n,
+        )
         ensure((mask & ~available) === 0n, 'Playable reward tier not achieved')
         const fresh = mask & ~claimed,
             awarded = []
         for (let index = 0; index < dropIds.length; index++)
             if (fresh & (1n << BigInt(index + 1))) awarded.push(Number(dropIds[index]))
         const rewards = awarded.length
-            ? grantRewards(tables, c.state, awarded.flatMap((id) => world.drops(id, c.randomInt)))
+            ? grantRewards(
+                  tables,
+                  c.state,
+                  awarded.flatMap((id) => world.drops(id, c.randomInt)),
+              )
             : []
         if (fresh) {
             finish.reward_info = Number(claimed | fresh)

@@ -162,7 +162,7 @@ export function syncBattle(c) {
     const active = c.state.player.group_mgrs.find((manager) => manager.type === 1),
         formation = active?.groups.find((entry) => entry.id === active.cur_group),
         heroIds = new Set((formation?.heros ?? []).map((entry) => entry.hero_id)),
-        petSp = c.state.combat?.map_id === c.state.world.map_id ? c.state.combat.petSp ?? {} : {}
+        petSp = c.state.combat?.map_id === c.state.world.map_id ? (c.state.combat.petSp ?? {}) : {}
     c.push('CSProtoObjBattleInfoSync', {
         infos: [
             ...c.state.player.heros_info.battle_infos.map((h) => ({

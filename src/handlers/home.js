@@ -13,9 +13,7 @@ function homeScenePosition(tables) {
     const homeMapId = Number(tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
     ensure(Number.isInteger(homeMapId) && homeMapId > 0, 'Missing home map id', 1007)
 
-    const point = tables
-        .get('world_borthpos')
-        .find((row) => row.cityId === homeMapId && Number(row.mainPoint) === 1)
+    const point = tables.get('world_borthpos').find((row) => row.cityId === homeMapId && Number(row.mainPoint) === 1)
     const area = tables.get('world_area').find((row) => row.sceneId === homeMapId)
     ensure(point && area, 'Missing home scene spawn configuration', 1007)
 

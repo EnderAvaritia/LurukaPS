@@ -203,22 +203,27 @@ export function expireTaskTrialGroup(tables, state) {
         graphCaches.set(tables, graphs)
     }
     const task = state.tasks.find((t) => t.task_id === trial.task_id)
-    const storyTrial = trial.story_campaign &&
+    const storyTrial =
+        trial.story_campaign &&
         state.storyCampaign?.map_id === state.world.map_id &&
         task?.nodes.some((node) => node.node_id === 11) &&
-        trial.ids.every((id) => String(tables.find('dungeon_scene', state.world.map_id)?.extraTrialGroup ?? '')
-            .split('|').some((entry) => Number(entry.split('#')[0]) === id))
-    const valid = storyTrial ||
-        task &&
-        graphs.get(task.task_id).controllers.some((controller) => {
-            const d = controller.__type_TaskTeamController
-            return (
-                d &&
-                asList(d.stateScene).includes(state.world.map_id) &&
-                task.nodes.some((n) => asList(controller.field_530003).includes(n.node_id)) &&
-                trial.ids.every((id) => asList(d.teamMemberList).some((m) => m.memberId === id))
-            )
-        })
+        trial.ids.every((id) =>
+            String(tables.find('dungeon_scene', state.world.map_id)?.extraTrialGroup ?? '')
+                .split('|')
+                .some((entry) => Number(entry.split('#')[0]) === id),
+        )
+    const valid =
+        storyTrial ||
+        (task &&
+            graphs.get(task.task_id).controllers.some((controller) => {
+                const d = controller.__type_TaskTeamController
+                return (
+                    d &&
+                    asList(d.stateScene).includes(state.world.map_id) &&
+                    task.nodes.some((n) => asList(controller.field_530003).includes(n.node_id)) &&
+                    trial.ids.every((id) => asList(d.teamMemberList).some((m) => m.memberId === id))
+                )
+            }))
     if (valid) {
         manager(state).src = 0
         return false
@@ -359,9 +364,9 @@ export function registerTrialGroups(on, tables) {
             requested.length > 0 && requested.length <= 3 && requestedPets.length <= 6,
             'Unsupported trial formation shape',
         )
-        const story = c.state.storyCampaign?.map_id === c.state.world.map_id &&
-            c.state.tasks.some((task) => task.task_id === 106014 &&
-                task.nodes.some((node) => node.node_id === 11))
+        const story =
+            c.state.storyCampaign?.map_id === c.state.world.map_id &&
+            c.state.tasks.some((task) => task.task_id === 106014 && task.nodes.some((node) => node.node_id === 11))
         const maxSlots = story ? 4 : 3
         ensure(
             new Set(requested.map((x) => x.id)).size === requested.length &&
@@ -387,7 +392,8 @@ export function registerTrialGroups(on, tables) {
         if (story) {
             const task = c.state.tasks.find((entry) => entry.task_id === 106014)
             const scene = tables.find('dungeon_scene', c.state.world.map_id)
-            const members = String(scene?.extraTrialGroup ?? '').split('|')
+            const members = String(scene?.extraTrialGroup ?? '')
+                .split('|')
                 .map((entry) => ({ memberId: Number(entry.split('#')[0]) }))
                 .filter((entry) => entry.memberId > 0)
             if (requested.every((entry) => members.some((member) => member.memberId === entry.id)))

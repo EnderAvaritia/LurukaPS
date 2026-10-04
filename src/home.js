@@ -65,14 +65,19 @@ export function ensureHomeFarmHouses(tables, state) {
     let changed = false
     for (const build of [...home.builds, ...(home.storedBuilds ?? [])]) {
         const config = tables.find('home_building', build.build_id)
-        const group = config && tables.get('home_building_group').find(row => row.groupId === config.groupId)
+        const group = config && tables.get('home_building_group').find((row) => row.groupId === config.groupId)
         if (group?.type !== 16 || build.auto_info) continue
         // CBT3 HomeBuildData.Populate calls HomeBuildAutoData.Populate without
         // a null check for field houses. An unstaffed house still needs this
         // empty message in both placement replies and home snapshots.
         build.auto_info = {
-            plant_pet: '0', water_pet: '0', harvest_pet: '0',
-            seeds: [], crops: [], got_crops: [], water_target: 0,
+            plant_pet: '0',
+            water_pet: '0',
+            harvest_pet: '0',
+            seeds: [],
+            crops: [],
+            got_crops: [],
+            water_target: 0,
             slot_satiety_reduce: [],
         }
         changed = true
@@ -86,7 +91,8 @@ export function homePayload(tables, state) {
     // The CBT3 client's getBeltItems starts zero-filling at #list, overwriting
     // the last entry unless the wire list already has the full slot count.
     const shortcutSlots = Math.max(
-        ...tables.get('game')
+        ...tables
+            .get('game')
             .filter((row) => row.title === 'HOME_BELT_NUM_PC' || row.title === 'HOME_BELT_NUM_MOBILE')
             .map((row) => Number(row.value)),
     )
@@ -135,15 +141,14 @@ export function refreshAutoBuildShortcut(home, id) {
     if (available?.unlock && available.total_num > available.used_num) {
         if (!home.suppressedBuildShortcuts?.includes(id) && addShortcut(home, 1, id)) autoIds.push(id)
     } else if (autoIds.includes(id)) {
-        if (bar) bar.item_id = bar.item_id.map((item) => item === id ? 0 : item)
+        if (bar) bar.item_id = bar.item_id.map((item) => (item === id ? 0 : item))
         home.autoBuildShortcutIds = autoIds.filter((item) => item !== id)
     }
 }
 
 export function refreshAutoCropShortcut(tables, state, id) {
     const item = tables.find('common_item', id)
-    if (!item || item.type !== 310 || !tables.get('home_seeds').some((seed) => seed.id === item.subId))
-        return false
+    if (!item || item.type !== 310 || !tables.get('home_seeds').some((seed) => seed.id === item.subId)) return false
     const home = ensureHome(tables, state)
     const count = state.player.sbag_infos.items
         .filter((entry) => entry.itemid === id)
@@ -154,7 +159,7 @@ export function refreshAutoCropShortcut(tables, state, id) {
         if (home.suppressedCropShortcuts?.includes(id) || !addShortcut(home, 2, id)) return false
         autoIds.push(id)
     } else if (autoIds.includes(id)) {
-        if (bar) bar.item_id = bar.item_id.map((entry) => entry === id ? 0 : entry)
+        if (bar) bar.item_id = bar.item_id.map((entry) => (entry === id ? 0 : entry))
         home.autoCropShortcutIds = autoIds.filter((entry) => entry !== id)
     } else return false
     state.homeRevision = (state.homeRevision || 0) + 1
@@ -164,13 +169,11 @@ export function refreshAutoCropShortcut(tables, state, id) {
 export function pruneAutoCropShortcuts(state) {
     const home = state.home
     if (!home?.autoCropShortcutIds?.length) return
-    const owned = new Set(
-        state.player.sbag_infos.items.filter((item) => item.itemnum > 0).map((item) => item.itemid),
-    )
+    const owned = new Set(state.player.sbag_infos.items.filter((item) => item.itemnum > 0).map((item) => item.itemid))
     const removed = home.autoCropShortcutIds.filter((id) => !owned.has(id))
     if (!removed.length) return
     const bar = home.shortcuts.find((entry) => entry.type === 2)
-    if (bar) bar.item_id = bar.item_id.map((id) => removed.includes(id) ? 0 : id)
+    if (bar) bar.item_id = bar.item_id.map((id) => (removed.includes(id) ? 0 : id))
     home.autoCropShortcutIds = home.autoCropShortcutIds.filter((id) => owned.has(id))
     state.homeRevision = (state.homeRevision || 0) + 1
 }
@@ -198,7 +201,11 @@ export function reconcileHomeBuildShortcuts(tables, state) {
         }
     }
     for (const building of home.inventory)
-        if (building.unlock && building.total_num > building.used_num && tables.find('home_building', building.build_id))
+        if (
+            building.unlock &&
+            building.total_num > building.used_num &&
+            tables.find('home_building', building.build_id)
+        )
             refreshAutoBuildShortcut(home, building.build_id)
     home.buildShortcutVersion = 2
     state.homeRevision = (state.homeRevision || 0) + 1

@@ -15,16 +15,27 @@ export function reconcileAutomaticTechnology(tables, state) {
     if (!tech) return false
     let rows = automaticRows.get(tables)
     if (!rows) {
-        rows = tables.get('home_technology_tree').filter(tree => tree.isAutoUnlock === 1)
-            .map(tree => ({ tree, row: tables.get('home_technology').find(row => row.type === tree.id && row.level === 1) }))
+        rows = tables
+            .get('home_technology_tree')
+            .filter((tree) => tree.isAutoUnlock === 1)
+            .map((tree) => ({
+                tree,
+                row: tables.get('home_technology').find((row) => row.type === tree.id && row.level === 1),
+            }))
         automaticRows.set(tables, rows)
     }
-    let changed = false, added
+    let changed = false,
+        added
     do {
         added = false
         for (const { tree, row } of rows) {
-            if (tech.levels[tree.id]?.level > 0 || !row || !technologyParents(tree, tech) ||
-                !homeCondition(row.unlockCondi1, state)) continue
+            if (
+                tech.levels[tree.id]?.level > 0 ||
+                !row ||
+                !technologyParents(tree, tech) ||
+                !homeCondition(row.unlockCondi1, state)
+            )
+                continue
             tech.levels[tree.id] = { level: 1, lastTime: 0, isOpened: false }
             added = changed = true
         }
@@ -66,9 +77,11 @@ export function technologyType(tables, state, type) {
                 lastTime: record?.lastTime || 0,
                 maxSubLevel: Math.max(0, ...rows.map((r) => r.level)),
                 isOpened:
-                    tree.isAutoUnlock === 1 ? !!record && (record.isOpened ?? true) : !!record ||
-                    (technologyParents(tree, tech) &&
-                        homeCondition(rows.find((r) => r.level === 1)?.unlockCondi1, state)),
+                    tree.isAutoUnlock === 1
+                        ? !!record && (record.isOpened ?? true)
+                        : !!record ||
+                          (technologyParents(tree, tech) &&
+                              homeCondition(rows.find((r) => r.level === 1)?.unlockCondi1, state)),
             }
         })
     return { type, list }

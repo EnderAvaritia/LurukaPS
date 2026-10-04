@@ -12,8 +12,10 @@ function homeInScene(tables, state) {
 
 function field(tables, home, guid) {
     const build = home.builds.find((item) => item.guid === guid)
-    ensure(build && tables.get('home_fieldtype').some((row) => row.homeBuildingId === build.build_id),
-        'Farmland is not owned')
+    ensure(
+        build && tables.get('home_fieldtype').some((row) => row.homeBuildingId === build.build_id),
+        'Farmland is not owned',
+    )
     return build
 }
 
@@ -21,16 +23,17 @@ function seed(tables, itemId, fieldType) {
     const item = tables.find('common_item', itemId)
     ensure(item?.type === 310, 'Item is not a seed')
     const config = tables.find('home_seeds', item.subId)
-    ensure(config && String(config.fieldType).split('|').map(Number).includes(fieldType),
-        'Seed is not compatible with this field')
+    ensure(
+        config && String(config.fieldType).split('|').map(Number).includes(fieldType),
+        'Seed is not compatible with this field',
+    )
     return config
 }
 
 function growthSeconds(config) {
     const grow = Number(String(config.growParam).split('#')[1])
     const pre = Number(String(config.preHarvestParam).split('|')[1])
-    ensure(Number.isInteger(grow) && grow > 0 && Number.isInteger(pre) && pre >= 0,
-        'Invalid crop growth time', 1007)
+    ensure(Number.isInteger(grow) && grow > 0 && Number.isInteger(pre) && pre >= 0, 'Invalid crop growth time', 1007)
     return { grow, pre }
 }
 
@@ -41,15 +44,20 @@ function clearCrop(build) {
 
 function harvest(tables, c, home, build) {
     const crop = build.crop_info
-    ensure(crop?.seed_id && crop.state === 2 && c.now >= crop.state_finish_time + crop.pre_cost_time,
-        'Crop is not ready to harvest')
+    ensure(
+        crop?.seed_id && crop.state === 2 && c.now >= crop.state_finish_time + crop.pre_cost_time,
+        'Crop is not ready to harvest',
+    )
     const config = tables.find('home_seeds', crop.seed_id)
     ensure(config, 'Missing planted crop configuration', 1007)
     const drops = String(config.homeDropId).split('|').filter(Boolean).map(Number)
     const rewards = drops.map((id) => {
         const row = tables.find('home_drop', id)
-        ensure(row && row.rate === 10000 && row.minValue === row.maxValue && /^\d+$/.test(String(row.itemId)),
-            'Unsupported crop drop configuration', 1021)
+        ensure(
+            row && row.rate === 10000 && row.minValue === row.maxValue && /^\d+$/.test(String(row.itemId)),
+            'Unsupported crop drop configuration',
+            1021,
+        )
         return { itemtype: row.itemType, itemid: Number(row.itemId), itemnum: row.minValue }
     })
     ensure(rewards.length > 0, 'Crop has no harvest reward', 1007)
@@ -65,15 +73,17 @@ export function registerFarming(on, tables) {
             fieldType = tables.find('home_fieldtype', r.field_type)
         ensure(fieldType?.homeBuildingId && r.locate, 'Unknown field type or location')
         const buildId = fieldType.homeBuildingId,
-            existing = home.builds.find((build) =>
-                build.build_id === buildId &&
-                build.locate.block_id === r.locate.block_id &&
-                build.locate.anchor === r.locate.anchor,
+            existing = home.builds.find(
+                (build) =>
+                    build.build_id === buildId &&
+                    build.locate.block_id === r.locate.block_id &&
+                    build.locate.anchor === r.locate.anchor,
             )
         if (existing) return existing
         const group = validatePlacement(tables, c.state, buildId, r.locate),
             maxGuid = [...home.builds, ...(home.storedBuilds ?? [])].reduce(
-                (max, build) => Math.max(max, build.guid), 0,
+                (max, build) => Math.max(max, build.guid),
+                0,
             ),
             guid = Math.max(home.nextBuildGuid || 1, maxGuid + 1)
         ensure(guid <= 0xffffffff, 'Home building GUID space exhausted')
@@ -108,10 +118,14 @@ export function registerFarming(on, tables) {
         const home = homeInScene(tables, c.state)
         ensure(!r.is_pet, 'Pet planting requires an assigned farm worker', 1021)
         ensure(r.plant_info.length > 0 && r.plant_info.length <= 32, 'Invalid planting batch')
-        const seen = new Set(), costs = new Map(), plantings = []
+        const seen = new Set(),
+            costs = new Map(),
+            plantings = []
         for (const row of r.plant_info) {
-            ensure(Number.isInteger(row.build_guid) && row.build_guid > 0 && !seen.has(row.build_guid),
-                'Duplicate or invalid planting field')
+            ensure(
+                Number.isInteger(row.build_guid) && row.build_guid > 0 && !seen.has(row.build_guid),
+                'Duplicate or invalid planting field',
+            )
             seen.add(row.build_guid)
             ensure(!row.follower_build_guids?.length, 'Multi-field planting is not yet supported', 1021)
             const build = field(tables, home, row.build_guid)
@@ -139,7 +153,8 @@ export function registerFarming(on, tables) {
     on('FieldWater', (c, r) => {
         const home = homeInScene(tables, c.state)
         ensure(!r.is_pet, 'Pet watering requires an assigned farm worker', 1021)
-        const build = field(tables, home, r.build_guid), crop = build.crop_info
+        const build = field(tables, home, r.build_guid),
+            crop = build.crop_info
         ensure(crop?.seed_id && crop.state === 1, 'Crop does not need watering')
         const config = tables.find('home_seeds', crop.seed_id)
         ensure(config, 'Missing planted crop configuration', 1007)
@@ -170,7 +185,8 @@ export function registerFarming(on, tables) {
     })
 
     on('FieldUnplant', (c, r) => {
-        const home = homeInScene(tables, c.state), build = field(tables, home, r.u32)
+        const home = homeInScene(tables, c.state),
+            build = field(tables, home, r.u32)
         ensure(build.crop_info?.seed_id, 'Farmland is empty')
         clearCrop(build)
         c.state.homeRevision = (c.state.homeRevision || 0) + 1
@@ -186,13 +202,19 @@ export function registerFarming(on, tables) {
     on('FieldHarvestList', (c, r) => {
         const home = homeInScene(tables, c.state)
         ensure(!r.is_pet, 'Pet harvesting requires an assigned farm worker', 1021)
-        ensure(r.build_guids.length > 0 && r.build_guids.length <= 32 &&
-            new Set(r.build_guids).size === r.build_guids.length, 'Invalid harvest batch')
+        ensure(
+            r.build_guids.length > 0 &&
+                r.build_guids.length <= 32 &&
+                new Set(r.build_guids).size === r.build_guids.length,
+            'Invalid harvest batch',
+        )
         const builds = r.build_guids.map((guid) => field(tables, home, guid))
         for (const build of builds) {
             const crop = build.crop_info
-            ensure(crop?.seed_id && crop.state === 2 && c.now >= crop.state_finish_time + crop.pre_cost_time,
-                'Crop is not ready to harvest')
+            ensure(
+                crop?.seed_id && crop.state === 2 && c.now >= crop.state_finish_time + crop.pre_cost_time,
+                'Crop is not ready to harvest',
+            )
         }
         return { results: builds.map((build) => harvest(tables, c, home, build)) }
     })

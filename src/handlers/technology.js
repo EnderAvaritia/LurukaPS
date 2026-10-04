@@ -5,7 +5,8 @@ import { ensure } from './common.js'
 export function registerTechnology(on, tables) {
     on('HomeTechnologyFirstOpen', (c, r) => {
         ensureHome(tables, c.state)
-        const tech = technologyState(tables, c.state), tree = tables.find('home_technology_tree', r.subType)
+        const tech = technologyState(tables, c.state),
+            tree = tables.find('home_technology_tree', r.subType)
         ensure(tree && tree.category === r.type, 'Technology does not belong to category')
         const record = tech.levels[tree.id]
         ensure(record?.level > 0, 'Technology is not unlocked')

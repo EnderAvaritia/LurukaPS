@@ -2,12 +2,18 @@ import { randomInt } from 'node:crypto'
 import { ensure } from './handlers/common.js'
 
 function quality(text, rng) {
-    const entries = String(text || '').split('|').filter(Boolean).map((token) => {
-        const [id, weight, ...extra] = token.split('#').map(Number)
-        ensure(!extra.length && Number.isInteger(id) && id > 0 && Number.isInteger(weight) && weight > 0,
-            'Invalid custom ornament quality', 1007)
-        return { id, weight }
-    })
+    const entries = String(text || '')
+        .split('|')
+        .filter(Boolean)
+        .map((token) => {
+            const [id, weight, ...extra] = token.split('#').map(Number)
+            ensure(
+                !extra.length && Number.isInteger(id) && id > 0 && Number.isInteger(weight) && weight > 0,
+                'Invalid custom ornament quality',
+                1007,
+            )
+            return { id, weight }
+        })
     const total = entries.reduce((sum, entry) => sum + entry.weight, 0)
     ensure(total > 0 && Number.isSafeInteger(total), 'Missing custom ornament quality', 1007)
     let draw = rng(total)
@@ -23,8 +29,10 @@ export function createCustomOrnaments(tables, state, id, count, rng = randomInt)
         accessory = tables.find('accessory', custom?.accessoryId)
     ensure(custom && accessory, 'Unknown custom ornament', 1007)
     state.ornaments ??= []
-    ensure(Number.isInteger(count) && count > 0 && count <= 1000 && state.ornaments.length + count <= 10000,
-        'Ornament bag limit')
+    ensure(
+        Number.isInteger(count) && count > 0 && count <= 1000 && state.ornaments.length + count <= 10000,
+        'Ornament bag limit',
+    )
     let next = Math.max(state.nextOrnamentGuid || 1, ...state.ornaments.map((entry) => entry.guid + 1))
     ensure(next + count - 1 <= 0xffffffff, 'Ornament identity space exhausted')
     const created = []

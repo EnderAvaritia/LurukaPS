@@ -41,7 +41,8 @@ export class Tables {
         if (values.length !== 6 || values.some((x) => !Number.isFinite(x)))
             throw Error(`Invalid borthPoint ${point.id}`)
         const homeMapId = Number(this.get('game').find((row) => row.title === 'HOME_ID')?.value)
-        const homeArea = point.cityId === homeMapId ? this.get('world_area').find((row) => row.sceneId === homeMapId) : null
+        const homeArea =
+            point.cityId === homeMapId ? this.get('world_area').find((row) => row.sceneId === homeMapId) : null
         if (point.cityId === homeMapId && !homeArea) throw Error(`Missing home world area ${homeMapId}`)
         return {
             map_id: point.cityId,

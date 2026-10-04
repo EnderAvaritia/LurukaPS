@@ -17,7 +17,11 @@ import { deliveryKey } from './task-delivery.js'
 import { recoverFailedSpecialNpcEvents } from './task-event-recovery.js'
 import { recoverCachedTaskTimeEvent } from './task-events.js'
 import { repairSoulEssenceStars } from './equipment.js'
-import { registerPlayableLifecycle, playableSnapshot, recoverInterruptedFlyTravel } from './handlers/playable-lifecycle.js'
+import {
+    registerPlayableLifecycle,
+    playableSnapshot,
+    recoverInterruptedFlyTravel,
+} from './handlers/playable-lifecycle.js'
 import { registerPetSkill } from './handlers/pet-skill.js'
 import { registerRoulette, roulettePayload } from './handlers/roulette.js'
 import { upgradeInventory } from './inventory.js'
@@ -29,7 +33,11 @@ import { registerPlayableEnemies } from './handlers/playable-enemies.js'
 import { registerGM } from './handlers/gm.js'
 import { registerWorldEvents } from './handlers/world-events.js'
 import { registerEntrust } from './handlers/entrust.js'
-import { registerStoryCampaign, settleStoryCampaignScene, recoverStoryCampaignClear } from './handlers/story-campaign.js'
+import {
+    registerStoryCampaign,
+    settleStoryCampaignScene,
+    recoverStoryCampaignClear,
+} from './handlers/story-campaign.js'
 import { ensureStoryCampaignScene, storyCampaignSnapshot } from './story-campaign.js'
 import {
     entrustInfoSnapshot,
@@ -37,7 +45,9 @@ import {
     ensureEntrustSceneObjects,
     entrustMultiSnapshot,
     entrustMultiBaseSnapshot,
-    campaignSnapshot, entrustChestSnapshot, entrustDamageSnapshot,
+    campaignSnapshot,
+    entrustChestSnapshot,
+    entrustDamageSnapshot,
 } from './entrust.js'
 import {
     registerKiboDuel,
@@ -68,7 +78,14 @@ import { registerFarmWorkers } from './handlers/farm-workers.js'
 import { registerCanteen } from './handlers/canteen.js'
 import { registerCooking } from './handlers/cooking.js'
 import { registerHome } from './handlers/home.js'
-import { ensureHome, ensureHomeCanteens, ensureHomeFarmHouses, homePayload, reconcileHomeBuildShortcuts, reconcileHomeCropShortcuts } from './home.js'
+import {
+    ensureHome,
+    ensureHomeCanteens,
+    ensureHomeFarmHouses,
+    homePayload,
+    reconcileHomeBuildShortcuts,
+    reconcileHomeCropShortcuts,
+} from './home.js'
 import { restoreLegacyHomeFormation } from './home-formation.js'
 import { repairMainHeroType } from './main-hero.js'
 import { upgradeEggState } from './eggs.js'
@@ -154,11 +171,14 @@ function forkBattleReport(base) {
         },
         tasks: structuredClone(base.tasks),
         taskEvents: structuredClone(base.taskEvents),
-        ...(base.entrust?.run ? {
-            entrust: { ...base.entrust, records: { ...base.entrust.records }, run: { ...base.entrust.run } },
-        } : {}),
-        ...(base.storyCampaign ? { storyCampaign: { ...base.storyCampaign,
-            completed_scenes: [...base.storyCampaign.completed_scenes] } } : {}),
+        ...(base.entrust?.run
+            ? {
+                  entrust: { ...base.entrust, records: { ...base.entrust.records }, run: { ...base.entrust.run } },
+              }
+            : {}),
+        ...(base.storyCampaign
+            ? { storyCampaign: { ...base.storyCampaign, completed_scenes: [...base.storyCampaign.completed_scenes] } }
+            : {}),
     }
 }
 function forkFastCombat(base, name, request) {
@@ -430,16 +450,19 @@ export class Game {
                 recoverInterruptedFlyTravel(this.tables, state)
                 settleSimpleProducts(this.tables, state, now)
                 recoverStoryCampaignClear({ state, tables: this.tables, now, pushBefore: () => {} })
-                recoverFailedSpecialNpcEvents({ state, tables: this.tables, id: session.id, now },
-                    this.protocol, this.taskEventDiagnosticsFile)
+                recoverFailedSpecialNpcEvents(
+                    { state, tables: this.tables, id: session.id, now },
+                    this.protocol,
+                    this.taskEventDiagnosticsFile,
+                )
                 recoverCachedTaskTimeEvent({ state, tables: this.tables, id: session.id, now })
                 recoverMissingTaskItems(this.tables, new TaskGraphs(this.tables), state)
                 refreshTaskProgress(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
                 ensureStoryCampaignScene(this.tables, state, now)
-                if (state.storyCampaign) settleStoryCampaignScene({ state, tables: this.tables,
-                    id: session.id, now, push: () => {} })
+                if (state.storyCampaign)
+                    settleStoryCampaignScene({ state, tables: this.tables, id: session.id, now, push: () => {} })
                 expireTaskTrialGroup(this.tables, state)
                 restoreMixedTrialGroup(this.tables, state)
                 repairSoulEssenceStars(state)
@@ -559,12 +582,27 @@ export class Game {
         const handler = this.handlers.get(e.id)
         if (!handler) throw new GameError(`Unsupported ${e.name}`, 1021)
         if (e.name === 'CSProtoWorldMapExtraStatus') {
-            const response = handler({ now, setExtraStatus: (value) => { session.worldExtraStatus = value } }, r)
+            const response = handler(
+                {
+                    now,
+                    setExtraStatus: (value) => {
+                        session.worldExtraStatus = value
+                    },
+                },
+                r,
+            )
             return [reply(response)]
         }
         if (clientAIReports.has(e.name)) {
-            session.aiControl = handler({ id: session.id, tables: this.tables,
-                state: this.store.load(session.id).state, aiControl: session.aiControl }, r)
+            session.aiControl = handler(
+                {
+                    id: session.id,
+                    tables: this.tables,
+                    state: this.store.load(session.id).state,
+                    aiControl: session.aiControl,
+                },
+                r,
+            )
             return []
         }
         if (fastCombatTelemetry.has(e.name) || e.name === 'CSProtoStateUpdate')
@@ -674,11 +712,23 @@ export class Game {
                 if (newTasks.length)
                     context.push('CSProtoTaskSync', { ...taskSnapshot(this.tables, state), new_task_ids: newTasks })
                 else if (levelChanged) {
-                    const newlyVisible = state.tasks.filter((task) =>
-                        taskVisibleAtLevel(this.tables, state, task) &&
-                        !taskVisibleAtLevel(this.tables, { ...state, player: { ...state.player,
-                            basic_info: { ...state.player.basic_info, lv: playerLevelBefore } } }, task),
-                    ).map((task) => task.task_id)
+                    const newlyVisible = state.tasks
+                        .filter(
+                            (task) =>
+                                taskVisibleAtLevel(this.tables, state, task) &&
+                                !taskVisibleAtLevel(
+                                    this.tables,
+                                    {
+                                        ...state,
+                                        player: {
+                                            ...state.player,
+                                            basic_info: { ...state.player.basic_info, lv: playerLevelBefore },
+                                        },
+                                    },
+                                    task,
+                                ),
+                        )
+                        .map((task) => task.task_id)
                     context.push('CSProtoTaskSync', { ...taskSnapshot(this.tables, state), new_task_ids: newlyVisible })
                 }
                 if (state.home?.technology && state.player.basic_info.lv !== playerLevelBefore)
@@ -894,20 +944,31 @@ export class Game {
             this.packet('CSProtoEntrustStarRewardSync', entrustStarRewardSnapshot(state)),
             ...(state.entrust?.run?.map_id === state.world.map_id
                 ? [
-                    ...(this.tables.find('world_city', state.world.map_id)?.type === 2 ? [
-                        this.packet('CSProtoCurMultiCampaignInfoSync', { status: 1, dungeon_id: state.entrust.run.dungeon_id }),
-                        this.packet('CSProtoCampaignInfoSync', campaignSnapshot(state.entrust.run)),
-                    ] : [
-                    this.packet('CSProtoMultiCampaignBaseInfoSync', entrustMultiBaseSnapshot(state, session.id)),
-                    this.packet('CSProtoMultiCampaignInfoSync', { camp: [entrustMultiSnapshot(state.entrust.run)] }),
-                    this.packet('CSProtoCurMultiCampaignInfoSync', entrustMultiSnapshot(state.entrust.run)),
-                    ]),
-                    this.packet('SCProtoMultiCampaignPlayerDmgInfoSync', entrustDamageSnapshot(state, session.id)),
-                    this.packet('CSProtoStaminaBoxSync', entrustChestSnapshot(this.tables, state)),
-                ]
+                      ...(this.tables.find('world_city', state.world.map_id)?.type === 2
+                          ? [
+                                this.packet('CSProtoCurMultiCampaignInfoSync', {
+                                    status: 1,
+                                    dungeon_id: state.entrust.run.dungeon_id,
+                                }),
+                                this.packet('CSProtoCampaignInfoSync', campaignSnapshot(state.entrust.run)),
+                            ]
+                          : [
+                                this.packet(
+                                    'CSProtoMultiCampaignBaseInfoSync',
+                                    entrustMultiBaseSnapshot(state, session.id),
+                                ),
+                                this.packet('CSProtoMultiCampaignInfoSync', {
+                                    camp: [entrustMultiSnapshot(state.entrust.run)],
+                                }),
+                                this.packet('CSProtoCurMultiCampaignInfoSync', entrustMultiSnapshot(state.entrust.run)),
+                            ]),
+                      this.packet('SCProtoMultiCampaignPlayerDmgInfoSync', entrustDamageSnapshot(state, session.id)),
+                      this.packet('CSProtoStaminaBoxSync', entrustChestSnapshot(this.tables, state)),
+                  ]
                 : []),
             ...(state.storyCampaign?.map_id === state.world.map_id
-                ? [this.packet('CSProtoCampaignInfoSync', storyCampaignSnapshot(state))] : []),
+                ? [this.packet('CSProtoCampaignInfoSync', storyCampaignSnapshot(state))]
+                : []),
             this.packet('CSProtoTaskSync', taskSnapshot(this.tables, state)),
             this.packet('CSProtoMailSync', { mails: state.mail }),
             this.packet('CSProtoStorySync', { infos: { infos: state.storyIds || [] } }),

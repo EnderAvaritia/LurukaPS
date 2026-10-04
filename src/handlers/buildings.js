@@ -5,8 +5,9 @@ function inactive(build) {
     return (
         build.status === 1 &&
         !(build.product || []).length &&
-        ![build.auto_info?.plant_pet, build.auto_info?.water_pet, build.auto_info?.harvest_pet]
-            .some(guid => guid && guid !== '0') &&
+        ![build.auto_info?.plant_pet, build.auto_info?.water_pet, build.auto_info?.harvest_pet].some(
+            (guid) => guid && guid !== '0',
+        ) &&
         (!build.station_pet_guid || build.station_pet_guid === '0') &&
         !(build.hatch?.hatch_infos || []).some((x) => x.egg_guid) &&
         !(build.batch_hatch?.slots || []).some((x) => x.egg_guid)

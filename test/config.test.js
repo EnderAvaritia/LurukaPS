@@ -3,8 +3,14 @@ import assert from 'node:assert/strict'
 import { configuration } from '../src/config.js'
 
 test('LurukaPS settings take precedence and legacy AZUR deployments remain supported', () => {
-    const names = ['AZUR_GAME_PORT', 'LURUKAPS_GAME_PORT', 'AZUR_ENABLE_GM', 'LURUKAPS_ENABLE_GM',
-        'AZUR_DIAGNOSTICS_FILE', 'LURUKAPS_DIAGNOSTICS_FILE']
+    const names = [
+        'AZUR_GAME_PORT',
+        'LURUKAPS_GAME_PORT',
+        'AZUR_ENABLE_GM',
+        'LURUKAPS_ENABLE_GM',
+        'AZUR_DIAGNOSTICS_FILE',
+        'LURUKAPS_DIAGNOSTICS_FILE',
+    ]
     const previous = new Map(names.map((name) => [name, process.env[name]]))
     try {
         for (const name of names) delete process.env[name]

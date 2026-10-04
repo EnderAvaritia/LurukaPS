@@ -229,8 +229,11 @@ test('completed story shows the next level-gated main quest and accepts it at th
     try {
         t.edit((state) => {
             state.tasks = []
-            state.taskRecords = [106001, 106002, 106009, 106010, 106012, 106013, 996001]
-                .map((task_id) => ({ task_id, count: 1, time: 1 }))
+            state.taskRecords = [106001, 106002, 106009, 106010, 106012, 106013, 996001].map((task_id) => ({
+                task_id,
+                count: 1,
+                time: 1,
+            }))
             state.player.basic_info.lv = 14
         })
         let packets = t.login()
@@ -240,7 +243,9 @@ test('completed story shows the next level-gated main quest and accepts it at th
         assert.ok(!t.state().tasks.some((task) => task.task_id === 106014))
         assert.throws(() => t.call('TaskAccept', { u32: 106014 }), /prerequisites/)
 
-        t.edit((state) => { state.player.basic_info.lv = 15 })
+        t.edit((state) => {
+            state.player.basic_info.lv = 15
+        })
         packets = t.login()
         sync = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
         assert.equal(sync.next_main_id, 0)
@@ -249,12 +254,13 @@ test('completed story shows the next level-gated main quest and accepts it at th
 
         t.edit((state) => {
             state.tasks = []
-            state.taskRecords.push({ task_id: 106014, count: 1, time: 1 },
-                { task_id: 106015, count: 1, time: 1 })
+            state.taskRecords.push({ task_id: 106014, count: 1, time: 1 }, { task_id: 106015, count: 1, time: 1 })
             state.player.basic_info.lv = 19
         })
         assert.equal(taskSnapshot(tables, t.state()).next_main_id, 106016)
-        t.edit((state) => { state.taskRecords = state.taskRecords.filter((record) => record.task_id !== 106015) })
+        t.edit((state) => {
+            state.taskRecords = state.taskRecords.filter((record) => record.task_id !== 106015)
+        })
         assert.equal(taskSnapshot(tables, t.state()).next_main_id, 0)
     } finally {
         t.store.close()
@@ -266,10 +272,21 @@ test('an old underleveled active main is shown as a level placeholder until leve
     try {
         t.edit((state) => {
             state.player.basic_info.lv = 8
-            state.taskRecords = [106001, 106002, 106009, 106010, 106012, 106013, 996001]
-                .map((task_id) => ({ task_id, count: 1, time: 1 }))
-            state.tasks = [{ task_id: 106014, nodes: [{ node_id: 3, node_values: [0] }],
-                finish_nodes: [1], reward_nodes: [], client_trace: true, start_time: 1 }]
+            state.taskRecords = [106001, 106002, 106009, 106010, 106012, 106013, 996001].map((task_id) => ({
+                task_id,
+                count: 1,
+                time: 1,
+            }))
+            state.tasks = [
+                {
+                    task_id: 106014,
+                    nodes: [{ node_id: 3, node_values: [0] }],
+                    finish_nodes: [1],
+                    reward_nodes: [],
+                    client_trace: true,
+                    start_time: 1,
+                },
+            ]
             state.taskEpochs[106014] = 1
         })
         const packets = t.login()

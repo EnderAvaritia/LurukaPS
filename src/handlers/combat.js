@@ -37,7 +37,7 @@ function skillActorKey(c, request, skillId, stopping = false) {
     if (u64(request.unit_id) !== '0') return actor(c, request.unit_id)
     let skills = itemSkillCatalogs.get(c.tables)
     if (!skills) {
-        skills = new Set(c.tables.get('battlefield_item').flatMap(item => [...pairs(item.skillList).values()]))
+        skills = new Set(c.tables.get('battlefield_item').flatMap((item) => [...pairs(item.skillList).values()]))
         itemSkillCatalogs.set(c.tables, skills)
     }
     // Scene battle items can have selfId=0. Match the configured item skill,
@@ -48,8 +48,10 @@ function skillActorKey(c, request, skillId, stopping = false) {
     // bullet, behavior, etc.), not actor ownership. Chained item casts use
     // Skill=1 and related_index; source_id is provenance, not a unit GUID.
     const sourceType = verify?.source_type ?? 0
-    ensure(verify && Number.isInteger(sourceType) && sourceType >= 0 && sourceType <= 12,
-        'Invalid local item skill source')
+    ensure(
+        verify && Number.isInteger(sourceType) && sourceType >= 0 && sourceType <= 12,
+        'Invalid local item skill source',
+    )
     const index = u64(stopping ? verify.related_index : verify.battle_index)
     ensure(index !== '0', 'Missing local item skill index')
     return `local-item:${index}`
@@ -62,8 +64,8 @@ function energyActors(c, battle) {
     const active = c.state.player.group_mgrs.find((manager) => manager.type === 1),
         formation = active?.groups.find((entry) => entry.id === active.cur_group),
         heroIds = new Set((formation?.heros ?? []).map((entry) => entry.hero_id).filter((id) => id && id !== '0')),
-        activePets = [...c.state.pets, ...(c.state.trialGroup?.pets ?? [])].filter((pet) =>
-            heroIds.has(pet.hero_id) && c.tables.find('template_value', pet.config_id),
+        activePets = [...c.state.pets, ...(c.state.trialGroup?.pets ?? [])].filter(
+            (pet) => heroIds.has(pet.hero_id) && c.tables.find('template_value', pet.config_id),
         ),
         key = [...heroIds, ...activePets.map((pet) => pet.guid)].join(':')
     if (battle.energyActorKey === key && battle.energySpecs) return new Map(Object.entries(battle.energySpecs))
@@ -73,11 +75,13 @@ function energyActors(c, battle) {
         modules = heroes.map((hero) => heroModules(c.tables, c.state, hero)),
         specs = new Map()
     const add = (id, info, kind) => {
-        const rate = info.modules.flatMap((module) => module.sub_modules).flatMap((sub) => sub.attrs?.attrs ?? [])
-            .filter((attr) => attr.attr_id === 110).reduce((sum, attr) => sum + Number(attr.attr_val), 0)
+        const rate = info.modules
+            .flatMap((module) => module.sub_modules)
+            .flatMap((sub) => sub.attrs?.attrs ?? [])
+            .filter((attr) => attr.attr_id === 110)
+            .reduce((sum, attr) => sum + Number(attr.attr_val), 0)
         const maxSp = heroBattleLimits(info).sp
-        if (Number.isFinite(rate) && rate >= 0 && maxSp > 0)
-            specs.set(id, { kind, maxSp, rate: Math.min(20000, rate) })
+        if (Number.isFinite(rate) && rate >= 0 && maxSp > 0) specs.set(id, { kind, maxSp, rate: Math.min(20000, rate) })
     }
     for (const info of modules) add(info.hero_guid, info, 'hero')
     for (const pet of activePets) add(pet.guid, petModules(c.tables, c.state, pet, modules), 'pet')
@@ -101,17 +105,20 @@ function advanceEnergy(c, battle, changed) {
         if (hero) hero.sp = after
         else battle.petSp[id] = after
         if (after !== before)
-            changed.set(id, hero
-                ? { uuid: id, hp: hero.hp, sp: after, alive_state: hero.alive_state, reason: 0 }
-                : { uuid: id, sp: after, reason: 0 })
+            changed.set(
+                id,
+                hero
+                    ? { uuid: id, hp: hero.hp, sp: after, alive_state: hero.alive_state, reason: 0 }
+                    : { uuid: id, sp: after, reason: 0 },
+            )
     }
     const current = (id, spec) =>
         (spec.kind === 'hero'
-            ? c.state.player.heros_info.battle_infos.find((info) => info.hero_id === id)?.sp ?? 0
-            : battle.petSp[id] ?? 0) * 1000 + (battle.energyRemainders[id] ?? 0)
-    if (seconds)
-        for (const [id, spec] of specs)
-            set(id, spec, current(id, spec) + spec.rate * seconds)
+            ? (c.state.player.heros_info.battle_infos.find((info) => info.hero_id === id)?.sp ?? 0)
+            : (battle.petSp[id] ?? 0)) *
+            1000 +
+        (battle.energyRemainders[id] ?? 0)
+    if (seconds) for (const [id, spec] of specs) set(id, spec, current(id, spec) + spec.rate * seconds)
     const reported = (id, snapshot, delta = 0) => {
         const spec = specs.get(id)
         if (!spec) return
@@ -155,7 +162,9 @@ export function registerCombat(on) {
         const p = [...c.state.pets, ...(c.state.trialGroup?.pets ?? [])].find((pet) => pet.guid === id)
         if (p) {
             const signature = String(c.tables.find('pet', p.config_id)?.signatureSkillList ?? '')
-                .split('|')[0]?.split('#').map(Number)
+                .split('|')[0]
+                ?.split('#')
+                .map(Number)
             if (signature?.[1] === r.skill.skill_id) {
                 battle.petSp ??= {}
                 battle.petSp[id] = 0
@@ -223,8 +232,10 @@ export function registerCombat(on) {
             changed = new Map(),
             maximums = new Map(),
             enemyHurts = []
-        const entrustRun = c.state.entrust?.run?.map_id === c.state.world.map_id && c.state.entrust.run.status === 2
-            ? c.state.entrust.run : null
+        const entrustRun =
+            c.state.entrust?.run?.map_id === c.state.world.map_id && c.state.entrust.run.status === 2
+                ? c.state.entrust.run
+                : null
         let entrustDamageChanged = false
         const reportSp = advanceEnergy(c, battle, changed)
         const update = (id, values, source) => {
@@ -305,10 +316,14 @@ export function registerCombat(on) {
                         : undefined,
                     boss = battle.entities[h.from_id],
                     prior = battle.entities[h.tar_id]?.hp
-                update(h.tar_id, {
-                    ...(h.hp_change !== undefined ? { delta: h.hp_change } : {}),
-                    ...(h.cur_hp !== undefined ? { reported_hp: h.cur_hp } : {}),
-                }, h.from_id)
+                update(
+                    h.tar_id,
+                    {
+                        ...(h.hp_change !== undefined ? { delta: h.hp_change } : {}),
+                        ...(h.cur_hp !== undefined ? { reported_hp: h.cur_hp } : {}),
+                    },
+                    h.from_id,
+                )
                 reportSp(h.from_id, h.from_sp)
                 reportSp(h.tar_id, h.tar_sp, h.tar_sp === undefined ? h.delta_sp : 0)
                 if (heroBefore !== undefined) {

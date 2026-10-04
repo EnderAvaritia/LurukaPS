@@ -6,28 +6,42 @@ import { Protocol } from '../src/protocol.js'
 import { Store } from '../src/store.js'
 import { Game } from '../src/game.js'
 
-const config = configuration(), tables = new Tables(config.tables), protocol = new Protocol(config.base)
+const config = configuration(),
+    tables = new Tables(config.tables),
+    protocol = new Protocol(config.base)
 
 function setup() {
     const store = new Store(':memory:')
-    let now = 1_790_600_000, sequence = 1
-    const game = new Game(protocol, store, tables, { clock: () => now }), session = {}
+    let now = 1_790_600_000,
+        sequence = 1
+    const game = new Game(protocol, store, tables, { clock: () => now }),
+        session = {}
     const call = (name, body = {}, activeSession = session) => {
         const entry = protocol.byName.get('CSProto' + name)
-        return game.dispatch(activeSession, {
-            id: entry.id,
-            seq: sequence++,
-            pushSeq: 0,
-            payload: protocol.encode(entry.req, body),
-        }).map((packet) => ({
-            id: packet.id,
-            data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
-        }))
+        return game
+            .dispatch(activeSession, {
+                id: entry.id,
+                seq: sequence++,
+                pushSeq: 0,
+                payload: protocol.encode(entry.req, body),
+            })
+            .map((packet) => ({
+                id: packet.id,
+                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+            }))
     }
     call('EnterGame', { open_id: 'caress' })
     const target = store.load(session.id).state.pets.find((p) => p.config_id === 500261)
     assert(target)
-    return { store, session, target, call, advance: (seconds) => { now += seconds } }
+    return {
+        store,
+        session,
+        target,
+        call,
+        advance: (seconds) => {
+            now += seconds
+        },
+    }
 }
 
 test('legacy pet names are sent before home interaction and custom names remain intact', () => {
@@ -47,10 +61,13 @@ test('legacy pet names are sent before home interaction and custom names remain 
         call('PetChangeName', { guid: target.guid, pet_name: bytes('小奇波') }, reconnect)
         const again = {}
         const next = call('EnterGame', { open_id: 'caress' }, again)
-        const custom = next.find((packet) => packet.id === protocol.byName.get('CSProtoPetInfoSync').id)
+        const custom = next
+            .find((packet) => packet.id === protocol.byName.get('CSProtoPetInfoSync').id)
             .data.pet_infos.pets.find((p) => p.guid === target.guid)
         assert.equal(Buffer.from(custom.pet_name, 'base64').toString('utf8'), '小奇波')
-    } finally { store.close() }
+    } finally {
+        store.close()
+    }
 })
 
 test('home caress acknowledges the client, synchronizes favor first and respects configured daily cap', () => {
@@ -89,7 +106,9 @@ test('home caress acknowledges the client, synchronizes favor first and respects
         assert.equal(pet.daily_favor_count, 1)
         assert.equal(pet.favor_lv, 2)
         assert.equal(pet.favor_val, 50)
-    } finally { store.close() }
+    } finally {
+        store.close()
+    }
 })
 
 test('caress validates the home scene and owned pet before changing state', () => {
@@ -101,7 +120,9 @@ test('caress validates the home scene and owned pet before changing state', () =
         assert.throws(() => call('PetCaress', { u64: '999999999999999' }))
         const after = store.load(session.id).state.pets.find((p) => p.guid === target.guid)
         assert.deepEqual(after, before)
-    } finally { store.close() }
+    } finally {
+        store.close()
+    }
 })
 
 test('reconnect after the daily refresh clears the client caress counter', () => {
@@ -110,12 +131,18 @@ test('reconnect after the daily refresh clears the client caress counter', () =>
         call('EnterHome', { creator_id: session.id })
         for (let i = 0; i < 4; i++) call('PetCaress', { u64: target.guid })
         advance(86400)
-        const reconnect = {}, packets = call('EnterGame', { open_id: 'caress' }, reconnect)
+        const reconnect = {},
+            packets = call('EnterGame', { open_id: 'caress' }, reconnect)
         const sync = packets.find((packet) => packet.id === protocol.byName.get('CSProtoPetInfoSync').id)
         const pet = sync.data.pet_infos.pets.find((p) => p.guid === target.guid)
         assert.equal(pet.daily_favor_count, 0)
         assert(!pet.daily_favor_val?.some((record) => record.source_type === 4))
         const caress = call('PetCaress', { u64: target.guid }, reconnect)
-        assert.equal(caress.find((packet) => packet.id === protocol.byName.get('CSProtoPetCaress').id).data.favor_exp_add, 50)
-    } finally { store.close() }
+        assert.equal(
+            caress.find((packet) => packet.id === protocol.byName.get('CSProtoPetCaress').id).data.favor_exp_add,
+            50,
+        )
+    } finally {
+        store.close()
+    }
 })

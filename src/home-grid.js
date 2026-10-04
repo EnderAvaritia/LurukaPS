@@ -48,7 +48,9 @@ export function validatePlacement(tables, state, buildId, locate, ignoreGuid = 0
     for (const field of ['position', 'rotation', 'scale', 'center'])
         if (locate[field])
             ensure(
-                ['x', 'y', 'z'].every((axis) => locate[field][axis] === undefined || Number.isFinite(locate[field][axis])),
+                ['x', 'y', 'z'].every(
+                    (axis) => locate[field][axis] === undefined || Number.isFinite(locate[field][axis]),
+                ),
                 'Invalid building transform',
             )
     const block = tables.find('home_block', locate.block_id)

@@ -31,7 +31,8 @@ export class EntrustCatalog {
             const chest = this.tables.get('stamina_chest_drop').find((row) => row.worldFilter === `1|${dungeon.id}`)
             const city = chest && this.tables.find('world_city', chest.worldmapcityid)
             const scene = city && this.tables.find('dungeon_scene', city.id)
-            const point = city && this.tables.get('world_borthpos').find((row) => row.cityId === city.id && row.mainPoint === 1)
+            const point =
+                city && this.tables.get('world_borthpos').find((row) => row.cityId === city.id && row.mainPoint === 1)
             // The scene table can override the dungeon row's generic victory
             // count (for example, chapter boss scenes have one container).
             ensure(city && scene?.mapId === city.id && point, 'Entrust scene mapping unavailable', 1007)
@@ -43,12 +44,18 @@ export class EntrustCatalog {
     victoryObjects(id) {
         const { scene } = this.get(id)
         const [kind, spawner, , , count, ...extra] = String(scene.victoryCondition).split('#').map(Number)
-        ensure(kind === 2500 && spawner > 0 && count > 0 && !extra.length, 'Unsupported entrust victory condition', 1007)
+        ensure(
+            kind === 2500 && spawner > 0 && count > 0 && !extra.length,
+            'Unsupported entrust victory condition',
+            1007,
+        )
         const rows = this.tables.get(`worldmap_${scene.id}`).filter((row) => row.spawnerId === spawner)
         ensure(rows.length === count, 'Entrust victory objects do not match configuration', 1007)
         return rows.map((row) => {
             const group = this.tables.find('world_enemy_group', row.expandId)
-            const enemies = String(group?.enemyList ?? '').split('|').filter(Boolean)
+            const enemies = String(group?.enemyList ?? '')
+                .split('|')
+                .filter(Boolean)
             ensure(enemies.length > 0 && enemies.length <= 24, 'Entrust enemy group unavailable', 1007)
             return { objectId: row.id, count: enemies.length }
         })
@@ -57,19 +64,32 @@ export class EntrustCatalog {
     stages(id) {
         if (!this.stageCache.has(id)) {
             const { scene } = this.get(id)
-            const rows = this.tables.get(`worldmap_${scene.id}`).flatMap((row) => {
-                const token = String(row.expandParams ?? '').split('|').find((part) => part.startsWith('autoBattleIndex#'))
-                if (!token) return []
-                const index = Number(token.split('#')[1])
-                const type = this.tables.find('world_spawner', row.spawnerId)?.objectType
-                ensure(Number.isInteger(index) && index > 0 && [13, 30, 50].includes(type),
-                    'Unsupported entrust stage', 1007)
-                return [{ index, type, row }]
-            }).sort((a, b) => a.index - b.index)
-            ensure(rows.length >= 3 && rows[0].type === 13 && rows.at(-1).type === 30 &&
-                rows.slice(1, -1).every((row) => row.type === 50) &&
-                rows.every((row, index) => index === 0 || row.index > rows[index - 1].index),
-            'Invalid entrust stage order', 1007)
+            const rows = this.tables
+                .get(`worldmap_${scene.id}`)
+                .flatMap((row) => {
+                    const token = String(row.expandParams ?? '')
+                        .split('|')
+                        .find((part) => part.startsWith('autoBattleIndex#'))
+                    if (!token) return []
+                    const index = Number(token.split('#')[1])
+                    const type = this.tables.find('world_spawner', row.spawnerId)?.objectType
+                    ensure(
+                        Number.isInteger(index) && index > 0 && [13, 30, 50].includes(type),
+                        'Unsupported entrust stage',
+                        1007,
+                    )
+                    return [{ index, type, row }]
+                })
+                .sort((a, b) => a.index - b.index)
+            ensure(
+                rows.length >= 3 &&
+                    rows[0].type === 13 &&
+                    rows.at(-1).type === 30 &&
+                    rows.slice(1, -1).every((row) => row.type === 50) &&
+                    rows.every((row, index) => index === 0 || row.index > rows[index - 1].index),
+                'Invalid entrust stage order',
+                1007,
+            )
             this.stageCache.set(id, rows)
         }
         return this.stageCache.get(id)
@@ -92,15 +112,21 @@ export function settleEntrustVictory(tables, state, now) {
     const catalog = getEntrustCatalog(tables)
     if (!entrustVictoryComplete(catalog, state, run.entrust_id)) return false
     const { scene, entrust } = catalog.get(run.entrust_id)
-    const goals = tables.get('common_challenge').filter((row) => row.group === scene.challengeGroup && row.type === 1)
+    const goals = tables
+        .get('common_challenge')
+        .filter((row) => row.group === scene.challengeGroup && row.type === 1)
         .sort((a, b) => a.id - b.id)
     const elapsed = run.end_time - run.battle_start_time
     let mask = 0
     goals.forEach((goal, index) => {
         const [type, a, b] = String(goal.challengeCondition).split('#').map(Number)
         // Unsupported requirements must never award an unearned star.
-        const met = type === 3006 ? elapsed <= a
-            : type === 60007 && a === 0 ? run.hero_deaths !== undefined && run.hero_deaths < b : false
+        const met =
+            type === 3006
+                ? elapsed <= a
+                : type === 60007 && a === 0
+                  ? run.hero_deaths !== undefined && run.hero_deaths < b
+                  : false
         if (met) mask |= 1 << index
     })
     run.battle_complete = true
@@ -111,16 +137,24 @@ export function settleEntrustVictory(tables, state, now) {
     run.star_mask = mask
     run.star = goals.reduce((count, _, index) => count + ((mask >>> index) & 1), 0)
     if (run.damage_total === undefined) {
-        run.damage_total = String(Object.values(state.combat.entities).reduce((total, enemy) =>
-            total + (enemy.max_hp ? Math.max(0, enemy.max_hp - enemy.hp) : 0), 0))
+        run.damage_total = String(
+            Object.values(state.combat.entities).reduce(
+                (total, enemy) => total + (enemy.max_hp ? Math.max(0, enemy.max_hp - enemy.hp) : 0),
+                0,
+            ),
+        )
         run.damage_recovered_from_hp = true
     }
     const old = state.entrust.records[run.entrust_id]
     state.entrust.records[run.entrust_id] = {
-        ...old, entrust_id: run.entrust_id, entrust_star: Math.max(run.star, old?.entrust_star ?? 0),
-        success_time: String(old?.success_time ?? run.end_time), group_id: entrust.groupId, difficulty_id: 0,
+        ...old,
+        entrust_id: run.entrust_id,
+        entrust_star: Math.max(run.star, old?.entrust_star ?? 0),
+        success_time: String(old?.success_time ?? run.end_time),
+        group_id: entrust.groupId,
+        difficulty_id: 0,
         entrust_start_bit: (old?.entrust_start_bit ?? 0) | mask,
-        first_reward_claimed: old ? old.first_reward_claimed ?? true : false,
+        first_reward_claimed: old ? (old.first_reward_claimed ?? true) : false,
     }
     return true
 }
@@ -129,8 +163,18 @@ export function entrustChestSnapshot(tables, state) {
     const run = state.entrust?.run
     if (!run?.battle_complete) return { boxes: [] }
     const chest = getEntrustCatalog(tables).chest(run.entrust_id)
-    return { boxes: [{ box_id: chest.id, finish_time: run.chest_claimed ? 0 : run.chest_ready_time ?? run.end_time, map_id: run.map_id,
-        box_count: run.chest_claimed ? run.claim_times ?? 1 : 0, stage_type: 1, stage_id: run.dungeon_id }] }
+    return {
+        boxes: [
+            {
+                box_id: chest.id,
+                finish_time: run.chest_claimed ? 0 : (run.chest_ready_time ?? run.end_time),
+                map_id: run.map_id,
+                box_count: run.chest_claimed ? (run.claim_times ?? 1) : 0,
+                stage_type: 1,
+                stage_id: run.dungeon_id,
+            },
+        ],
+    }
 }
 
 export function entrustDamageSnapshot(state, accountId) {
@@ -138,7 +182,11 @@ export function entrustDamageSnapshot(state, accountId) {
 }
 
 export function entrustInfoSnapshot(state) {
-    return { data: Object.values(state.entrust?.records ?? {}).map(({ first_reward_claimed, pending_chest, ...wire }) => wire) }
+    return {
+        data: Object.values(state.entrust?.records ?? {}).map(
+            ({ first_reward_claimed, pending_chest, ...wire }) => wire,
+        ),
+    }
 }
 
 export function entrustStarRewardSnapshot(state) {
@@ -162,12 +210,14 @@ export function campaignSnapshot(run) {
         // This wire field is a configuration ID, not our per-run serial.
         // Keep instance_id server-side for cache isolation and fresh retries.
         dungeon_instance_id: run.dungeon_id,
-        scene_datas: [{
-            scene_id: run.map_id,
-            scene_status: run.status === 3 ? 1 : 0,
-            cur_step: Math.max(0, (run.stage_index ?? 1) - 1),
-            objs: run.scene_objects ?? [],
-        }],
+        scene_datas: [
+            {
+                scene_id: run.map_id,
+                scene_status: run.status === 3 ? 1 : 0,
+                cur_step: Math.max(0, (run.stage_index ?? 1) - 1),
+                objs: run.scene_objects ?? [],
+            },
+        ],
     }
 }
 
@@ -183,28 +233,32 @@ export function entrustMultiSnapshot(run) {
         map_id: run.map_id,
         line_id: 1,
         star: run.star_mask ?? 0,
-        clearance_time: String(run.end_time && run.battle_start_time ? (run.end_time - run.battle_start_time) * 1000 : 0),
+        clearance_time: String(
+            run.end_time && run.battle_start_time ? (run.end_time - run.battle_start_time) * 1000 : 0,
+        ),
     }
 }
 
 export function entrustMultiBaseSnapshot(state, accountId) {
     const manager = state.player.group_mgrs.find((entry) => entry.type === 1)
     const formation = manager?.groups.find((entry) => entry.id === manager.cur_group)
-    const active = (formation?.heros ?? []).map((entry) =>
-        state.player.heros_info.heros.find((hero) => hero.guid === entry.hero_id),
-    ).filter(Boolean)
+    const active = (formation?.heros ?? [])
+        .map((entry) => state.player.heros_info.heros.find((hero) => hero.guid === entry.hero_id))
+        .filter(Boolean)
     ensure(active.length > 0, 'Entrust formation has no hero')
     const control = active.find((hero) => hero.guid === formation.control) ?? active[0]
     return {
         dungeon_id: state.entrust.run.dungeon_id,
         dungeon_scene_id: state.entrust.run.map_id,
-        player_list: [{
-            player_id: accountId,
-            hero_id: control.conf_id,
-            name: Buffer.from(state.player.basic_info.name, 'base64').toString('utf8'),
-            lv: state.player.basic_info.lv,
-            heros: active.map((hero) => ({ hero_id: hero.conf_id })),
-        }],
+        player_list: [
+            {
+                player_id: accountId,
+                hero_id: control.conf_id,
+                name: Buffer.from(state.player.basic_info.name, 'base64').toString('utf8'),
+                lv: state.player.basic_info.lv,
+                heros: active.map((hero) => ({ hero_id: hero.conf_id })),
+            },
+        ],
         team_option_list: [{ player_id: accountId, stay: true }],
         player_status_list: [{ player_id: accountId, status: 1 }],
     }
@@ -270,10 +324,13 @@ export function ensureEntrustSceneObjects(tables, state, now) {
         const stage = stagesById.get(row.id)
         if (stage) {
             const finished = stage.index < run.stage_index
-            const active = stage.index === run.stage_index ||
-                (stage.type === 30 && finished)
-            if (record.active !== active || record.complete !== finished ||
-                record.state_data?.step !== (finished ? 1 : 0)) changed = true
+            const active = stage.index === run.stage_index || (stage.type === 30 && finished)
+            if (
+                record.active !== active ||
+                record.complete !== finished ||
+                record.state_data?.step !== (finished ? 1 : 0)
+            )
+                changed = true
             record.active = active
             record.complete = finished
             record.state_data = { ...record.state_data, step: finished ? 1 : 0, complete: finished }
@@ -284,7 +341,9 @@ export function ensureEntrustSceneObjects(tables, state, now) {
         // scene loads, including inactive later waves. All slots need their
         // level and pack at entry; active controls visibility, not metadata.
         const group = tables.find('world_enemy_group', row.expandId),
-            packs = String(group?.enemyList ?? '').split('|').filter(Boolean)
+            packs = String(group?.enemyList ?? '')
+                .split('|')
+                .filter(Boolean)
         ensure(packs.length > 0 && packs.length <= 24, 'Entrust enemy group unavailable', 1007)
         const monsters = packs.map((_, slot) => {
             const uid = ((3n << 56n) | (BigInt(slot) << 32n) | BigInt(row.id)).toString()
@@ -337,9 +396,11 @@ export function ensureEntrustSceneObjects(tables, state, now) {
 export function entrustVictoryComplete(catalog, state, id) {
     const { scene } = catalog.get(id)
     if (state.world.map_id !== scene.id || state.combat?.map_id !== scene.id) return false
-    return catalog.victoryObjects(id).every(({ objectId, count }) =>
-        Array.from({ length: count }, (_, slot) =>
-            ((3n << 56n) | (BigInt(slot) << 32n) | BigInt(objectId)).toString(),
-        ).every((uuid) => state.combat.entities[uuid]?.hp === 0),
-    )
+    return catalog
+        .victoryObjects(id)
+        .every(({ objectId, count }) =>
+            Array.from({ length: count }, (_, slot) =>
+                ((3n << 56n) | (BigInt(slot) << 32n) | BigInt(objectId)).toString(),
+            ).every((uuid) => state.combat.entities[uuid]?.hp === 0),
+        )
 }

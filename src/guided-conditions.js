@@ -15,23 +15,9 @@ const buildingGroups = new Map(
 const fieldGroups = new Set([2016, 2033])
 const shopTableDir = configuration().tables
 const shopTable = (name) => JSON.parse(fs.readFileSync(path.join(shopTableDir, `${name}.json`), 'utf8'))
-const shopSlots = new Map(
-    shopTable('shop_slot').map((row) => [
-        row.slotId,
-        row.slotParam,
-    ]),
-)
-const goods = new Map(
-    shopTable('goods').map((row) => [
-        row.goodsId,
-        row,
-    ]),
-)
-const commonItemTypes = new Map(
-    shopTable('common_item').map(
-        (row) => [row.id, row.type],
-    ),
-)
+const shopSlots = new Map(shopTable('shop_slot').map((row) => [row.slotId, row.slotParam]))
+const goods = new Map(shopTable('goods').map((row) => [row.goodsId, row]))
+const commonItemTypes = new Map(shopTable('common_item').map((row) => [row.id, row.type]))
 const productRows = new Map(shopTable('products').map((row) => [row.id, row]))
 const petGroups = new Map(
     JSON.parse(fs.readFileSync(new URL('../configs/task-tables/pet_rank.json', import.meta.url), 'utf8')).map((row) => [
@@ -53,19 +39,37 @@ export function guidedConditionValue(id, state, context) {
         .map(Number)
     // HomePetStation: pet group, exact pet ID, EStationType, capacity, count.
     // EStationType.Crop=3 counts occupied, placed field-house work slots.
-    if (parts.length === 6 && parts[0] === 12032 && parts[3] === 3 &&
-        [parts[1], parts[2], parts[4]].every(value => Number.isInteger(value) && value >= 0) &&
-        Number.isInteger(parts[5]) && parts[5] > 0) {
+    if (
+        parts.length === 6 &&
+        parts[0] === 12032 &&
+        parts[3] === 3 &&
+        [parts[1], parts[2], parts[4]].every((value) => Number.isInteger(value) && value >= 0) &&
+        Number.isInteger(parts[5]) &&
+        parts[5] > 0
+    ) {
         const stationed = new Set()
         for (const build of state.home?.builds ?? []) {
             if (build.build_type !== 16 || !build.locate) continue
-            for (const [capacity, field] of [[1001, 'plant_pet'], [1002, 'water_pet'], [1003, 'harvest_pet']]) {
+            for (const [capacity, field] of [
+                [1001, 'plant_pet'],
+                [1002, 'water_pet'],
+                [1003, 'harvest_pet'],
+            ]) {
                 if (parts[4] && capacity !== parts[4]) continue
                 const id = build.auto_info?.[field]
-                const pet = (state.pets ?? []).find(pet => pet.guid === id && pet.work_status === 5 &&
-                    pet.work_build === build.guid && pet.capacity_id === capacity)
-                if (!pet || (parts[1] && petGroups.get(pet.config_id) !== parts[1]) ||
-                    (parts[2] && pet.config_id !== parts[2])) continue
+                const pet = (state.pets ?? []).find(
+                    (pet) =>
+                        pet.guid === id &&
+                        pet.work_status === 5 &&
+                        pet.work_build === build.guid &&
+                        pet.capacity_id === capacity,
+                )
+                if (
+                    !pet ||
+                    (parts[1] && petGroups.get(pet.config_id) !== parts[1]) ||
+                    (parts[2] && pet.config_id !== parts[2])
+                )
+                    continue
                 stationed.add(id)
             }
         }
@@ -79,20 +83,18 @@ export function guidedConditionValue(id, state, context) {
     // DungeonEntrustFinish checks the best star count of the configured
     // commission. A mere EnterEntrust request never completes this condition.
     if (
-        parts.length === 3 && parts[0] === 13044 &&
-        Number.isInteger(parts[1]) && parts[1] > 0 &&
-        Number.isInteger(parts[2]) && parts[2] > 0
+        parts.length === 3 &&
+        parts[0] === 13044 &&
+        Number.isInteger(parts[1]) &&
+        parts[1] > 0 &&
+        Number.isInteger(parts[2]) &&
+        parts[2] > 0
     )
         return state.entrust?.records?.[parts[1]]?.entrust_star ?? 0
     // CBT3 common_condition 12030 is ActivationPoint. The local server seeds
     // all configured transfer points, so evaluate the configured point ID
     // against that authoritative unlocked-point list.
-    if (
-        parts.length === 2 &&
-        parts[0] === 12030 &&
-        Number.isInteger(parts[1]) &&
-        parts[1] > 0
-    )
+    if (parts.length === 2 && parts[0] === 12030 && Number.isInteger(parts[1]) && parts[1] > 0)
         return (state.world?.points ?? []).includes(parts[1]) ? 1 : 0
     // CBT3 conditionNode_12027 reads HomeStore buildingBag.used_num by group.
     if (
@@ -141,17 +143,22 @@ export function guidedConditionValue(id, state, context) {
     // HomeProducts counts output collected from the configured recipe. Jobs
     // still in a production queue do not count as completed food.
     if (
-        parts.length === 5 && parts[0] === 12018 &&
-        parts.slice(1).every((value) => Number.isInteger(value) && value > 0) && row.formulaId > 0
+        parts.length === 5 &&
+        parts[0] === 12018 &&
+        parts.slice(1).every((value) => Number.isInteger(value) && value > 0) &&
+        row.formulaId > 0
     ) {
         const recipe = productRows.get(row.formulaId)
         const [, , rewardType, itemId] = parts
-        const perCraft = String(recipe?.rewardId || '').split('|')
+        const perCraft = String(recipe?.rewardId || '')
+            .split('|')
             .map((entry) => entry.split('#').map(Number))
             .filter(([type, id, count]) => type === rewardType && id === itemId && count > 0)
             .reduce((sum, [, , count]) => sum + count, 0)
-        return perCraft * (state.home?.craftCounts?.[row.formulaId] ?? 0) +
-            (parts[1] === 10 && rewardType === 3 ? state.home?.cookCounts?.[itemId] ?? 0 : 0)
+        return (
+            perCraft * (state.home?.craftCounts?.[row.formulaId] ?? 0) +
+            (parts[1] === 10 && rewardType === 3 ? (state.home?.cookCounts?.[itemId] ?? 0) : 0)
+        )
     }
     // KiboBoardFoodType counts distinct foods stocked at placed pet tables.
     // A bag item or an empty/removable table does not satisfy this condition.
@@ -165,12 +172,21 @@ export function guidedConditionValue(id, state, context) {
         return types.size
     }
     // KiboBoardFoodNum reads food actually stocked at placed pet tables.
-    if (parts.length === 3 && parts[0] === 15013 && parts.slice(1).every((value) =>
-        Number.isInteger(value) && value > 0))
-        return (state.home?.builds ?? []).reduce((total, build) =>
-            total + (build.build_type === 6 ? (build.pet_canteen?.foods ?? [])
-                .filter((food) => food.itemid === parts[1])
-                .reduce((sum, food) => sum + food.itemnum, 0) : 0), 0)
+    if (
+        parts.length === 3 &&
+        parts[0] === 15013 &&
+        parts.slice(1).every((value) => Number.isInteger(value) && value > 0)
+    )
+        return (state.home?.builds ?? []).reduce(
+            (total, build) =>
+                total +
+                (build.build_type === 6
+                    ? (build.pet_canteen?.foods ?? [])
+                          .filter((food) => food.itemid === parts[1])
+                          .reduce((sum, food) => sum + food.itemnum, 0)
+                    : 0),
+            0,
+        )
     // common_condition 12067 is PortableProduction. The table specifies the
     // produced reward type and ID; only settled quick-production output counts.
     if (
@@ -189,13 +205,7 @@ export function guidedConditionValue(id, state, context) {
     )
         return state.home?.craftCounts?.[row.formulaId] ?? 0
     // HomeHubKibo mode 1 counts pets actually stationed in the home hub.
-    if (
-        parts.length === 3 &&
-        parts[0] === 12070 &&
-        parts[1] === 1 &&
-        Number.isInteger(parts[2]) &&
-        parts[2] > 0
-    ) {
+    if (parts.length === 3 && parts[0] === 12070 && parts[1] === 1 && Number.isInteger(parts[2]) && parts[2] > 0) {
         const stationed = new Set((state.home?.stationPets ?? []).map(String))
         return (state.pets ?? []).filter((pet) => stationed.has(String(pet.guid)) && pet.work_status === 7).length
     }

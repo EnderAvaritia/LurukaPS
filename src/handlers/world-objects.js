@@ -7,27 +7,42 @@ import { taskNodeCompleted } from '../tasks.js'
 // World resource prefabs do not expose their drop ID in worldmap/world_spawner.
 // These IDs match the shipped resource variants and their configured drop pools.
 const collectionFinalDrops = new Map([
-    [650010, 44001], [650020, 44003], [650030, 44004],
-    [650170, 41091], [650180, 41092], [650190, 41001],
-    [650270, 43012], [650290, 43001], [650291, 43001],
-    [650310, 43004], [650320, 43005], [650340, 43002],
-    [650560, 42091], [650890, 41093], [650910, 44002],
-    [651004, 41095], [651006, 41094], [651013, 43011], [651014, 43011],
+    [650010, 44001],
+    [650020, 44003],
+    [650030, 44004],
+    [650170, 41091],
+    [650180, 41092],
+    [650190, 41001],
+    [650270, 43012],
+    [650290, 43001],
+    [650291, 43001],
+    [650310, 43004],
+    [650320, 43005],
+    [650340, 43002],
+    [650560, 42091],
+    [650890, 41093],
+    [650910, 44002],
+    [651004, 41095],
+    [651006, 41094],
+    [651013, 43011],
+    [651014, 43011],
 ])
 function worldCondition(value, state) {
     if (!value) return true
-    return String(value).split('|').every((part) => {
-        const [kind, a, b, ...extra] = part.split('#').map(Number)
-        ensure(!extra.length && [kind, a].every(Number.isInteger), 'Invalid world object condition', 1007)
-        if (kind === 2004) return state.player.basic_info.lv >= a
-        if (kind === 2007)
-            return (state.taskRecords ?? []).some((record) => record.task_id === a && record.count > 0)
-        if (kind === 12045) {
-            ensure(Number.isInteger(b) && b > 0, 'Invalid task-step appearance condition', 1007)
-            return taskNodeCompleted(state, a, b)
-        }
-        ensure(false, `Unsupported world object condition ${kind}`, 1007)
-    })
+    return String(value)
+        .split('|')
+        .every((part) => {
+            const [kind, a, b, ...extra] = part.split('#').map(Number)
+            ensure(!extra.length && [kind, a].every(Number.isInteger), 'Invalid world object condition', 1007)
+            if (kind === 2004) return state.player.basic_info.lv >= a
+            if (kind === 2007)
+                return (state.taskRecords ?? []).some((record) => record.task_id === a && record.count > 0)
+            if (kind === 12045) {
+                ensure(Number.isInteger(b) && b > 0, 'Invalid task-step appearance condition', 1007)
+                return taskNodeCompleted(state, a, b)
+            }
+            ensure(false, `Unsupported world object condition ${kind}`, 1007)
+        })
 }
 function stateData(input, depth = 0) {
     ensure(depth < 8 && (input.children ?? []).length <= 64, 'World state nesting limit')
@@ -43,12 +58,18 @@ function stateData(input, depth = 0) {
 }
 function collectingRows(catalog, spawnerId) {
     return catalog.get('world_collecting').filter((row) =>
-        String(row.spawnerId).split('|').some((id) => Number(id) === spawnerId))
+        String(row.spawnerId)
+            .split('|')
+            .some((id) => Number(id) === spawnerId),
+    )
 }
 function collectionReward(catalog, spawner, collecting) {
     const dropId = collectionFinalDrops.get(spawner.resourceId)
-    const primary = dropId && catalog.get('drop').find((row) =>
-        row.dropId === dropId && row.dropGroupId === 1 && row.type === 3 && row.itemId > 0)
+    const primary =
+        dropId &&
+        catalog
+            .get('drop')
+            .find((row) => row.dropId === dropId && row.dropGroupId === 1 && row.type === 3 && row.itemId > 0)
     const ordinary = primary
         ? { itemtype: primary.type, itemid: primary.itemId, itemnum: 1 }
         : collecting.length
@@ -185,11 +206,14 @@ export function registerWorldObjects(on, tables) {
                             rewards.push(...catalog.drops(dropId, c.randomInt))
                             dropIds.push(dropId)
                             claims.finalDrop_v2 = true
-                        } else rewards.push(...collecting.map((entry) => ({
-                            itemtype: entry.itemType,
-                            itemid: entry.itemId,
-                            itemnum: 1,
-                        })))
+                        } else
+                            rewards.push(
+                                ...collecting.map((entry) => ({
+                                    itemtype: entry.itemType,
+                                    itemid: entry.itemId,
+                                    itemnum: 1,
+                                })),
+                            )
                         claims.complete = true
                     }
                 }

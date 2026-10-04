@@ -24,14 +24,16 @@ function isSingleEntrust(c) {
 
 function unlocked(rule, state) {
     if (!rule) return true
-    return String(rule).split('|').every((part) => {
-        const [kind, id, stars, ...extra] = part.split('#').map(Number)
-        if (extra.length) return false
-        if (kind === 2004) return state.player.basic_info.lv >= id
-        if (kind === 2007) return (state.taskRecords ?? []).some((task) => task.task_id === id && task.count > 0)
-        if (kind === 13044) return (state.entrust?.records?.[id]?.entrust_star ?? 0) >= stars
-        return false
-    })
+    return String(rule)
+        .split('|')
+        .every((part) => {
+            const [kind, id, stars, ...extra] = part.split('#').map(Number)
+            if (extra.length) return false
+            if (kind === 2004) return state.player.basic_info.lv >= id
+            if (kind === 2007) return (state.taskRecords ?? []).some((task) => task.task_id === id && task.count > 0)
+            if (kind === 13044) return (state.entrust?.records?.[id]?.entrust_star ?? 0) >= stars
+            return false
+        })
 }
 
 function claimEntrustChest(c, times = 1) {
@@ -39,7 +41,8 @@ function claimEntrustChest(c, times = 1) {
     const run = c.state.entrust?.run
     ensure(run?.battle_complete && run.map_id === c.state.world.map_id, 'Entrust battle is not finished')
     if (run.chest_claimed) return []
-    const catalog = getEntrustCatalog(c.tables), chest = catalog.chest(run.entrust_id)
+    const catalog = getEntrustCatalog(c.tables),
+        chest = catalog.chest(run.entrust_id)
     ensure(c.now <= (run.chest_ready_time ?? run.end_time) + chest.time, 'Entrust chest expired')
     ensure(times === 1 || chest.multimes === 1, 'Chest does not support multiple claims')
     for (const cost of parseRewards(chest.need)) {
@@ -53,16 +56,20 @@ function claimEntrustChest(c, times = 1) {
     }
     // Roll independently for each paid share, with the normal shared drop
     // budget. Costs, rewards and receipt commit atomically in dispatch.
-    const drops = new WorldObjectCatalog(c.tables), budget = { count: 0 }, merged = new Map()
+    const drops = new WorldObjectCatalog(c.tables),
+        budget = { count: 0 },
+        merged = new Map()
     for (let i = 0; i < times; i++) {
         ensure(i < 4096, 'Drop roll limit', 1007)
         for (const reward of drops.drops(chest.drop, c.randomInt, budget)) {
-            const key = `${reward.itemtype}:${reward.itemid}`, old = merged.get(key)
+            const key = `${reward.itemtype}:${reward.itemid}`,
+                old = merged.get(key)
             if (old) old.itemnum += reward.itemnum
             else merged.set(key, { ...reward })
         }
     }
-    const rewards = [...merged.values()], exp = catalog.get(run.entrust_id).dungeon.userExp
+    const rewards = [...merged.values()],
+        exp = catalog.get(run.entrust_id).dungeon.userExp
     if (exp > 0) rewards.push({ itemtype: 10, itemid: 10, itemnum: exp * times })
     run.rewards = grantRewards(c.tables, c.state, rewards)
     run.chest_claimed = true
@@ -91,9 +98,10 @@ function syncStage(c, previousEnemyObjectId) {
     // running a second scene-entry flow.
     c.push('CSProtoOnlineModeChange', { mode: isSingleEntrust(c) ? 5 : 4 })
     c.push('CSProtoWorldMapSync', {
-        cmd: 47, creator_id: c.id, map_id: c.state.world.map_id,
-        map_info: { creator_id: c.id, map_id: c.state.world.map_id,
-            objs: c.state.entrust.run.scene_objects },
+        cmd: 47,
+        creator_id: c.id,
+        map_id: c.state.world.map_id,
+        map_info: { creator_id: c.id, map_id: c.state.world.map_id, objs: c.state.entrust.run.scene_objects },
     })
     syncEntrustEnemyBattle(c, previousEnemyObjectId)
 }
@@ -108,26 +116,37 @@ export function syncEntrustEnemyBattle(c, previousEnemyObjectId) {
         c.push('SCProtoControlChangeByDelNtf', { agent_uid })
         c.push('SCProtoObjDisappearNtf', { agent_uid })
     }
-    const enemies = Object.values(c.state.combat.entities ?? {}).filter((enemy) =>
-        c.state.worldObjects?.[`${run.map_id}:${enemy.object_id}`]?.active,
+    const enemies = Object.values(c.state.combat.entities ?? {}).filter(
+        (enemy) => c.state.worldObjects?.[`${run.map_id}:${enemy.object_id}`]?.active,
     )
     for (const objectId of single ? [] : new Set(enemies.map((enemy) => enemy.object_id))) {
         const agent_uid = groupAgent(objectId)
         // Static groups already have their members in WorldObj.battle_group.
         // Appear registers the group AOI record and removes preload hide 300;
         // ownership must follow it so MapService can resolve that record.
-        c.push('SCProtoObjAppearNtf', { agent_uid, agent_type: 4,
+        c.push('SCProtoObjAppearNtf', {
+            agent_uid,
+            agent_type: 4,
             obj: { obj_id: objectId, obj_type: 3 },
-            lv: enemies.find((enemy) => enemy.object_id === objectId).level })
+            lv: enemies.find((enemy) => enemy.object_id === objectId).level,
+        })
         c.push('SCProtoControlChangeByAddNtf', { agent_uid, cli_data: { uuid: agent_uid } })
     }
     if (!single && run.battle_complete && !run.chest_claimed) {
         const chest = getEntrustCatalog(c.tables).chest(run.entrust_id)
-        c.push('SCProtoObjAppearNtf', { agent_uid: ((8n << 56n) | BigInt(chest.worldmapid)).toString(),
-            agent_type: 9, obj: { obj_id: chest.worldmapid, obj_type: 0 } })
+        c.push('SCProtoObjAppearNtf', {
+            agent_uid: ((8n << 56n) | BigInt(chest.worldmapid)).toString(),
+            agent_type: 9,
+            obj: { obj_id: chest.worldmapid, obj_type: 0 },
+        })
     }
-    const infos = enemies.map((enemy) => ({ uuid: enemy.uuid, hp: enemy.hp, sp: enemy.sp ?? 0,
-        alive_state: enemy.alive_state ?? (enemy.hp > 0 ? 0 : 1), reason: 1 }))
+    const infos = enemies.map((enemy) => ({
+        uuid: enemy.uuid,
+        hp: enemy.hp,
+        sp: enemy.sp ?? 0,
+        alive_state: enemy.alive_state ?? (enemy.hp > 0 ? 0 : 1),
+        reason: 1,
+    }))
     if (infos.length) c.push('CSProtoObjBattleInfoSync', { infos })
 }
 
@@ -139,12 +158,17 @@ export function validateEntrustObjectInteraction(c, objectId, completing) {
     if (!stage) return
     ensure(stage.index <= context.run.stage_index, 'Entrust stage is not active')
     if (stage.type === 50 && stage.index === context.run.stage_index)
-        ensure(context.catalog.victoryObjects(context.run.entrust_id)
-            .find((entry) => entry.objectId === objectId)?.count > 0 &&
-            Object.values(c.state.combat?.entities ?? {}).filter((enemy) =>
-                enemy.object_id === objectId && enemy.hp === 0).length ===
-            String(c.tables.find('world_enemy_group', stage.row.expandId)?.enemyList ?? '').split('|').filter(Boolean).length,
-        'Entrust enemy group is still alive')
+        ensure(
+            context.catalog.victoryObjects(context.run.entrust_id).find((entry) => entry.objectId === objectId)?.count >
+                0 &&
+                Object.values(c.state.combat?.entities ?? {}).filter(
+                    (enemy) => enemy.object_id === objectId && enemy.hp === 0,
+                ).length ===
+                    String(c.tables.find('world_enemy_group', stage.row.expandId)?.enemyList ?? '')
+                        .split('|')
+                        .filter(Boolean).length,
+            'Entrust enemy group is still alive',
+        )
 }
 
 export function completeEntrustObject(c, objectId, completing) {
@@ -163,8 +187,10 @@ export function completeEntrustObject(c, objectId, completing) {
         return []
     }
     if (stage.type !== 30) return []
-    ensure(position === stages.length - 1 && entrustVictoryComplete(context.catalog, c.state, run.entrust_id),
-        'Entrust battle is not finished')
+    ensure(
+        position === stages.length - 1 && entrustVictoryComplete(context.catalog, c.state, run.entrust_id),
+        'Entrust battle is not finished',
+    )
     return claimEntrustChest(c)
 }
 
@@ -176,10 +202,16 @@ export function advanceEntrustCombat(c) {
     const stage = stages[position]
     if (!stage || stage.type !== 50) return false
     const group = c.tables.find('world_enemy_group', stage.row.expandId),
-        count = String(group?.enemyList ?? '').split('|').filter(Boolean).length
-    if (!count || !Array.from({ length: count }, (_, slot) =>
-        ((3n << 56n) | (BigInt(slot) << 32n) | BigInt(stage.row.id)).toString(),
-    ).every((uid) => c.state.combat?.entities?.[uid]?.hp === 0)) return false
+        count = String(group?.enemyList ?? '')
+            .split('|')
+            .filter(Boolean).length
+    if (
+        !count ||
+        !Array.from({ length: count }, (_, slot) =>
+            ((3n << 56n) | (BigInt(slot) << 32n) | BigInt(stage.row.id)).toString(),
+        ).every((uid) => c.state.combat?.entities?.[uid]?.hp === 0)
+    )
+        return false
     // Battle reports share untouched world records. Fork these ten-ish scene
     // objects only when a wave ends, not on each high-frequency hit.
     c.state.worldObjects = { ...c.state.worldObjects }
@@ -238,7 +270,10 @@ export function registerEntrust(on, tables) {
             active = c.state.entrust?.run
         ensure(unlocked(config.entrust.taskUnlock, c.state), 'Entrust is locked', 10266)
         ensure(!c.state.multiCampaign, 'Another dungeon is active')
-        ensure(!active || (restart && active.entrust_id === id && [2, 3].includes(active.status)), 'Another entrust is active')
+        ensure(
+            !active || (restart && active.entrust_id === id && [2, 3].includes(active.status)),
+            'Another entrust is active',
+        )
         const entrust = (c.state.entrust ??= { records: {}, starRewards: {}, nextInstanceId: 1 })
         {
             const w = c.state.world
@@ -282,7 +317,11 @@ export function registerEntrust(on, tables) {
     on('EnterDungeonScene', (c, r) => {
         if (c.state.storyCampaign) return enterStoryCampaignScene(c, r)
         const run = c.state.entrust?.run
-        ensure(run && [2, 3].includes(run.status) && (!r.scene_id || r.scene_id === run.map_id), 'Entrust scene is not active', 10275)
+        ensure(
+            run && [2, 3].includes(run.status) && (!r.scene_id || r.scene_id === run.map_id),
+            'Entrust scene is not active',
+            10275,
+        )
         ensure(!r.creator_id || r.creator_id === c.id, 'Entrust creator mismatch')
         ensureEntrustSceneObjects(tables, c.state, c.now)
         sync(c, run)
@@ -292,8 +331,10 @@ export function registerEntrust(on, tables) {
     on('MultiCampaignPlayerLoadFinish', (c) => {
         const run = c.state.entrust?.run
         if (!run) {
-            ensure(c.state.multiCampaign && c.state.world.map_id === c.state.multiCampaign.map_id,
-                'No active dungeon loading')
+            ensure(
+                c.state.multiCampaign && c.state.world.map_id === c.state.multiCampaign.map_id,
+                'No active dungeon loading',
+            )
             c.pushBefore('CSProtoMultiCampaignPlayerLoadingPageCompleteNtf', { u32: c.id })
             return
         }
@@ -328,7 +369,7 @@ export function registerEntrust(on, tables) {
         sync(c, run)
         return {}
     })
-    on('CampaignQuit', (c) => c.state.storyCampaign ? exitStoryCampaign(c) : exitEntrust(c))
+    on('CampaignQuit', (c) => (c.state.storyCampaign ? exitStoryCampaign(c) : exitEntrust(c)))
     on('StaminaBoxGet', (c, r) => {
         const run = c.state.entrust?.run
         ensure(run && r.box_id === catalog.chest(run.entrust_id).id, 'Invalid entrust chest claim')
@@ -344,14 +385,24 @@ export function registerEntrust(on, tables) {
             const row = tables.find('dungeon_entrust_reward', id)
             ensure(row, 'Entrust star reward unavailable', 10263)
             ensure(row.dungeonEntrustType === 1, 'Entrust reward belongs to another mode', 10263)
-            const total = Object.values(entrust.records).reduce((sum, record) =>
-                sum + (record.group_id === row.dungeonEntrustGroup ? record.entrust_star : 0), 0)
+            const total = Object.values(entrust.records).reduce(
+                (sum, record) => sum + (record.group_id === row.dungeonEntrustGroup ? record.entrust_star : 0),
+                0,
+            )
             ensure(total >= row.starNum, 'Entrust star requirement not reached', 10265)
             ensure(!entrust.starRewards[id], 'Entrust star reward already claimed', 10264)
-            rewards.push(...grantRewards(tables, c.state, String(row.reward).split('|').map((item) => {
-                const [itemtype, itemid, itemnum] = item.split('#').map(Number)
-                return { itemtype, itemid, itemnum }
-            })))
+            rewards.push(
+                ...grantRewards(
+                    tables,
+                    c.state,
+                    String(row.reward)
+                        .split('|')
+                        .map((item) => {
+                            const [itemtype, itemid, itemnum] = item.split('#').map(Number)
+                            return { itemtype, itemid, itemnum }
+                        }),
+                ),
+            )
             entrust.starRewards[id] = { reward_id: id, reward_time: c.now }
         }
         syncPlayer({ ...c, push: c.pushBefore })
