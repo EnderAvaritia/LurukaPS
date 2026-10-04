@@ -288,7 +288,7 @@ test('entry sends one Base64 server notice into each session world chat after it
         for (const decoded of [decodedA, decodedB]) {
             assert.equal(decoded.target.chat_type, 2)
             assert.equal(decoded.target.tid, '1')
-            assert.equal(decoded.chat.msg, 'QXp1ckpTIOaYr+WFjei0ueeahO+8jOS7heS+m+WtpuS5oOeglOeptuWNj+iuruWunueOsO+8jOS4peemgeeUqOS6juWVhuS4mueUqOmAlOOAgkF6dXJKUyBpcyBmcmVlIGFuZCBpbnRlbmRlZCBmb3IgbGVhcm5pbmcgYW5kIHByb3RvY29sIHJlc2VhcmNoIG9ubHk7IGNvbW1lcmNpYWwgdXNlIGlzIHByb2hpYml0ZWQu')
+            assert.equal(decoded.chat.msg, 'THVydWthUFMg5piv5YWN6LS555qE77yM5LuF5L6b5a2m5Lmg56CU56m25Y2P6K6u5a6e546w77yM5Lil56aB55So5LqO5ZWG5Lia55So6YCU44CCTHVydWthUFMgaXMgZnJlZSBhbmQgaW50ZW5kZWQgZm9yIGxlYXJuaW5nIGFuZCBwcm90b2NvbCByZXNlYXJjaCBvbmx5OyBjb21tZXJjaWFsIHVzZSBpcyBwcm9oaWJpdGVkLg==')
             assert.equal(decoded.chat.player_id, 0)
             assert.equal(decoded.chat.basic_info.stand_plates.profile, 10114)
             assert.equal(decoded.chat.basic_info.stand_plates.profile_frame, 10231)

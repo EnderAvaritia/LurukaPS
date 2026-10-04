@@ -14,9 +14,9 @@ import { FrameReader, encodeFrame } from './wire.js'
 
 const ENTRY_WORLD_CHAT_DELAY_MS = 15_000
 const ENTRY_WORLD_CHAT_TEXT_BASE64 =
-    'QXp1ckpTIOaYr+WFjei0ueeahO+8jOS7heS+m+WtpuS5oOeglOeptuWNj+iuruWunueOsO+8jOS4peemgeeUqOS6juWVhuS4mueUqOmAlOOAgkF6dXJKUyBpcyBmcmVlIGFuZCBpbnRlbmRlZCBmb3IgbGVhcm5pbmcgYW5kIHByb3RvY29sIHJlc2VhcmNoIG9ubHk7IGNvbW1lcmNpYWwgdXNlIGlzIHByb2hpYml0ZWQu'
-const AZURJS_CHAT_PROFILE_HEAD_ID = 10114 // CBT3 playercard_dress entry for Luluka
-const AZURJS_CHAT_PROFILE_FRAME_ID = 10231 // CBT3 playercard_dress: Kibo Duel Legend frame
+    'THVydWthUFMg5piv5YWN6LS555qE77yM5LuF5L6b5a2m5Lmg56CU56m25Y2P6K6u5a6e546w77yM5Lil56aB55So5LqO5ZWG5Lia55So6YCU44CCTHVydWthUFMgaXMgZnJlZSBhbmQgaW50ZW5kZWQgZm9yIGxlYXJuaW5nIGFuZCBwcm90b2NvbCByZXNlYXJjaCBvbmx5OyBjb21tZXJjaWFsIHVzZSBpcyBwcm9oaWJpdGVkLg=='
+const LURUKAPS_CHAT_PROFILE_HEAD_ID = 10114 // CBT3 playercard_dress entry for Luluka
+const LURUKAPS_CHAT_PROFILE_FRAME_ID = 10231 // CBT3 playercard_dress: Kibo Duel Legend frame
 
 async function readJsonBody(req, maxBytes = 1024 * 1024) {
     const chunks = []
@@ -121,8 +121,8 @@ export async function startServer(config, logger = console) {
                                 birth: 0,
                                 lv: 80,
                                 stand_plates: {
-                                    profile: AZURJS_CHAT_PROFILE_HEAD_ID,
-                                    profile_frame: AZURJS_CHAT_PROFILE_FRAME_ID,
+                                    profile: LURUKAPS_CHAT_PROFILE_HEAD_ID,
+                                    profile_frame: LURUKAPS_CHAT_PROFILE_FRAME_ID,
                                 },
                             },
                             extra_info: '',
@@ -392,7 +392,7 @@ export async function startServer(config, logger = console) {
                     scrolling: {},
                     gateway: {
                         meta: {},
-                        name: 'azurjs',
+                        name: 'LurukaPS',
                         orderId: 0,
                         tabId: 0,
                         endTime: 2000000000,

@@ -186,7 +186,7 @@ test('direct pet rewards allocate distinct 64-bit identities and roll back inval
 })
 
 test('hatch queues retain their result and progress across a database restart', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azurjs-hatch-')),
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lurukaps-hatch-')),
         file = path.join(dir, 'state.sqlite')
     let f = setup(file),
         store = f.store
@@ -224,7 +224,7 @@ test('hatch queues retain their result and progress across a database restart', 
     } finally {
         store.close()
         assert.equal(path.dirname(dir), os.tmpdir())
-        assert(path.basename(dir).startsWith('azurjs-hatch-'))
+        assert(path.basename(dir).startsWith('lurukaps-hatch-'))
         fs.rmSync(dir, { recursive: true })
     }
 })

@@ -22,7 +22,7 @@ function call(game, session, name, r = {}) {
     return packets.map((p) => ({ id: p.id, data: protocol.decode(protocol.byId.get(p.id).rsp, p.payload) }))
 }
 test('login, account isolation, durable changes and rollback', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azurjs-test-')),
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lurukaps-test-')),
         filename = path.join(dir, 'state.sqlite')
     let store = new Store(filename)
     let game = new Game(protocol, store, tables)

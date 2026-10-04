@@ -15,7 +15,7 @@ const cfg = configuration(),
     tables = new Tables(cfg.tables)
 
 test('high-frequency combat reports stay in memory until a critical request or shutdown', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azurjs-combat-memory-')),
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lurukaps-combat-memory-')),
         file = path.join(dir, 'state.sqlite')
     let store = new Store(file, { flushIntervalMs: 60000 })
     const game = new Game(protocol, store, tables),

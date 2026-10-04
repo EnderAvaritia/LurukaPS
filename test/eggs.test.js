@@ -14,7 +14,7 @@ const c = configuration(),
     t = new Tables(c.tables),
     p = new Protocol(c.base)
 test('shop egg awards have unique GUIDs, precede the reply, and persist across restart', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azurjs-eggs-')),
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lurukaps-eggs-')),
         db = path.join(dir, 'state.sqlite')
     let store = new Store(db),
         game = new Game(p, store, t),
@@ -60,7 +60,7 @@ test('shop egg awards have unique GUIDs, precede the reply, and persist across r
     } finally {
         store.close()
         assert.equal(path.dirname(dir), os.tmpdir())
-        assert(path.basename(dir).startsWith('azurjs-eggs-'))
+        assert(path.basename(dir).startsWith('lurukaps-eggs-'))
         fs.rmSync(dir, { recursive: true })
     }
 })

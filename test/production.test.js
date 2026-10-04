@@ -134,7 +134,7 @@ test('completed task unlocks a type-25 saddle recipe supported by grantRewards',
     } finally { store.close() }
 })
 test('absolute queue timestamps survive SQLite restart and offline time', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'azurjs-production-')),
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lurukaps-production-')),
         file = path.join(dir, 'state.sqlite')
     let fixture = setup(file),
         store = fixture.store
@@ -167,7 +167,7 @@ test('absolute queue timestamps survive SQLite restart and offline time', () => 
     } finally {
         store.close()
         assert.equal(path.dirname(dir), os.tmpdir())
-        assert(path.basename(dir).startsWith('azurjs-production-'))
+        assert(path.basename(dir).startsWith('lurukaps-production-'))
         fs.rmSync(dir, { recursive: true })
     }
 })

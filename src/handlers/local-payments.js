@@ -19,7 +19,7 @@ export function registerLocalPayments(on, tables, store, { enabled = true } = {}
             r = { ...input, purchase_sdk_id: goods.purchaseSdkID }
         }
         ensure(enabled, 'Offline payments are disabled')
-        const match = /^azurjs-offline:([a-z0-9-]{8,64}):(.*)$/i.exec(r.product_id ?? '')
+        const match = /^(?:lurukaps|azurjs)-offline:([a-z0-9-]{8,64}):(.*)$/i.exec(r.product_id ?? '')
         const product = match?.[2] ?? r.product_id ?? ''
         ensure(product.length <= 512, 'Product metadata too long')
         ensure(match || c.requestKey, 'Order request has no stable sequence')
@@ -48,7 +48,7 @@ export function registerLocalPayments(on, tables, store, { enabled = true } = {}
                 errcode: LOCAL_CALLBACK_NOTICE,
                 order_id: order.id,
                 purchase_sdk_id: 0,
-                purchase_sdk_item: 'azurjs-offline',
+                purchase_sdk_item: 'lurukaps-offline',
                 buy_count: count,
                 ext_info: 'offline-simulated',
                 ...(isMall ? { pay_shop_id: r.pay_shop_id, pay_goods_id: r.pay_goods_id } : {}),

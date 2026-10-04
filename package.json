@@ -1,18 +1,16 @@
 {
-  "name": "azurjs",
+  "name": "lurukaps",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Azur Promilia local game server",
-  "license": "AGPL-3.0-only",
+  "description": "LurukaPS — Azur Promilia CBT3 server emulator",
+  "license": "AGPL-3.0",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "start": "node src/main.js",
-    "generate": "node scripts/generate.js",
-    "test": "node --test",
-    "coverage:protocol": "node scripts/coverage.js"
+    "test": "node --test"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

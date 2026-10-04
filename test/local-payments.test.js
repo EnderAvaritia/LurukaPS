@@ -14,7 +14,7 @@ const config = configuration(),
 const order = (nonce, id = 2001, count = 1) => ({
     purchase_sdk_id: id,
     buy_count: count,
-    product_id: `azurjs-offline:${nonce}:local-test-product`,
+    product_id: `lurukaps-offline:${nonce}:local-test-product`,
     amount: '0',
 })
 function fixture(options = {}, filename = ':memory:') {
@@ -41,11 +41,15 @@ test('offline recharge grants correct currency and first bonus once, with non-ac
         assert.equal(f.state().player.basic_info.diamond, 0)
         const notice = packets.find((p) => p.id === 18038).data
         assert.equal(notice.purchase_sdk_id, 0)
-        assert.equal(notice.purchase_sdk_item, 'azurjs-offline')
+        assert.equal(notice.purchase_sdk_item, 'lurukaps-offline')
         assert.equal(notice.callback_url, undefined)
         const syncIndex = packets.findIndex((p) => p.id === protocol.byName.get('CSProtoSyncPlayerData').id)
         assert(syncIndex >= 0 && syncIndex < packets.findIndex((p) => p.id === 18038))
         f.call('NonMallCreatePayOrder', order('nonce-0001', 2002, 2))
+        // Older clients use the previous project prefix; nonce remains idempotent.
+        const legacy = order('nonce-0001', 2002, 2)
+        legacy.product_id = legacy.product_id.replace('lurukaps-offline:', 'azurjs-offline:')
+        f.call('NonMallCreatePayOrder', legacy)
         assert.equal(currency(f.state(), 901), 600)
         assert.equal(f.state().mall.popupQueue.length, 1)
         const before = f.store.load(f.session.id)
@@ -126,7 +130,7 @@ test('mall orders validate shop membership and return the correct async channel'
             pay_shop_id: 201,
             pay_goods_id: 20101,
             buy_count: 1,
-            product_id: 'azurjs-offline:mall-0001:gift',
+            product_id: 'lurukaps-offline:mall-0001:gift',
             amount: '0',
         }
         const output = f.call('PlayerMallCreatePayOrder', request)

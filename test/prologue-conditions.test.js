@@ -52,6 +52,12 @@ test('creation page receives CBT3 new-player name marker and legacy default acco
         f.game.dispatch({}, { id: e.id, seq: 1, payload: p.encode(e.req, { open_id: 'prologue' }) })
         assert.equal(Buffer.from(f.state().player.basic_info.name, 'base64').toString('utf8'), '&AzurPlayer')
         assert.equal(f.state().tasks[0].nodes[0].node_id, 11)
+        f.edit((s) => {
+            s.player.basic_info.name = bytes('&AzurJSPlayer')
+            s.characterCustomized = false
+        })
+        f.game.dispatch({}, { id: e.id, seq: 2, payload: p.encode(e.req, { open_id: 'prologue' }) })
+        assert.equal(Buffer.from(f.state().player.basic_info.name, 'base64').toString('utf8'), '&AzurPlayer')
         f.call('PlayerCustomData', { name: bytes('PlayerName'), wardrobe_info: { sex: 2, height: 90, complexion: 0 } })
         const state = f.state(),
             groups = state.player.group_mgrs[0].groups,

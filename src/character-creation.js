@@ -72,7 +72,7 @@ function restoreCompanion(state, main, groups) {
 // CBT3 L_PlayerStore:getIsNewPlayer uses the first character of the decoded
 // player name. Legacy placeholder names omitted the required '&' prefix.
 export function repairCharacterCreationMarker(state) {
-    if (state.characterCustomized || state.player.basic_info.name !== bytes('AzurPlayer')) return false
+    if (state.characterCustomized || ![bytes('AzurPlayer'), bytes('&AzurJSPlayer')].includes(state.player.basic_info.name)) return false
     if (!(state.tasks ?? []).some((task) => task.task_id === 106001)) return false
     state.player.basic_info.name = bytes('&AzurPlayer')
     return true
