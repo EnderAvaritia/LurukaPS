@@ -1,10 +1,14 @@
 # LurukaPS
 
+![LurukaPS](images/LurukaPS.webp)
+
 LurukaPS is a server emulator for the Azur Promilia CBT3 client. It implements networking and gameplay logic in Node.js and uses SQLite to persist accounts, characters, and game state.
 
 The project is under active development.
 
 AzurJS was the project's former internal name.
+
+![Example](images/example.jpg)
 
 ## Features
 
