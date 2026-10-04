@@ -3,7 +3,7 @@ import path from 'node:path'
 import protobuf from 'protobufjs'
 export class Protocol {
     constructor(base) {
-        this.entries = JSON.parse(fs.readFileSync(path.join(base, 'data/protocol.json')))
+        this.entries = JSON.parse(fs.readFileSync(path.join(base, 'configs/protocol.json')))
         this.byId = new Map(this.entries.map((e) => [e.id, e]))
         this.byName = new Map(this.entries.map((e) => [e.name, e]))
         const dir = path.join(base, 'proto/lua/proto')

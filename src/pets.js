@@ -9,7 +9,7 @@ import { refreshPetCaressPeriod } from './pet-caress.js'
 
 // The localized export corrupts pet.gradeScore. Use the numeric CBT3 table.
 const petScores = new Map(
-    JSON.parse(fs.readFileSync(new URL('../data/pet-tables/pet.json', import.meta.url), 'utf8')).map((row) => [
+    JSON.parse(fs.readFileSync(new URL('../configs/pet-tables/pet.json', import.meta.url), 'utf8')).map((row) => [
         row.id,
         row.gradeScore,
     ]),

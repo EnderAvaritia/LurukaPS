@@ -5,7 +5,7 @@ import { WorldObjectCatalog } from './world-objects.js'
 import { enemyDefinition } from './enemy-state.js'
 import { u64, combatState } from './combat-state.js'
 const profiles = JSON.parse(
-    fs.readFileSync(new URL('../data/battle-config/story-kill-rules.json', import.meta.url)),
+    fs.readFileSync(new URL('../configs/battle-config/story-kill-rules.json', import.meta.url)),
 ).profiles
 export function registerStoryBattle(on, tables) {
     const world = new WorldObjectCatalog(tables),

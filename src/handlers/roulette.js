@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { ensure } from './common.js'
 import { u64 } from '../combat-state.js'
 const items = new Map(
-    JSON.parse(fs.readFileSync(new URL('../../data/inventory-tables/common_item.json', import.meta.url))).map((r) => [
+    JSON.parse(fs.readFileSync(new URL('../../configs/inventory-tables/common_item.json', import.meta.url))).map((r) => [
         r.id,
         r,
     ]),

@@ -23,7 +23,7 @@ export function taskActions(node, phase = 'before') {
     )
 }
 export function taskBirthPoint(tables, id, map) {
-    points ??= JSON.parse(fs.readFileSync(new URL('../data/task-tables/world_borthpos.json', import.meta.url), 'utf8'))
+    points ??= JSON.parse(fs.readFileSync(new URL('../configs/task-tables/world_borthpos.json', import.meta.url), 'utf8'))
     const point = id ? points.find((p) => p.id === id) : points.find((p) => p.cityId === map && p.mainPoint === 1)
     ensure(point && (!map || point.cityId === map), 'Task scene birth point unavailable', 1007)
     return point

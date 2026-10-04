@@ -292,7 +292,7 @@ export function registerTrialGroups(on, tables) {
     }
     const graphs = new TaskGraphs(tables),
         rows = JSON.parse(
-            fs.readFileSync(new URL('../../data/task-tables/hero_interim.json', import.meta.url), 'utf8'),
+            fs.readFileSync(new URL('../../configs/task-tables/hero_interim.json', import.meta.url), 'utf8'),
         ),
         configs = new Map(rows.map((r) => [r.id, r]))
     on('TrialGroupChange', (c, r) => {

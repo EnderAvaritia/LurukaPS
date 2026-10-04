@@ -4,7 +4,7 @@ import { WorldObjectCatalog } from '../world-objects.js'
 import { TaskGraphs, nodeConditions } from '../tasks.js'
 import { grantRewards } from '../rewards.js'
 const configs = new Map(
-    JSON.parse(fs.readFileSync(new URL('../../data/playable-tables/playable.json', import.meta.url))).map((r) => [
+    JSON.parse(fs.readFileSync(new URL('../../configs/playable-tables/playable.json', import.meta.url))).map((r) => [
         r.id,
         r,
     ]),

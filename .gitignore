@@ -1,8 +1,5 @@
 node_modules/
-data/*.sqlite*
+/data/
 .env
-data/*.txt
-data/*.log
-data/**/*.log
 .analysis-python/
 *.cpuprofile

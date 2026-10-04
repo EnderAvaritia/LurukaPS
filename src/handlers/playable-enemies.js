@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { ensure } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 export function registerPlayableEnemies(on, tables, store) {
-    const file = new URL('../../data/playable-enemies.json', import.meta.url),
+    const file = new URL('../../configs/playable-enemies.json', import.meta.url),
         source = JSON.parse(fs.readFileSync(file)),
         assets = new Map(source.playables.map((p) => [p.id, p])),
         world = new WorldObjectCatalog(tables)

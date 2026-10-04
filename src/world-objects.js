@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ensure } from './handlers/common.js'
 export class WorldObjectCatalog {
-    constructor(tables, directory = fileURLToPath(new URL('../data/world-tables/', import.meta.url))) {
+    constructor(tables, directory = fileURLToPath(new URL('../configs/world-tables/', import.meta.url))) {
         this.tables = tables
         this.directory = directory
         this.cache = new Map()

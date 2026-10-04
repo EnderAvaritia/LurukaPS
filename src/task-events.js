@@ -11,7 +11,7 @@ function ownsFractalPet(c, data) {
     petTables ??= Object.fromEntries(
         ['pet_rank', 'world_enemy_group', 'enemy'].map((name) => [
             name,
-            JSON.parse(fs.readFileSync(new URL(`../data/task-tables/${name}.json`, import.meta.url), 'utf8')),
+            JSON.parse(fs.readFileSync(new URL(`../configs/task-tables/${name}.json`, import.meta.url), 'utf8')),
         ]),
     )
     const groupId = data.enemyData?.__type_TaskEnemiesOverrideData?.enemiesGroupId

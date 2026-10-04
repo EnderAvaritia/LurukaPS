@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { encodeFrame, decodeFrame, FrameReader, HEADER_SIZE } from '../src/wire.js'
 import { decompressLz4 } from '../src/compression.js'
-import key from '../data/wire-key.json' with { type: 'json' }
+import key from '../configs/wire-key.json' with { type: 'json' }
 test('CBT3 header matches native layout, uint32 sequences and uint64 signature', () => {
     const b = encodeFrame(
         { id: 5001, error: 1024, seq: 0x12345678, pushSeq: 0xabcdef01, signature: 0xfedcba9876543210n },

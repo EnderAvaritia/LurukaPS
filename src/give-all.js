@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 const rules = new Map(
-    JSON.parse(fs.readFileSync(new URL('../data/inventory-tables/common_item.json', import.meta.url))).map((row) => [
+    JSON.parse(fs.readFileSync(new URL('../configs/inventory-tables/common_item.json', import.meta.url))).map((row) => [
         row.id,
         row,
     ]),

@@ -1,6 +1,6 @@
 import { strongTransform } from './wire-crypto.js'
 import { decompressLz4 } from './compression.js'
-import key from '../data/wire-key.json' with { type: 'json' }
+import key from '../configs/wire-key.json' with { type: 'json' }
 export const HEADER_SIZE = 25
 export const MAX_FRAME = 4 * 1024 * 1024
 function transform(buffer) {

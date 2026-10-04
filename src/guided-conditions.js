@@ -3,12 +3,12 @@ import path from 'node:path'
 import { configuration } from './config.js'
 
 const conditions = new Map(
-    JSON.parse(fs.readFileSync(new URL('../data/task-tables/task_condition.json', import.meta.url), 'utf8')).map(
+    JSON.parse(fs.readFileSync(new URL('../configs/task-tables/task_condition.json', import.meta.url), 'utf8')).map(
         (row) => [row.id, row],
     ),
 )
 const buildingGroups = new Map(
-    JSON.parse(fs.readFileSync(new URL('../data/client-tables/home_building.json', import.meta.url), 'utf8')).map(
+    JSON.parse(fs.readFileSync(new URL('../configs/client-tables/home_building.json', import.meta.url), 'utf8')).map(
         (row) => [row.id, row.groupId],
     ),
 )
@@ -34,7 +34,7 @@ const commonItemTypes = new Map(
 )
 const productRows = new Map(shopTable('products').map((row) => [row.id, row]))
 const petGroups = new Map(
-    JSON.parse(fs.readFileSync(new URL('../data/task-tables/pet_rank.json', import.meta.url), 'utf8')).map((row) => [
+    JSON.parse(fs.readFileSync(new URL('../configs/task-tables/pet_rank.json', import.meta.url), 'utf8')).map((row) => [
         row.petId,
         row.petGroup,
     ]),
