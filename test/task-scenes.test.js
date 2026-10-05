@@ -75,6 +75,90 @@ function setup() {
     login()
     return { store, call, login, state: () => store.load(who.id).state, edit: (fn) => store.transact(who.id, 0, fn) }
 }
+
+function homeExitFixture() {
+    const f = setup(),
+        graph = new TaskGraphs(tables).get(106016)
+    f.edit((s) => {
+        s.taskEpochs[106016] = 1
+        s.taskRecords = tables
+            .get('task')
+            .filter((row) => row.type === 1 && row.id !== 106016)
+            .map((row) => ({ task_id: row.id, count: 1, time: 1 }))
+        s.tasks = [
+            {
+                task_id: 106016,
+                nodes: [{ ...makeNode(graph, 27, s), client_before: true }],
+                finish_nodes: [1, 25, 26],
+                reward_nodes: [],
+            },
+        ]
+        delete s.pendingTaskScene
+    })
+    return f
+}
+
+test('home exit escapes a completed story performance scene and skips intermediate home history', () => {
+    const f = homeExitFixture()
+    try {
+        const origin = tables.position(tables.find('world_borthpos', 20002))
+        origin.pos = { ...origin.pos, x: origin.pos.x + 137 }
+        for (const current of [710, 701]) {
+            f.edit((s) => {
+                Object.assign(s.world, tables.position(tables.find('world_borthpos', current === 710 ? 780301 : 70101)))
+                s.worldHistory = [
+                    origin,
+                    tables.position(tables.find('world_borthpos', 70101)),
+                    tables.position(tables.find('world_borthpos', 780301)),
+                    tables.position(tables.find('world_borthpos', 70101)),
+                ]
+                s.pendingTaskScene = { task_id: 106016, node_id: 26, map_id: 710, point_id: 780301 }
+            })
+            const before = f.state(),
+                packets = f.call('WorldQuitHome')
+            assert.equal(f.state().world.map_id, 200)
+            assert.deepEqual(f.state().world.pos, origin.pos)
+            assert.equal(packets.find((packet) => packet.id === 9103).data.cmd, 256)
+            assert.deepEqual(
+                f.state().tasks.find((task) => task.task_id === 106016),
+                before.tasks.find((task) => task.task_id === 106016),
+            )
+            assert.deepEqual(f.state().player.group_mgrs, before.player.group_mgrs)
+            assert.equal(f.state().pendingTaskScene, undefined)
+            assert.deepEqual(f.state().worldHistory, [])
+            assert.ok(
+                !f.call('WorldQuitHome').some((packet) => packet.id === 9103),
+                'duplicate exit outside home is harmless',
+            )
+            f.login()
+            assert.equal(f.state().world.map_id, 200)
+        }
+    } finally {
+        f.store.close()
+    }
+})
+
+test('home exit with only temporary scenes left uses exploration fallback and preserves normal interior returns', () => {
+    const f = homeExitFixture()
+    try {
+        f.edit((s) => {
+            Object.assign(s.world, tables.position(tables.find('world_borthpos', 780301)))
+            s.worldHistory = [tables.position(tables.find('world_borthpos', 70101))]
+        })
+        f.call('WorldQuitHome')
+        assert.equal(f.state().world.point_id, 10045)
+        const interior = tables.position(tables.find('world_borthpos', 25001))
+        f.edit((s) => {
+            Object.assign(s.world, tables.position(tables.find('world_borthpos', 70101)))
+            s.worldHistory = [interior]
+        })
+        f.call('WorldQuitHome')
+        assert.equal(f.state().world.map_id, interior.map_id)
+        assert.deepEqual(f.state().world.pos, interior.pos)
+    } finally {
+        f.store.close()
+    }
+})
 test('initial story starts on configured scene102 and legacy node5 wrong-map save recovers without losing progress', () => {
     const f = setup()
     try {

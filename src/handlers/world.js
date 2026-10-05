@@ -256,11 +256,22 @@ export function registerWorld(on) {
     on('WorldQuitHome', (c) => {
         const homeMapId = Number(c.tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
         ensure(Number.isInteger(homeMapId) && homeMapId > 0, 'Missing home map id', 1007)
-        if (c.state.world.map_id !== homeMapId) return {}
+        const isHomeScene = (mapId) => mapId === homeMapId || c.tables.find('world_city', mapId)?.playModule === 'Home'
+        if (!isHomeScene(c.state.world.map_id)) return {}
 
         const history = c.state.worldHistory ?? []
-        const previous = history.pop()
-        if (previous && c.tables.get('world_borthpos').some((point) => point.cityId === previous.map_id)) {
+        let previous
+        while (history.length) {
+            const candidate = history.pop(),
+                city = c.tables.find('world_city', candidate.map_id)
+            // Task transfers add home and performance scenes to the same stack.
+            // A home exit must not re-enter one of those intermediate scenes.
+            if (!city || isHomeScene(candidate.map_id) || city.type === 28) continue
+            if (!c.tables.get('world_borthpos').some((point) => point.cityId === candidate.map_id)) continue
+            previous = candidate
+            break
+        }
+        if (previous) {
             Object.assign(c.state.world, previous)
         } else {
             const fallback = c.tables.find('world_borthpos', 10045)
@@ -269,6 +280,7 @@ export function registerWorld(on) {
         }
 
         delete c.state.combat
+        delete c.state.pendingTaskScene
         const sceneContext = { ...c, push: c.pushBefore }
         worldSync(sceneContext, {}, WORLD_MAP_CMD_ENTER)
         syncBattle(sceneContext)
