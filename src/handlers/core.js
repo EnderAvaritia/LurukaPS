@@ -1,7 +1,32 @@
-import { ensure, textValue, syncPlayer } from './common.js'
+import { ensure, textValue, syncPlayer, hero } from './common.js'
+import { ensureAppearance, appearanceCatalog, normalizeClothes } from '../appearance.js'
 import { initializeCharacterFormation } from '../character-creation.js'
 import { repairMainHeroType } from '../main-hero.js'
 export function registerCore(on) {
+    on('PresetWardrobeReq', (c, r) => {
+        ensure([1, 2].includes(r.sex), 'Invalid preset sex')
+        // CBT3 GetFirstEmptyPresetIdBySex searches slots 1..3 independently
+        // for each sex. Saving a preset must not apply it to the player.
+        ensure(Number.isInteger(r.present) && r.present >= 1 && r.present <= 3, 'Invalid wardrobe preset slot')
+        ensure(new Set(r.parts.map((part) => part.type)).size === r.parts.length, 'Duplicate wardrobe part')
+        const presets = (c.state.wardrobePresets ??= [])
+        const index = presets.findIndex((preset) => preset.sex === r.sex && preset.present === r.present)
+        if (index < 0) presets.push(r)
+        else presets[index] = r
+        c.push('SCProtoPresetWardrobeSync', { info_list: presets })
+        return {}
+    })
+    on('HeroUpdateSkin', (c, r) => {
+        const actor = hero(c.state, r.hero_guid)
+        ensureAppearance(c.tables, c.state)
+        const id = r.skin_id || actor.conf_id,
+            skin = appearanceCatalog(c.tables).skins.get(id)
+        ensure(skin?.hero === actor.conf_id, 'Skin does not belong to this hero')
+        ensure(c.state.unlockedHeroSkins[actor.conf_id]?.includes(id), 'Hero skin is not unlocked')
+        actor.hero_skin = id
+        syncPlayer(c, { heros_info: c.state.player.heros_info })
+        return {}
+    })
     on('PinchFaceDataUp', (c, r) => {
         const basic = c.state.player.basic_info
         const wardrobe = { ...basic.wardrobe, ...r }
@@ -78,6 +103,14 @@ export function registerCore(on) {
         return {}
     })
     on('PlayerClothesInfoChange', (c, r) => {
+        ensureAppearance(c.tables, c.state)
+        ensure(new Set(r.parts.map((part) => part.type)).size === r.parts.length, 'Duplicate clothing part')
+        r = normalizeClothes(c.tables, r)
+        for (const part of r.parts) {
+            const clothing = appearanceCatalog(c.tables).clothes.get(part.id)
+            ensure(clothing?.typeId === part.type, 'Clothing does not match its slot')
+            ensure(c.state.unlockedClothes.includes(part.id), 'Clothing is not unlocked')
+        }
         c.state.player.basic_info.clothes_info = r
         syncPlayer(c, { basic_info: c.state.player.basic_info })
         return {}

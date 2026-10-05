@@ -105,6 +105,7 @@ import { mountPayload, repairMountSelection } from './mounts.js'
 import { GameError, ensure, textValue } from './handlers/common.js'
 
 import { registerCore } from './handlers/core.js'
+import { ensureAppearance, clothesSnapshot, heroSkinsSnapshot } from './appearance.js'
 import { registerCollection } from './handlers/collection.js'
 import { registerWorld, repairLegacyMountState } from './handlers/world.js'
 import { registerMail } from './handlers/mail.js'
@@ -461,6 +462,7 @@ export class Game {
                 recoverCachedTaskTimeEvent({ state, tables: this.tables, id: session.id, now })
                 recoverMissingTaskItems(this.tables, new TaskGraphs(this.tables), state)
                 refreshTaskProgress(this.tables, state)
+                ensureAppearance(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
                 ensureStoryCampaignScene(this.tables, state, now)
@@ -951,6 +953,9 @@ export class Game {
                 egg_infos: { eggs: state.petEggs || [] },
             }),
             this.packet('CSProtoPetBoxInfoSync', { box_infos: state.petBoxes }),
+            this.packet('SCProtoClothesInfoSync', clothesSnapshot(this.tables, state)),
+            this.packet('SCProtoPresetWardrobeSync', { info_list: state.wardrobePresets ?? [] }),
+            this.packet('SCProtoHeroSkinMessageSync', heroSkinsSnapshot(this.tables, state)),
             this.packet('CSProtoAllEquipOrnamentSync', {
                 ornaments: state.ornaments || [],
                 smelt_num: state.ornamentSmeltNum || 0,
