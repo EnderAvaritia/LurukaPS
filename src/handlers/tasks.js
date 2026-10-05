@@ -120,6 +120,7 @@ export function registerTasks(register, tables) {
     on('TaskClientTrace', (c, r) => {
         const task = activeTask(c.state, r.task_id)
         task.client_trace = !!r.is_trace
+        ;(c.state.taskTraceChoices ??= {})[`${r.task_id}:${c.state.taskEpochs?.[r.task_id] ?? 0}`] = !!r.is_trace
         sync(c, r.is_trace ? { trace_id: r.task_id } : { del_trace_list: [r.task_id] })
         return {}
     })

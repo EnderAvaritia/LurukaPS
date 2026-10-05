@@ -32,6 +32,51 @@ function setup() {
         edit: (fn) => store.transact(session.id, 0, fn),
     }
 }
+
+test('new main auto-tracks alongside the selected branch and old missing trace migrates on login', () => {
+    const f = setup(),
+        graph = new TaskGraphs(tables).get(202025)
+    try {
+        f.edit((s) => {
+            s.tasks = [
+                {
+                    task_id: 202025,
+                    nodes: [makeNode(graph, graph.start, s)],
+                    finish_nodes: [],
+                    reward_nodes: [],
+                    client_trace: true,
+                },
+            ]
+            s.player.basic_info.lv = 20
+            s.taskRecords = tables
+                .get('task')
+                .filter((row) => row.type === 1 && row.id !== 107016)
+                .map((row) => ({ task_id: row.id, count: 1, time: 1 }))
+        })
+        let packets = f.login(),
+            snapshot = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
+        assert.equal(f.state().tasks.find((task) => task.task_id === 107016).client_trace, true)
+        assert.ok(snapshot.trace_list.includes(107016))
+        assert.ok(snapshot.trace_list.includes(202025))
+        assert.equal(snapshot.next_main_id, 0, 'accepted main is not an unaccepted placeholder')
+        f.edit((s) => {
+            s.tasks.find((task) => task.task_id === 107016).client_trace = false
+        })
+        const before = f.state().tasks.find((task) => task.task_id === 107016).nodes
+        packets = f.login()
+        snapshot = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
+        assert.ok(snapshot.trace_list.includes(107016))
+        assert.ok(snapshot.trace_list.includes(202025))
+        assert.deepEqual(f.state().tasks.find((task) => task.task_id === 107016).nodes, before)
+        f.call('TaskClientTrace', { task_id: 107016, is_trace: false })
+        packets = f.login()
+        snapshot = protocol.decode('SCTaskSync', packets.find((packet) => packet.id === 9853).payload)
+        assert.ok(!snapshot.trace_list.includes(107016), 'manual untrack survives relog')
+        assert.ok(snapshot.trace_list.includes(202025))
+    } finally {
+        f.store.close()
+    }
+})
 test('late duplicate after for finished prologue node is acknowledged without advancing again', () => {
     const t = setup()
     try {

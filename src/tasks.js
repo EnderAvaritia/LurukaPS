@@ -254,7 +254,7 @@ export function acceptTask(graph, state, now) {
         nodes: [makeNode(graph, graph.start, state)],
         finish_nodes: [],
         reward_nodes: [],
-        client_trace: false,
+        client_trace: graph.config.type === 1,
         start_time: now,
     }
     advanceStartNodes(graph, task, state)
@@ -303,10 +303,21 @@ export function unlockAutomaticTasks(tables, state, now) {
         const graph = graphs.get(config.id)
         if (!taskUnlocked(graph, state)) continue
         const task = acceptTask(graph, state, now)
-        if (config.type === 1 && !state.tasks.some((t) => t.client_trace)) task.client_trace = true
         added.push(config.id)
     }
     return added
+}
+export function repairMainTaskTrace(tables, state) {
+    const mains = state.tasks.filter(
+        (task) => tables.find('task', task.task_id)?.type === 1 && taskVisibleAtLevel(tables, state, task),
+    )
+    if (mains.some((task) => task.client_trace)) return false
+    const candidate = mains.find(
+        (task) => state.taskTraceChoices?.[`${task.task_id}:${state.taskEpochs?.[task.task_id] ?? 0}`] !== false,
+    )
+    if (!candidate) return false
+    candidate.client_trace = true
+    return true
 }
 export function taskNodeCompleted(state, taskId, nodeId) {
     return (
