@@ -150,6 +150,7 @@ export async function startServer(config, logger = console) {
             session = {},
             replay = new ReplayWindow(),
             crc = new DelayedCrc()
+        let preamble = 'CONN'
         sessions.set(socket, { session, replay })
         socket.on('error', (err) => logger.warn(`Socket: ${err.code || err.message}`))
         socket.on('close', () => {
@@ -159,6 +160,17 @@ export async function startServer(config, logger = console) {
             if (owners.get(session.id) === socket) owners.delete(session.id)
         })
         socket.on('data', (chunk) => {
+            if (preamble) {
+                if (chunk.length >= 4 && chunk.subarray(0, 4).toString() === preamble) {
+                    socket.write(preamble)
+                    preamble = null
+                    chunk = chunk.subarray(4)
+                    if (!chunk.length) return
+                } else {
+                    socket.destroy()
+                    return
+                }
+            }
             let activeFrame
             session.recentFrames ??= []
             try {
