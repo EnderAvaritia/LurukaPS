@@ -1,6 +1,7 @@
 import { ensureHome } from '../home.js'
 import { spend } from '../inventory.js'
 import { refreshProduction } from '../production.js'
+import { productionSeconds } from '../production-time.js'
 import { ensure } from './common.js'
 import { cookingRecipe, cookingMaterials } from '../cooking.js'
 import { homeCondition } from '../home-grid.js'
@@ -47,8 +48,9 @@ export function registerCooking(on, tables) {
                 jobs.length < station.productionQueueNum,
             'Cooking queue is full',
         )
+        const seconds = productionSeconds(tables, c.state, build, product)
         const start = Math.max(c.now, ...jobs.map((job) => job.start + job.count * job.seconds))
-        ensure(start + r.cook_count * product.time <= 0xffffffff, 'Cooking finish time overflow')
+        ensure(start + r.cook_count * seconds <= 0xffffffff, 'Cooking finish time overflow')
         const guid = home.nextProductGuid || 1
         ensure(guid <= 0xffffffff, 'Cooking job identity exhausted')
         spend(c.state, costs, 0, c.now)
@@ -60,7 +62,7 @@ export function registerCooking(on, tables) {
             count: r.cook_count,
             claimed: 0,
             start,
-            seconds: product.time,
+            seconds,
             costs: [...supplied].map(([itemid, itemnum]) => ({ itemtype: 3, itemid, itemnum })),
             rewards: [{ itemtype: 3, itemid: r.cook_id, itemnum: 1 }],
             reportedDone: 0,

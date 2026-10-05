@@ -33,6 +33,17 @@ export function refreshProduction(state, now) {
             }
         })
         const status = jobs.some((j) => completed(j, now) < j.count) ? 4 : 1
+        const workerIndex =
+            state.pets?.findIndex((pet) => pet.guid === build.station_pet_guid && pet.work_build === build.guid) ?? -1
+        const worker = state.pets?.[workerIndex]
+        if (worker && [1, 2].includes(worker.work_status) && worker.work_status !== (status === 4 ? 2 : 1)) {
+            // Some deferred requests share the pet collection. Copy only this
+            // changed worker so a later rejected request cannot leak its status.
+            state.pets = [...state.pets]
+            state.pets[workerIndex] = { ...worker, work_status: status === 4 ? 2 : 1 }
+            state.petRevision = (state.petRevision || 0) + 1
+            changed = true
+        }
         if (JSON.stringify(build.product || []) !== JSON.stringify(wire) || build.status !== status) {
             build.product = wire
             build.status = status
