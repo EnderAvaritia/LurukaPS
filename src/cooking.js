@@ -2,13 +2,17 @@ import { ensure } from './handlers/common.js'
 
 export function cookingRecipe(tables, id) {
     const quality = tables.find('products_multi_quality', id)
+    const product = quality && tables.find('products', quality.productId)
+    // CookRequest also serves the mill's quality-selectable ingredient recipes.
+    // The products table distinguishes processing (2) from cooking (3).
     ensure(
-        quality && tables.find('food', id) && tables.find('common_item', id)?.type === 355,
+        quality &&
+            tables.find('common_item', id) &&
+            (product?.type === 2 || (product?.type === 3 && tables.find('food', id))),
         'Unknown cooking recipe',
         1021,
     )
-    const product = tables.find('products', quality.productId)
-    ensure(product?.type === 3 && product.rewardId === `3#${id}#1`, 'Cooking product configuration is missing', 1007)
+    ensure(product.rewardId === `3#${id}#1`, 'Cooking product configuration is missing', 1007)
     const requirements = String(quality.needMaterial ?? '')
         .split('|')
         .filter(Boolean)

@@ -30,6 +30,12 @@ export function registerProduction(on, tables) {
             'Recipe cannot be produced at this building',
         )
         ensure(homeCondition(recipe.unlockCondition, c.state), 'Production recipe locked')
+        // Quality recipes supply their ingredients through CookRequest. Their
+        // products.material is empty; accepting ProductStart would create free flour.
+        ensure(
+            !tables.get('products_multi_quality').some((row) => row.productId === recipe.id),
+            'Quality production requires CookRequest materials',
+        )
         ensure(!recipe.isNeedPet, 'Pet-assisted production is not implemented', 1021)
         ensure(!recipe.materialSelect && !r.select_material.length, 'Selectable materials are not implemented', 1021)
         ensure(!recipe.notReleased, 'Recipe not released')

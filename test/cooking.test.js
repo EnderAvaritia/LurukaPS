@@ -73,6 +73,115 @@ function fixture() {
 }
 const stock = (state, id) => state.player.sbag_infos.items.find((item) => item.itemid === id)?.itemnum ?? 0
 
+function addMill(f) {
+    f.store.transact(f.session.id, 0, (state) => {
+        state.home.builds.push({
+            guid: 21,
+            build_id: 20141,
+            build_type: 2,
+            status: 1,
+            product: [],
+            locate: { block_id: 101, anchor: 6750238, direction: 0 },
+        })
+        state.player.sbag_infos.items = state.player.sbag_infos.items.filter((item) => item.itemid !== 1400101)
+    })
+}
+
+test('mill grinds wheat into real flour, then cooks and claims the task foods', () => {
+    const f = fixture()
+    try {
+        addMill(f)
+        f.call('CookRequest', {
+            build_guid: 21,
+            cook_id: 1400101,
+            cook_count: 2,
+            cook_material: [{ item_id: 400101, item_num: 3 }],
+        })
+        assert.equal(stock(f.state(), 400101), 24)
+        assert.equal(stock(f.state(), 1400101), 0)
+        assert.equal(f.state().home.productionJobs[21][0].seconds, 3)
+        assert.throws(() => f.call('ProductFinish', { guid: 21, is_all: true }), /No finished/)
+        f.advance(3)
+        f.call('ProductFinish', { guid: 21, is_all: true })
+        assert.equal(stock(f.state(), 1400101), 1)
+        f.advance(3)
+        f.call('ProductFinish', { guid: 21, is_all: true })
+        assert.equal(stock(f.state(), 1400101), 2)
+        assert.throws(() => f.call('ProductFinish', { guid: 21, is_all: true }))
+        f.call('CookRequest', {
+            build_guid: 21,
+            cook_id: 1400101,
+            cook_count: 4,
+            cook_material: [{ item_id: 400101, item_num: 3 }],
+        })
+        f.advance(12)
+        f.call('ProductFinish', { guid: 21, is_all: true })
+        assert.equal(stock(f.state(), 1400101), 6)
+        f.call('CookRequest', { ...corn, cook_id: 9000101, cook_material: [{ item_id: 1400101, item_num: 6 }] })
+        f.advance(20)
+        f.call('ProductFinish', { guid: 18, is_all: true })
+        assert.equal(stock(f.state(), 1400101), 0)
+        assert.equal(stock(f.state(), 9000101), 1)
+        f.call('CookRequest', corn)
+        f.advance(10)
+        f.call('ProductFinish', { guid: 18, is_all: true })
+        assert.deepEqual(f.state().tasks[0].nodes[0].node_values, [1, 1])
+        f.call('TaskClientCondAfter', { task_id: 106016, node_id: 26, indexes: [0, 1] })
+        f.call('TaskClientAfter', { task_id: 106016, node_id: 26 })
+        assert.equal(f.state().tasks[0].nodes[0].node_id, 27)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('mill validates station and quality, blocks ingredient-free ProductStart, and refunds unfinished work', () => {
+    const f = fixture()
+    try {
+        addMill(f)
+        const request = {
+            build_guid: 21,
+            cook_id: 1400102,
+            cook_count: 2,
+            cook_material: [{ item_id: 400102, item_num: 3 }],
+        }
+        for (const [name, req] of [
+            ['CookRequest', { ...request, build_guid: 18 }],
+            ['CookRequest', { ...corn, build_guid: 21 }],
+            ['CookRequest', { ...request, cook_material: [{ item_id: 400101, item_num: 3 }] }],
+            ['ProductStart', { build_guid: 21, product_id: 400101, count: 1 }],
+        ]) {
+            const before = f.state()
+            assert.throws(() => f.call(name, req))
+            assert.deepEqual(f.state(), before)
+        }
+        f.call('CookRequest', request)
+        assert.equal(stock(f.state(), 400102), 12)
+        f.advance(3)
+        f.call('ProductCancel', { guid: 21, is_all: true })
+        assert.equal(stock(f.state(), 1400102), 1)
+        assert.equal(stock(f.state(), 400102), 15)
+        assert.equal(f.state().home.craftCounts[400102], 1)
+        f.call('EnterGame', { open_id: 'cooking-test', reconnect: true }, {})
+        assert.equal(stock(f.state(), 1400102), 1)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('all thirty mill quality recipes resolve from external tables', () => {
+    const rows = tables
+        .get('products_multi_quality')
+        .filter((row) => tables.find('products', row.productId)?.type === 2)
+    assert.equal(rows.length, 30)
+    for (const row of rows) {
+        const recipe = cookingRecipe(tables, row.id)
+        cookingMaterials(
+            recipe,
+            recipe.requirements.map(({ count, choices }) => ({ item_id: choices[0], item_num: count })),
+        )
+    }
+})
+
 test('real corn recipe debits six per serving, queues ten seconds, grants on collection and completes both configured quest foods', () => {
     const f = fixture()
     try {

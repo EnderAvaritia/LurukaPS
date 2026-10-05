@@ -13,7 +13,7 @@ export function registerCooking(on, tables) {
         const recipe = cookingRecipe(tables, r.cook_id),
             product = recipe.product
         const build = home.builds.find((entry) => entry.guid === r.build_guid)
-        ensure(build?.build_type === 10 && [1, 4].includes(build.status), 'Cooking pot is not owned or placed')
+        ensure(build && [1, 4].includes(build.status), 'Cooking/processing station is not owned or placed')
         const station = tables.find('home_building_production', build.build_id)
         ensure(
             product &&
