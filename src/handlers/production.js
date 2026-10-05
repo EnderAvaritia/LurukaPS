@@ -5,6 +5,7 @@ import { homeCondition } from '../home-grid.js'
 import { parseRewards, grantRewards } from '../rewards.js'
 import { spend, spendCurrency } from '../inventory.js'
 import { completed, refreshProduction, rescheduleJobs } from '../production.js'
+import { productionSeconds } from '../production-time.js'
 function multiplied(rows, count) {
     return rows.map((r) => {
         const n = r.itemnum * count
@@ -62,8 +63,9 @@ export function registerProduction(on, tables) {
                 jobs.length < station.productionQueueNum,
             'Production queue is full',
         )
+        const seconds = productionSeconds(tables, c.state, b, recipe)
         const start = Math.max(c.now, ...jobs.map((j) => j.start + j.count * j.seconds))
-        ensure(start + r.count * recipe.time <= 0xffffffff, 'Production timestamp overflow')
+        ensure(start + r.count * seconds <= 0xffffffff, 'Production timestamp overflow')
         const allCosts = multiplied(costs, r.count),
             bag = new Map()
         for (const cost of allCosts) {
@@ -80,7 +82,7 @@ export function registerProduction(on, tables) {
             count: r.count,
             claimed: 0,
             start,
-            seconds: recipe.time,
+            seconds,
             costs,
             rewards,
             reportedDone: 0,

@@ -70,11 +70,13 @@ import { registerHatching } from './handlers/hatching.js'
 import { registerProduction } from './handlers/production.js'
 import { registerSimpleProduction } from './handlers/simple-production.js'
 import { refreshProduction, productionDue } from './production.js'
+import { retimeProduction } from './production-time.js'
 import { simpleProductionDue, settleSimpleProducts, simpleProductSnapshot } from './simple-production.js'
 import { registerTechnology } from './handlers/technology.js'
 import { registerBuildingPlacement } from './handlers/buildings.js'
 import { registerFarming } from './handlers/farming.js'
 import { registerFarmWorkers } from './handlers/farm-workers.js'
+import { registerProductionWorkers } from './handlers/production-workers.js'
 import { registerCanteen } from './handlers/canteen.js'
 import { registerCooking } from './handlers/cooking.js'
 import { registerHome } from './handlers/home.js'
@@ -103,6 +105,7 @@ import { mountPayload, repairMountSelection } from './mounts.js'
 import { GameError, ensure, textValue } from './handlers/common.js'
 
 import { registerCore } from './handlers/core.js'
+import { ensureAppearance, clothesSnapshot, heroSkinsSnapshot } from './appearance.js'
 import { registerCollection } from './handlers/collection.js'
 import { registerWorld, repairLegacyMountState } from './handlers/world.js'
 import { registerMail } from './handlers/mail.js'
@@ -277,6 +280,7 @@ export class Game {
         registerBuildingPlacement(on, tables)
         registerFarming(on, tables)
         registerFarmWorkers(on, tables)
+        registerProductionWorkers(on, tables)
         registerCanteen(on, tables)
         registerCooking(on, tables)
         registerTechnology(on, tables)
@@ -458,6 +462,7 @@ export class Game {
                 recoverCachedTaskTimeEvent({ state, tables: this.tables, id: session.id, now })
                 recoverMissingTaskItems(this.tables, new TaskGraphs(this.tables), state)
                 refreshTaskProgress(this.tables, state)
+                ensureAppearance(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
                 ensureStoryCampaignScene(this.tables, state, now)
@@ -478,6 +483,7 @@ export class Game {
                 ensureHomeFarmHouses(this.tables, state)
                 reconcileHomeBuildShortcuts(this.tables, state)
                 reconcileHomeCropShortcuts(this.tables, state)
+                retimeProduction(this.tables, state, now)
                 refreshProduction(state, now)
                 for (const [id, capture] of Object.entries(state.petCaptureResults ?? {}))
                     if (capture.map_id === state.world.map_id && state.combat?.entities?.[id]?.captured !== true)
@@ -687,7 +693,10 @@ export class Game {
                     pushBefore: (name, value) => emit(before, name, value),
                     push: (name, value) => emit(pushes, name, value, { pushSeq: frame.pushSeq }),
                 }
-                if (!battleReport) refreshProduction(state, now)
+                if (!battleReport) {
+                    retimeProduction(this.tables, state, now)
+                    refreshProduction(state, now)
+                }
                 // Older servers persisted the selected pet and final step, then rejected
                 // PlayableFinish. The client keeps requesting Start while that run remains
                 // incomplete, so recover on the next request as well as on login.
@@ -700,6 +709,7 @@ export class Game {
                     context.push('CSProtoTaskSync', taskSnapshot(this.tables, state))
                 }
                 const response = recoveredChoice ? {} : handler(context, r)
+                if (!battleReport && retimeProduction(this.tables, state, now)) refreshProduction(state, now)
                 if (e.name === 'CSProtoPlayerCustomData') this.finishPendingCharacterTask(context)
                 if ((state.taskItemRevision ?? 0) !== taskItemRevision)
                     context.pushBefore('CSProtoTaskSync', taskItemSnapshot(state))
@@ -859,7 +869,8 @@ export class Game {
         if (!homeDue && !simpleDue) return []
         return this.store.transact(id, 0, (state) => {
             const packets = [],
-                eggRevision = state.eggRevision || 0
+                eggRevision = state.eggRevision || 0,
+                petRevision = state.petRevision || 0
             if (homeDue && refreshProduction(state, now)) {
                 if ((state.eggRevision || 0) !== eggRevision)
                     packets.push(
@@ -869,6 +880,13 @@ export class Game {
                         }),
                     )
                 packets.push(this.packet('CSProtoHomeSync', homePayload(this.tables, state)))
+                if ((state.petRevision || 0) !== petRevision)
+                    packets.push(
+                        this.packet('CSProtoPetInfoSync', {
+                            ...releaseFields(state, 'pet', now, this.releaseResetHour),
+                            pet_infos: { pets: state.pets },
+                        }),
+                    )
             }
             if (simpleDue) {
                 const settled = settleSimpleProducts(this.tables, state, now)
@@ -935,6 +953,9 @@ export class Game {
                 egg_infos: { eggs: state.petEggs || [] },
             }),
             this.packet('CSProtoPetBoxInfoSync', { box_infos: state.petBoxes }),
+            this.packet('SCProtoClothesInfoSync', clothesSnapshot(this.tables, state)),
+            this.packet('SCProtoPresetWardrobeSync', { info_list: state.wardrobePresets ?? [] }),
+            this.packet('SCProtoHeroSkinMessageSync', heroSkinsSnapshot(this.tables, state)),
             this.packet('CSProtoAllEquipOrnamentSync', {
                 ornaments: state.ornaments || [],
                 smelt_num: state.ornamentSmeltNum || 0,
