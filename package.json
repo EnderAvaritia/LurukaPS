@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node src/main.js",
+    "coverage:protocol": "node scripts/coverage.js",
     "test": "node --test"
   },
   "dependencies": {
