@@ -122,7 +122,17 @@ export function conditionValue(condition, state, context) {
     if ([2501, 2513, 2514].includes(condition.conditionId)) return deliveryComplete(state, condition, context) ? 1 : 0
     if (condition.conditionId === 2519 && base.__type_TaskCondInSceneData) {
         const scene = base.__type_TaskCondInSceneData.sceneId
-        return Number.isInteger(scene) && scene > 0 && state.world.map_id === scene ? 1 : 0
+        if (!Number.isInteger(scene) || scene <= 0) return 0
+        if (state.world.map_id === scene) return 1
+        if (!context) return 0
+        // The node's after-actions can immediately transfer out of the target
+        // scene. Retain a server-validated event/CondAfter receipt, rather than
+        // revoking it when TaskClientAfter arrives from the performance scene.
+        const recorded = state.taskEvents?.[deliveryKey(state, context.taskId, context.nodeId, context.index)] ?? 0
+        const node = state.tasks
+            ?.find((task) => task.task_id === context.taskId)
+            ?.nodes.find((node) => node.node_id === context.nodeId)
+        return recorded > 0 || node?.client_cond_after?.[context.index] === true ? 1 : 0
     }
     if ([1001, 2500, 2519, 2520, 2512].includes(condition.conditionId) && context) {
         const data =

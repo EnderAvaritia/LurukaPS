@@ -98,6 +98,72 @@ function homeExitFixture() {
     return f
 }
 
+function homeArrivalFixture() {
+    const f = homeExitFixture(),
+        graph = new TaskGraphs(tables).get(106016)
+    f.edit((s) => {
+        Object.assign(s.world, tables.position(tables.find('world_borthpos', 20002)))
+        s.tasks[0].nodes = [{ ...makeNode(graph, 29, s), client_before: true }]
+        s.tasks[0].finish_nodes = [1, 25, 26, 27, 28]
+    })
+    return f
+}
+
+test('home arrival condition remains complete after the configured performance transfer and story', () => {
+    const f = homeArrivalFixture(),
+        ack = { task_id: 106016, node_id: 29 }
+    try {
+        assert.throws(() => f.call('TaskClientCondAfter', { ...ack, indexes: [0] }), /condition not complete/)
+        assert.throws(() => f.call('TaskClientAfter', ack), /conditions not complete/)
+        assert.throws(
+            () => f.call('ClientBehaviourRecord', { key: 2519, args: [701, 106016, 29, 0, 1] }),
+            /different map/,
+        )
+        f.call('EnterHome')
+        f.call('TaskClientCondAfter', { ...ack, indexes: [0] })
+        f.call('EnterWorldMap', { ...ack, map_id: 710, point_id: 780301 })
+        assert.equal(f.state().world.map_id, 710)
+        assert.equal(f.state().tasks.find((t) => t.task_id === 106016).nodes[0].node_values[0], 1)
+        f.call('SetStoryId', { story_id: 101180, story_type: 0 })
+        f.call('TaskClientAfter', ack)
+        assert.equal(f.state().tasks.find((t) => t.task_id === 106016).nodes[0].node_id, 30)
+        const before = f.state().tasks.find((t) => t.task_id === 106016)
+        f.call('TaskClientAfter', ack)
+        assert.deepEqual(
+            f.state().tasks.find((t) => t.task_id === 106016),
+            before,
+        )
+    } finally {
+        f.store.close()
+    }
+})
+
+test('old acknowledged scene condition survives relog in performance map; unacknowledged conditions do not', () => {
+    const f = homeArrivalFixture(),
+        ack = { task_id: 106016, node_id: 29 }
+    try {
+        f.edit((s) => {
+            Object.assign(s.world, tables.position(tables.find('world_borthpos', 780301)))
+            s.tasks[0].nodes[0].node_values = [0]
+            s.tasks[0].nodes[0].client_cond_after = [true]
+        })
+        f.login()
+        assert.equal(f.state().tasks.find((t) => t.task_id === 106016).nodes[0].node_values[0], 1)
+        f.call('TaskClientAfter', ack)
+        assert.equal(f.state().tasks.find((t) => t.task_id === 106016).nodes[0].node_id, 30)
+        const graph = new TaskGraphs(tables).get(106016)
+        f.edit((s) => {
+            s.taskEpochs[106016]++
+            s.tasks.find((t) => t.task_id === 106016).nodes = [{ ...makeNode(graph, 29, s), client_before: true }]
+            s.tasks.find((t) => t.task_id === 106016).finish_nodes = [1, 28]
+        })
+        f.login()
+        assert.throws(() => f.call('TaskClientAfter', ack), /conditions not complete/)
+    } finally {
+        f.store.close()
+    }
+})
+
 test('home exit escapes a completed story performance scene and skips intermediate home history', () => {
     const f = homeExitFixture()
     try {
