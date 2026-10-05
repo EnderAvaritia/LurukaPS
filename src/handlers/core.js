@@ -2,6 +2,28 @@ import { ensure, textValue, syncPlayer } from './common.js'
 import { initializeCharacterFormation } from '../character-creation.js'
 import { repairMainHeroType } from '../main-hero.js'
 export function registerCore(on) {
+    on('PinchFaceDataUp', (c, r) => {
+        const basic = c.state.player.basic_info
+        const wardrobe = { ...basic.wardrobe, ...r }
+        ensure([1, 2].includes(wardrobe.sex), 'Invalid sex')
+        // WardrobeInfo is also used by the later appearance editor. Optional
+        // fields (notably height) are absent in the real CBT3 upload request.
+        // Do not rerun character creation or reset the player's saved party.
+        ensure(
+            new Set(wardrobe.parts.map((part) => part.type)).size === wardrobe.parts.length,
+            'Duplicate wardrobe part',
+        )
+        for (const part of wardrobe.parts)
+            ensure(
+                new Set(part.colors.map((color) => color.index)).size === part.colors.length,
+                'Duplicate wardrobe color channel',
+            )
+        basic.wardrobe = wardrobe
+        basic.sex = wardrobe.sex
+        repairMainHeroType(c.tables, c.state)
+        syncPlayer(c, { basic_info: basic, heros_info: c.state.player.heros_info })
+        return {}
+    })
     on('SkipGuide', (c, r) => {
         c.state.player.basic_info.skip_guide = r.u32 ?? 1
         syncPlayer(c, { basic_info: c.state.player.basic_info })

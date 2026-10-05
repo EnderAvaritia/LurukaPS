@@ -1,0 +1,152 @@
+{
+  "parts": [
+    {
+      "colors": [
+        {
+          "index": 0,
+          "color_id": 12832735
+        },
+        {
+          "index": 1,
+          "color_id": 14743543
+        },
+        {
+          "index": 2,
+          "color_id": 12259241
+        },
+        {
+          "index": 3,
+          "color_id": 13907996
+        }
+      ],
+      "color_formular_ids": [
+        2002,
+        0
+      ],
+      "type": 6,
+      "id": 606003
+    },
+    {
+      "colors": [
+        {
+          "index": 0,
+          "color_id": 6010616
+        },
+        {
+          "index": 1,
+          "color_id": 11144688
+        },
+        {
+          "index": 2,
+          "color_id": 6010616
+        },
+        {
+          "index": 3,
+          "color_id": 11144688
+        }
+      ],
+      "color_formular_ids": [
+        4001,
+        4001
+      ],
+      "type": 3,
+      "id": 0
+    },
+    {
+      "colors": [],
+      "color_formular_ids": [
+        6001,
+        0
+      ],
+      "type": 2,
+      "id": 206000
+    },
+    {
+      "colors": [
+        {
+          "index": 0,
+          "color_id": 7124418
+        }
+      ],
+      "color_formular_ids": [
+        10004,
+        0
+      ],
+      "type": 4,
+      "id": 406000
+    },
+    {
+      "colors": [],
+      "color_formular_ids": [
+        10006,
+        0
+      ],
+      "type": 5,
+      "id": 506003000
+    },
+    {
+      "colors": [],
+      "color_formular_ids": [
+        10008,
+        0
+      ],
+      "type": 8,
+      "id": 806003000
+    },
+    {
+      "colors": [
+        {
+          "index": 0,
+          "color_id": 16921906
+        },
+        {
+          "index": 1,
+          "color_id": 5280946
+        },
+        {
+          "index": 2,
+          "color_id": 6141146
+        }
+      ],
+      "color_formular_ids": [
+        10002,
+        0
+      ],
+      "type": 1,
+      "id": 106004
+    }
+  ],
+  "avatars": [
+    {
+      "avatar_type": "head1",
+      "avatar_url": "project-3/playerdata/face/1_head1_1791211941"
+    },
+    {
+      "avatar_type": "head2",
+      "avatar_url": "project-3/playerdata/face/1_head2_1791211941"
+    },
+    {
+      "avatar_type": "head3",
+      "avatar_url": "project-3/playerdata/face/1_head3_1791211942"
+    },
+    {
+      "avatar_type": "head4",
+      "avatar_url": "project-3/playerdata/face/1_head4_1791211942"
+    },
+    {
+      "avatar_type": "head5",
+      "avatar_url": "project-3/playerdata/face/1_head5_1791211942"
+    },
+    {
+      "avatar_type": "head6",
+      "avatar_url": "project-3/playerdata/face/1_head6_1791211942"
+    },
+    {
+      "avatar_type": "head7",
+      "avatar_url": "project-3/playerdata/face/1_head7_1791211942"
+    }
+  ],
+  "sex": 2,
+  "complexion": 8001,
+  "present": 0
+}
