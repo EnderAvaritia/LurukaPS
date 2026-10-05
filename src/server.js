@@ -164,8 +164,10 @@ export async function startServer(config, logger = console) {
                 if (chunk.length >= 4 && chunk.subarray(0, 4).toString() === preamble) {
                     socket.write(preamble)
                     preamble = null
-                    chunk = chunk.subarray(4)
-                    if (!chunk.length) return
+                    const rest = chunk.subarray(4)
+                    logger.warn(`Preamble: consumed CONN, ${rest.length}B remaining, hex=${rest.subarray(0, Math.min(rest.length, 32)).toString('hex')}`)
+                    if (!rest.length) return
+                    chunk = rest
                 } else {
                     socket.destroy()
                     return
