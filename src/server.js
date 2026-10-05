@@ -150,7 +150,7 @@ export async function startServer(config, logger = console) {
             session = {},
             replay = new ReplayWindow(),
             crc = new DelayedCrc()
-        let preamble = 'CONN'
+        let preamble = Buffer.alloc(0)
         sessions.set(socket, { session, replay })
         socket.on('error', (err) => logger.warn(`Socket: ${err.code || err.message}`))
         socket.on('close', () => {
@@ -160,18 +160,20 @@ export async function startServer(config, logger = console) {
             if (owners.get(session.id) === socket) owners.delete(session.id)
         })
         socket.on('data', (chunk) => {
-            if (preamble) {
-                if (chunk.length >= 4 && chunk.subarray(0, 4).toString() === preamble) {
-                    socket.write(preamble)
-                    preamble = null
-                    const rest = chunk.subarray(4)
-                    logger.warn(`Preamble: consumed CONN, ${rest.length}B remaining, hex=${rest.subarray(0, Math.min(rest.length, 32)).toString('hex')}`)
-                    if (!rest.length) return
-                    chunk = rest
-                } else {
+            if (preamble !== null) {
+                preamble = Buffer.concat([preamble, Buffer.from(chunk)])
+                const headerEnd = preamble.indexOf('\r\n\r\n')
+                if (headerEnd === -1) return
+                if (!preamble.subarray(0, preamble.indexOf('\r\n')).toString().startsWith('CONNECT ')) {
                     socket.destroy()
                     return
                 }
+                socket.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+                const rest = preamble.subarray(headerEnd + 4)
+                preamble = null
+                logger.info(`CONNECT tunnel established, ${rest.length}B trailing data`)
+                if (!rest.length) return
+                chunk = rest
             }
             let activeFrame
             session.recentFrames ??= []
