@@ -37,6 +37,20 @@ export function guidedConditionValue(id, state, context) {
     const parts = String(row.condition || '')
         .split('|')
         .map(Number)
+    // HaveCommonItem checks current bag stock, irrespective of how it was
+    // granted. Finished-but-unclaimed production and lifetime craft counts
+    // are not owned items. Sum all stacks of the exact configured item ID.
+    if (
+        parts.length === 3 &&
+        parts[0] === 12041 &&
+        parts.slice(1).every((value) => Number.isSafeInteger(value) && value > 0)
+    )
+        return (state.player?.sbag_infos?.items ?? []).reduce(
+            (count, item) =>
+                count +
+                (item.itemid === parts[1] && Number.isSafeInteger(item.itemnum) && item.itemnum > 0 ? item.itemnum : 0),
+            0,
+        )
     // HomePetStation: pet group, exact pet ID, EStationType, capacity, count.
     // EStationType.Crop=3 counts occupied, placed field-house work slots.
     if (

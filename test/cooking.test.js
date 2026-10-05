@@ -8,6 +8,7 @@ import { Store } from '../src/store.js'
 import { Game } from '../src/game.js'
 import { TaskGraphs, makeNode } from '../src/tasks.js'
 import { cookingRecipe, cookingMaterials } from '../src/cooking.js'
+import { guidedConditionValue } from '../src/guided-conditions.js'
 
 const cfg = configuration(),
     tables = new Tables(cfg.tables),
@@ -72,6 +73,77 @@ function fixture() {
     }
 }
 const stock = (state, id) => state.player.sbag_infos.items.find((item) => item.itemid === id)?.itemnum ?? 0
+
+test('task106016/31 counts only owned meatballs and advances after the fifth cooked serving is claimed', () => {
+    const f = fixture()
+    try {
+        const recipe = cookingRecipe(tables, 9004201)
+        const materials = recipe.requirements.map(({ count, choices }) => ({ item_id: choices[0], item_num: count }))
+        f.store.transact(f.session.id, 0, (s) => {
+            s.player.basic_info.lv = 20
+            s.tasks[0].finish_nodes.push(30)
+            s.tasks[0].nodes = [{ ...makeNode(new TaskGraphs(tables).get(106016), 31, s), client_before: true }]
+            s.player.sbag_infos.items = materials.map((item, index) => ({
+                itemid: item.item_id,
+                itemnum: item.item_num * 5,
+                itemtype: 3,
+                guid: String(100 + index),
+            }))
+        })
+        const request = { build_guid: 18, cook_id: 9004201, cook_count: 5, cook_material: materials }
+        f.call('CookRequest', request)
+        assert.equal(f.state().home.productionJobs[18][0].productId, 9102301)
+        f.advance(recipe.product.time * 4)
+        assert.equal(guidedConditionValue(10020, f.state()), 0, 'unclaimed servings do not count')
+        f.call('ProductFinish', { guid: 18, is_all: true })
+        assert.equal(stock(f.state(), 9004201), 4)
+        assert.deepEqual(f.state().tasks[0].nodes[0].node_values, [4])
+        assert.throws(
+            () => f.call('TaskClientCondAfter', { task_id: 106016, node_id: 31, indexes: [0] }),
+            /condition not complete/,
+        )
+        f.advance(recipe.product.time)
+        const packets = f.call('ProductFinish', { guid: 18, is_all: true })
+        assert.equal(stock(f.state(), 9004201), 5)
+        assert.deepEqual(f.state().tasks[0].nodes[0].node_values, [5])
+        const sync = packets.find((packet) => packet.id === protocol.byName.get('CSProtoTaskSync').id)
+        assert.ok(sync, 'claim refreshes client task progress')
+        f.call('EnterGame', { open_id: 'cooking-test', reconnect: true }, {})
+        assert.deepEqual(f.state().tasks[0].nodes[0].node_values, [5])
+        f.call('TaskClientCondAfter', { task_id: 106016, node_id: 31, indexes: [0] })
+        f.call('TaskClientAfter', { task_id: 106016, node_id: 31 })
+        assert.equal(f.state().tasks[0].nodes[0].node_id, 32)
+        assert.equal(stock(f.state(), 9004201), 5, 'holding condition does not consume food')
+    } finally {
+        f.store.close()
+    }
+})
+
+test('HaveCommonItem sums exact-ID bag stacks and follows current inventory rather than craft history', () => {
+    const state = {
+        player: {
+            sbag_infos: {
+                items: [
+                    { itemid: 9004201, itemnum: 2 },
+                    { itemid: 9004201, itemnum: 3 },
+                    { itemid: 9004202, itemnum: 99 },
+                    { itemid: 9004201, itemnum: 0 },
+                ],
+            },
+        },
+        home: { craftCounts: { 9102301: 100 } },
+    }
+    assert.equal(guidedConditionValue(10020, state), 5)
+    state.player.sbag_infos.items[1].itemnum = 1
+    assert.equal(guidedConditionValue(10020, state), 3)
+    state.player.sbag_infos.items = [
+        { itemid: 3100005, itemnum: 1 },
+        { itemid: 3100009, itemnum: 3 },
+    ]
+    assert.equal(guidedConditionValue(10020, state), 0)
+    assert.equal(guidedConditionValue(10030, state), 1)
+    assert.equal(guidedConditionValue(10033, state), 3)
+})
 
 function addMill(f) {
     f.store.transact(f.session.id, 0, (state) => {
