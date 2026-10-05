@@ -39,9 +39,9 @@ export function decodeFrame(raw, { encryptionKey } = {}) {
         pushSeq: b.readUInt32BE(13),
         signature: b.readBigUInt64BE(17),
         payload: b[4] & 1 ? (() => {
-            try { return decompressLz4(b.subarray(HEADER_SIZE)) } catch (e) {
-                console.warn(`LZ4 fail: id=${b.readUInt16BE(5)} flag=${b[4]} size=${b.readUInt32BE(0)} seq=${b.readUInt32BE(9)} rawPayloadHex=${raw.subarray(HEADER_SIZE, Math.min(raw.length, HEADER_SIZE + 256)).toString('hex')} decPayloadHex=${b.subarray(HEADER_SIZE, Math.min(b.length, HEADER_SIZE + 256)).toString('hex')}`)
-                throw e
+            const candidate = b.subarray(HEADER_SIZE)
+            try { return decompressLz4(candidate) } catch {
+                return candidate
             }
         })() : b.subarray(HEADER_SIZE),
     }
