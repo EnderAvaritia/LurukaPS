@@ -111,3 +111,33 @@ test('relogin restores only the logged rejected story kill after its played-stor
         fs.rmdirSync(dir)
     }
 })
+
+test('fully extracted boss400080 rule works on its real 106021/16 task group', () => {
+    const f = fixture()
+    try {
+        f.store.transact(f.session.id, 0, (state) => {
+            state.player.basic_info.lv = 35
+            state.tasks = [
+                {
+                    task_id: 106021,
+                    nodes: [{ ...makeNode(new TaskGraphs(tables).get(106021), 16, state), client_before: true }],
+                    finish_nodes: [1],
+                    reward_nodes: [],
+                },
+            ]
+            state.taskEpochs[106021] = 1
+            state.taskRecords = tables
+                .get('task')
+                .filter((row) => row.type === 1 && row.id !== 106021)
+                .map((row) => ({ task_id: row.id, count: 1, time: 1 }))
+        })
+        const boss = ((4n << 56n) | 106021049n).toString()
+        assert.throws(() => f.call('StoryKill', { guid: [boss] }), /story has not played/)
+        f.call('SetStoryId', { story_id: 101511, story_type: 3 })
+        f.call('StoryKill', { guid: [boss] })
+        assert.equal(f.state().combat.entities[boss].hp, 0)
+        assert.deepEqual(f.state().storyKillReceipts[`100:${boss}`].story_ids, [101511])
+    } finally {
+        f.store.close()
+    }
+})

@@ -62,16 +62,16 @@ export function registerStoryBattle(on, tables) {
                 group = target?.group
             const profile = profiles.find((p) => p.battleFsmType === group?.battleFsmType)
             ensure(group?.canForceKill === 1 && profile, 'Enemy group has no configured story kill')
-            ensure(
-                profile.rules.some(
-                    (rule) => rule.stories.length && rule.stories.every((id) => c.state.storyIds?.includes(id)),
-                ),
-                'Required battle story has not played',
+            const rules = profile.rules.filter((rule) => !rule.validation || rule.validation === 'story')
+            ensure(rules.length > 0, 'Story-kill client-condition validation is not implemented', 1007)
+            const matchedRule = rules.find(
+                (rule) => rule.stories.length && rule.stories.every((id) => c.state.storyIds?.includes(id)),
             )
+            ensure(matchedRule, 'Required battle story has not played')
             ensure(target, 'Story-kill objective is not active')
             battle.entities[uuid] = { ...existing, ...def, uuid, hp: 0, alive_state: 1, updated_at: c.now }
             c.state.storyKillReceipts ??= {}
-            c.state.storyKillReceipts[key] = { story_ids: profile.rules.flatMap((x) => x.stories), time: c.now }
+            c.state.storyKillReceipts[key] = { story_ids: matchedRule.stories, time: c.now }
             infos.push({ uuid, hp: 0, sp: 0, alive_state: 1, reason: 0 })
         }
         if (infos.length) c.push('CSProtoObjBattleInfoSync', { infos })

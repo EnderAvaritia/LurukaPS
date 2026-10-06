@@ -9,7 +9,433 @@
           "fsmNode": "24",
           "stories": [
             100603
-          ]
+          ],
+          "validation": "story"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1001,
+      "sourceGraph": "ast_fsm_battle_teach_1001",
+      "sourceSha256": "5f5447a11f4bdc9e7025f38517768ad1795a328de1cc78032fa54ae40b77d909",
+      "rules": [
+        {
+          "fsmNode": "5",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1002,
+      "sourceGraph": "ast_fsm_battle_teach_1002",
+      "sourceSha256": "1a40bda8ec082b3def25c0b674749a9dc73ab79ac72cfef5e09dade318b5d571",
+      "rules": [
+        {
+          "fsmNode": "5",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1003,
+      "sourceGraph": "ast_fsm_battle_teach_1003",
+      "sourceSha256": "6cf2ce44f5bdc1284d020b764280e2dcacb6a8b62758b83d6e4ab9e0718714e5",
+      "rules": [
+        {
+          "fsmNode": "4",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 2001,
+      "sourceGraph": "ast_fsm_battle_teach_2001",
+      "sourceSha256": "b724d2d5090994594be741672ebbcd9d3186e70c014985deb96d5986b507c0f2",
+      "rules": [
+        {
+          "fsmNode": "2",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 2002,
+      "sourceGraph": "ast_fsm_battle_teach_2002",
+      "sourceSha256": "dbe68f52ad4930d7afd11fb71fe640990e30bae6f729ab9a9a99a711c7111dd3",
+      "rules": [
+        {
+          "fsmNode": "2",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 3001,
+      "sourceGraph": "ast_fsm_battle_teach_3001",
+      "sourceSha256": "9055f3cfe81580265d9a42b65cfe08e0f43ff5b80a4dac37949f352e411d6556",
+      "rules": [
+        {
+          "fsmNode": "3",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 3002,
+      "sourceGraph": "ast_fsm_battle_teach_3002",
+      "sourceSha256": "f01f564f8ad7aa955627c6052aff60f3f44e04974a9d537b8ac84067749df5c8",
+      "rules": [
+        {
+          "fsmNode": "3",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 4001,
+      "sourceGraph": "ast_fsm_battle_teach_4001",
+      "sourceSha256": "bc69f36743fcd5c7f0180d3ea608af1e0e6aa5d3e96a006865a7406777b38f3f",
+      "rules": [
+        {
+          "fsmNode": "3",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 5001,
+      "sourceGraph": "ast_fsm_battle_teach_5001",
+      "sourceSha256": "4af8c2bb0206059ec9f0f0e3da16de442ce5dbef2dae2a773f633c19d9409cce",
+      "rules": [
+        {
+          "fsmNode": "11",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 101524,
+      "sourceGraph": "ast_fsm_story_101524",
+      "sourceSha256": "e70e44124a5a289eefc5b9610c785b32f938aa2c69b1a8825b1bfa70fd271f08",
+      "rules": [
+        {
+          "fsmNode": "5",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010031,
+      "sourceGraph": "ast_fsm_battle_teach_1010031",
+      "sourceSha256": "2186cf2c8b9c80016f89f08bfc662d3b190b22608b1e680dfaa6878a6028c961",
+      "rules": [
+        {
+          "fsmNode": "5",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010041,
+      "sourceGraph": "ast_fsm_battle_teach_1010041",
+      "sourceSha256": "d41bf807fa47e37c4d78340f058b95618147c3b0ae313d6df4f60f7aa03c5837",
+      "rules": [
+        {
+          "fsmNode": "9",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010061,
+      "sourceGraph": "ast_fsm_battle_teach_1010061",
+      "sourceSha256": "477ea85986304b6719bd96372e1391b384d93a81aa6b91772bb2eb89cdbb9c92",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010071,
+      "sourceGraph": "ast_fsm_battle_teach_1010071",
+      "sourceSha256": "edf2a8541c1d7ded686dec3805132f649794261986a6680f3e7a66330ffa0bcd",
+      "rules": [
+        {
+          "fsmNode": "2",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010081,
+      "sourceGraph": "ast_fsm_battle_teach_1010081",
+      "sourceSha256": "b395fa5045ed009a701f3b09494fa2be3fc34a938d7999196bd7481f864962c0",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010101,
+      "sourceGraph": "ast_fsm_battle_teach_1010101",
+      "sourceSha256": "5d4084ce972120a3151df6dbf67c9c85c1f79541c803555149ff7a7fc430725d",
+      "rules": [
+        {
+          "fsmNode": "7",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1010141,
+      "sourceGraph": "ast_fsm_battle_teach_1010141",
+      "sourceSha256": "53c4525a7713359b52b723bd5872bba776097d0fb4a07d6b4fd0c059cdf8aa5a",
+      "rules": [
+        {
+          "fsmNode": "4",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1020011,
+      "sourceGraph": "ast_fsm_battle_teach_1020011",
+      "sourceSha256": "0fc82b1586e10188efb0e6077f6e87431e1d4f951e69640122edc6910e626a13",
+      "rules": [
+        {
+          "fsmNode": "6",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1030021,
+      "sourceGraph": "ast_fsm_battle_teach_1030021",
+      "sourceSha256": "1b846d98886827b2f0f20ad7c99be1140fb097460c8c17ee854bd93aca33bf9f",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [],
+          "validation": "client-condition"
+        },
+        {
+          "fsmNode": "17",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1070011,
+      "sourceGraph": "ast_fsm_battle_teach_1070011",
+      "sourceSha256": "6a41fbf1fb02576ea25ac8a244cfd54eeb1d1765cc1a7355aeaadfcd63b6c0f9",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1070021,
+      "sourceGraph": "ast_fsm_battle_teach_1070021",
+      "sourceSha256": "138841907571e559c401a314f5612d9906992f9d3876e4b26df4c544911981ad",
+      "rules": [
+        {
+          "fsmNode": "3",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1070031,
+      "sourceGraph": "ast_fsm_battle_teach_1070031",
+      "sourceSha256": "6b06cf7c2fa56a756ce06a42a152c724bbf995f09930f4503e98beb3f542f553",
+      "rules": [
+        {
+          "fsmNode": "3",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1080011,
+      "sourceGraph": "ast_fsm_battle_teach_1080011",
+      "sourceSha256": "00439d82849496e46bd76598cbfd1303f6efb71baaef7bb2ea2762ed9a93eacd",
+      "rules": [
+        {
+          "fsmNode": "11",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1080021,
+      "sourceGraph": "ast_fsm_battle_teach_1080021",
+      "sourceSha256": "41211e283894454fbeaa854843723d5d26f1b067126e15a4adf9e4ad258771db",
+      "rules": [
+        {
+          "fsmNode": "4",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1080031,
+      "sourceGraph": "ast_fsm_battle_teach_1080031",
+      "sourceSha256": "aa273cedcfa36e23ae2712ad0068a178c09e886c6c56b9340f30b006bb8b4a50",
+      "rules": [
+        {
+          "fsmNode": "7",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1080051,
+      "sourceGraph": "ast_fsm_battle_teach_1080051",
+      "sourceSha256": "d3a1c5fb0d8f1423b81ff3ec977a5e2f1cd344ce204da85903caecb60c4d88f3",
+      "rules": [
+        {
+          "fsmNode": "2",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1090011,
+      "sourceGraph": "ast_fsm_battle_teach_1090011",
+      "sourceSha256": "2860513bdc6dd8d92bc3aa17305f1de3a924d46a276055df3ab3d3794e78a2c3",
+      "rules": [
+        {
+          "fsmNode": "4",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1090021,
+      "sourceGraph": "ast_fsm_battle_teach_1090021",
+      "sourceSha256": "4c799022f38d000794d5b4fc4ce7a9c64de31a623d510a62b00c46b16c1878c4",
+      "rules": [
+        {
+          "fsmNode": "6",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1110011,
+      "sourceGraph": "ast_fsm_battle_teach_1110011",
+      "sourceSha256": "61ef4188d4e277c064a6c9b75396a67b180a13b02d56f60b080da871307651ba",
+      "rules": [
+        {
+          "fsmNode": "5",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1120011,
+      "sourceGraph": "ast_fsm_battle_teach_1120011",
+      "sourceSha256": "046d8d46336f9899f32434b233f12e6b463f5b06624b10134b659c884f299215",
+      "rules": [
+        {
+          "fsmNode": "6",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1120021,
+      "sourceGraph": "ast_fsm_battle_teach_1120021",
+      "sourceSha256": "ca542e30e6d8179b17c6f6311cb59ca05947f02cfbf39c18f0ac861d0992e43e",
+      "rules": [
+        {
+          "fsmNode": "3",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1990011,
+      "sourceGraph": "ast_fsm_battle_teach_1990011",
+      "sourceSha256": "889b414d70c4e710d8fb451bdbaf99d5eca123c3bf6432f8a2790561b6f6ab37",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1990021,
+      "sourceGraph": "ast_fsm_battle_teach_1990021",
+      "sourceSha256": "5096325e32c64bc7270a852e3c60ccc207f76519c8178a080b193f886e241e11",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1990031,
+      "sourceGraph": "ast_fsm_battle_teach_1990031",
+      "sourceSha256": "64a0dab268b83db2c7d07b01fc78c4e48d4296534f46668df8ed93e84f71eb63",
+      "rules": [
+        {
+          "fsmNode": "4",
+          "stories": [],
+          "validation": "client-condition"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 1990081,
+      "sourceGraph": "ast_fsm_battle_teach_1990081",
+      "sourceSha256": "fbe3c0f806b5dc5b2a249e394496e45818ad199f6dbccb2005f2210c3593b368",
+      "rules": [
+        {
+          "fsmNode": "6",
+          "stories": [],
+          "validation": "client-condition"
         }
       ]
     },
@@ -22,7 +448,36 @@
           "fsmNode": "9",
           "stories": [
             101230
-          ]
+          ],
+          "validation": "story"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 40008001,
+      "sourceGraph": "ast_fsm_battle_boss_400080",
+      "sourceSha256": "4f6c492c3542fa14e747d7e9d0d9f1c9be25d49a55ab55ccb453971cb55c8155",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [
+            101511
+          ],
+          "validation": "story"
+        }
+      ]
+    },
+    {
+      "battleFsmType": 40008401,
+      "sourceGraph": "ast_fsm_battle_boss_400084",
+      "sourceSha256": "ea77518ff76d9d750e5bff02ae6e6a1db66971ca40ab83f8a8a2d1f331405ddf",
+      "rules": [
+        {
+          "fsmNode": "8",
+          "stories": [
+            101266
+          ],
+          "validation": "story"
         }
       ]
     }
