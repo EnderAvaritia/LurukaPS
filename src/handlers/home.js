@@ -228,7 +228,7 @@ export function registerHome(on, tables) {
             const scene = dormSceneMap.get(hero.conf_id)
             const bg = home.dormBackgrounds?.[heroId]
             if (scene) {
-                const sceneId = Number(bg?.sceneid ?? (scene.exclusivedormScene || scene.sceneId))
+                const sceneId = Number(bg?.sceneid ?? scene.sceneId)
                 if (sceneId) {
                     const point = tables
                         .get('world_borthpos')

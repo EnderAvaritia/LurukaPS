@@ -127,15 +127,16 @@ const ownedItems = []
         if (!itemId) continue
         heroPajamas.push({ hero_id: heroId, pajamas_itemid: itemId })
 ownedItems.push({ itemid: itemId, itemnum: 1 })
-        // Use saved background choice, or default to the exclusive scene if one
-        // exists (the exclusive scene is what the dorm item unlocks).
+        // Use saved background choice (set via ChangeHeroBackGround), or fall
+        // back to the normal scene. The exclusive scene is only applied when
+        // the player explicitly selects it.
         const scene = dormSceneMap.get(confId)
         if (scene) {
             const bg = saved[heroId]
             heroBackGround.push({
                 hero_id: heroId,
-                sceneid: bg?.sceneid ?? (scene.exclusivedormScene || scene.sceneId),
-                night_sceneid: bg?.night_sceneid ?? (scene.exclusivedormSceneNight || scene.sceneIdNight),
+                sceneid: bg?.sceneid ?? scene.sceneId,
+                night_sceneid: bg?.night_sceneid ?? scene.sceneIdNight,
                 itemid: bg?.itemid ?? itemId,
             })
         }
