@@ -215,8 +215,9 @@ export function registerHome(on, tables) {
         const build = home.builds.find((b) => b.guid === r.build_guid)
         ensure(build?.build_type === 5, 'Building is not a dorm', 1021)
         ensure(build.dorm, 'Dorm has no resident heroes', 1021)
-        // Notify the client about the hero being visited in the dorm scene.
+        // Push notification and refresh home data for scene transition.
         c.push('SCProtoHomeDormReEnterNtf', { hero_id: r.hero_id ?? '0' })
+        change(c)
         return {}
     })
     on('HomeDormQuit', () => {
@@ -230,5 +231,21 @@ export function registerHome(on, tables) {
         build.dorm.name = textValue(r.name, 30)
         change(c)
         return {}
+    })
+    on('HomeHeroDressUp', (c, r) => {
+        const hero = c.state.player.heros_info.heros.find((h) => h.guid === String(r.hero_id ?? '0'))
+        ensure(hero, 'Hero not found', 1021)
+        // hearthDormItem on hero state tracks which dorm pajama is equipped.
+        c.state.heroDormItems ??= {}
+        c.state.heroDormItems[hero.guid] = r.item_id
+        change(c)
+        return {}
+    })
+    on('ChangeHeroBackGround', (c, r) => {
+        // Acknowledge background scene changes.
+        return {}
+    })
+    on('HomeFurnitureRecommend', () => {
+        return { id: [] }
     })
 }
