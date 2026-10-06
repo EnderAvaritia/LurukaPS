@@ -215,8 +215,39 @@ export function registerHome(on, tables) {
         const build = home.builds.find((b) => b.guid === r.build_guid)
         ensure(build?.build_type === 5, 'Building is not a dorm', 1021)
         ensure(build.dorm, 'Dorm has no resident heroes', 1021)
-        // Push notification and refresh home data for scene transition.
-        c.push('SCProtoHomeDormReEnterNtf', { hero_id: r.hero_id ?? '0' })
+        if (r.is_change) {
+            // Switching heroes within the dorm — just refresh the sync.
+            c.push('SCProtoHomeDormReEnterNtf', { hero_id: r.hero_id ?? '0' })
+            change(c)
+            return {}
+        }
+        // First entry: transition to the dorm interior sub-scene via world sync.
+        const heroId = String(r.hero_id ?? '0')
+        const hero = c.state.player.heros_info.heros.find((h) => h.guid === heroId)
+        if (hero) {
+            const scene = dormSceneMap.get(hero.conf_id)
+            const bg = home.dormBackgrounds?.[heroId]
+            if (scene) {
+                const sceneId = Number(bg?.sceneid ?? (scene.exclusivedormScene || scene.sceneId))
+                if (sceneId) {
+                    const point = tables
+                        .get('world_borthpos')
+                        .find((row) => row.cityId === sceneId && Number(row.mainPoint) === 1)
+                    if (point) {
+                        rememberMap(c, c.state.world.map_id)
+                        Object.assign(c.state.world, tables.position(point))
+                        delete c.state.combat
+                        change(c)
+                        const sceneContext = { ...c, push: c.pushBefore }
+                        sceneContext.push('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
+                        worldSync(sceneContext, r, WORLD_MAP_CMD_ENTER)
+                        syncBattle(sceneContext)
+                        return {}
+                    }
+                }
+            }
+        }
+        // Fallback: just refresh the home sync if anything went wrong above.
         change(c)
         return {}
     })

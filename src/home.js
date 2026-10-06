@@ -121,10 +121,12 @@ export function homePayload(tables, state) {
         for (const heroId of build.dorm.hero_ids) checkedIn.add(heroId)
     }
     const saved = h.dormBackgrounds ?? {}
+const ownedItems = []
     for (const [heroId, confId] of heroMap) {
         const itemId = dormItemMap.get(confId)
         if (!itemId) continue
         heroPajamas.push({ hero_id: heroId, pajamas_itemid: itemId })
+ownedItems.push({ item_id: itemId, item_num: 1 })
         // Use saved background choice, or default to the exclusive scene if one
         // exists (the exclusive scene is what the dorm item unlocks).
         const scene = dormSceneMap.get(confId)
@@ -132,8 +134,8 @@ export function homePayload(tables, state) {
             const bg = saved[heroId]
             heroBackGround.push({
                 hero_id: heroId,
-                sceneid: bg?.sceneid ?? scene.exclusivedormScene || scene.sceneId,
-                night_sceneid: bg?.night_sceneid ?? scene.exclusivedormSceneNight || scene.sceneIdNight,
+                sceneid: bg?.sceneid ?? (scene.exclusivedormScene || scene.sceneId),
+                night_sceneid: bg?.night_sceneid ?? (scene.exclusivedormSceneNight || scene.sceneIdNight),
                 itemid: bg?.itemid ?? itemId,
             })
         }
@@ -158,9 +160,11 @@ export function homePayload(tables, state) {
         })),
         home_hub: { pos_infos: [], station_pets: h.stationPets ?? [] },
         home_level_new_base: { level: h.level, exp: h.exp, option_setting: 0 },
-        dorm: heroPajamas.length || heroBackGround.length
-            ? { hero_pajamas: heroPajamas, hero_back_ground: heroBackGround }
-            : { hero_pajamas: [], hero_back_ground: [] },
+        dorm: {
+            hero_pajamas: heroPajamas,
+            back_ground_scene: ownedItems.length ? { items: ownedItems } : { items: [] },
+            hero_back_ground: heroBackGround,
+        },
     }
 }
 
