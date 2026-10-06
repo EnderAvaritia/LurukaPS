@@ -296,30 +296,30 @@ export function registerHome(on, tables) {
         const heroId = String(r.hero_id ?? '0')
         const bg = (home.dormBackgrounds ??= {})
         console.log('[ChangeHeroBackGround] req:', JSON.stringify(r), 'heroId:', heroId)
-        if (r.is_change) {
-            // Look up the scene for this item from the dorm_scene table.
+        if (r.itemid) {
+            // itemid is set → select the exclusive background for this item.
             const hero = c.state.player.heros_info.heros.find((h) => h.guid === heroId)
+            console.log('[ChangeHeroBackGround] hero found:', !!hero, 'conf_id:', hero?.conf_id)
             const scene = hero && dormSceneMap.get(hero.conf_id)
+            console.log('[ChangeHeroBackGround] scene:', scene ? `exclusive=${scene.exclusivedormScene}` : 'null')
             if (scene?.exclusivedormScene) {
                 bg[heroId] = {
                     sceneid: scene.exclusivedormScene,
                     night_sceneid: scene.exclusivedormSceneNight || scene.sceneIdNight,
-                    itemid: r.itemid || 0,
+                    itemid: r.itemid,
                 }
                 // Sync heroDormItems so pajamas match the exclusive background.
                 c.state.heroDormItems ??= {}
-                c.state.heroDormItems[heroId] = r.itemid || 0
+                c.state.heroDormItems[heroId] = r.itemid
             }
-        } else if (bg[heroId]) {
-            // Restore to default exclusive scene.
+        } else {
+            // itemid is 0 → revert to normal background.
             delete bg[heroId]
-            // Also clear heroDormItems so pajamas revert to default.
             if (c.state.heroDormItems) delete c.state.heroDormItems[heroId]
         }
-        // Push the home sync first so the client has fresh data when it processes
-        // the notification that follows.
-        c.pushBefore('CSProtoHomeSync', homePayload(tables, c.state))
-        c.push('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
+        // Push notification (without pushSeq) + inline home sync.
+        c.pushBefore('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
+        change(c)
         return {}
     })
     on('HomeFurnitureRecommend', () => {
