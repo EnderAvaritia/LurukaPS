@@ -1,6 +1,7 @@
 import { ensure, syncPlayer } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
-import { grantRewards } from '../rewards.js'
+import { grantRewards, parseRewards } from '../rewards.js'
+import { spend, spendCurrency } from '../inventory.js'
 import { randomInt } from 'node:crypto'
 import { completeEntrustObject, validateEntrustObjectInteraction } from './entrust.js'
 import { taskNodeCompleted } from '../tasks.js'
@@ -114,6 +115,56 @@ export function reconcileWorldCollectionFinalDrops(tables, state) {
 }
 export function registerWorldObjects(on, tables) {
     const catalog = new WorldObjectCatalog(tables)
+    on('WorldCommonRepair', (c, r) => {
+        const config = tables.find('common_world_repair', r.repair_id)
+        ensure(config, 'Unknown world repair', 12045)
+        ensure(
+            config.cityId === c.state.world.map_id && config.worldmapId === r.obj_id,
+            'Repair does not belong to this object/map',
+            12046,
+        )
+        const { row } = catalog.object(c.state.world.map_id, r.obj_id)
+        ensure(worldCondition(row.appearCond, c.state), 'Repair object is not available')
+        const key = `${c.state.world.map_id}:${r.obj_id}`,
+            records = (c.state.worldObjects ??= {}),
+            old = records[key]
+        if (old?.complete || old?.claims?.repair) {
+            const { claims, ...obj } = old
+            return { obj, rewards: { rewards: [] } }
+        }
+        const costs = parseRewards(config.cost),
+            bag = new Map()
+        ensure(
+            costs.every((item) => [3, 10].includes(item.itemtype)),
+            'Unsupported repair material',
+            1007,
+        )
+        for (const cost of costs) {
+            if (cost.itemtype === 3) bag.set(cost.itemid, (bag.get(cost.itemid) ?? 0) + cost.itemnum)
+            else spendCurrency(c.state, cost.itemid, cost.itemnum)
+        }
+        if (bag.size) spend(c.state, bag, 0, c.now)
+        const budget = { count: 0 }
+        const rewardRows = parseRewards(config.reward).flatMap((reward) => {
+            if (reward.itemtype !== 27) return [reward]
+            ensure(reward.itemnum <= 512, 'Repair drop roll limit', 1007)
+            return Array.from({ length: reward.itemnum }, () =>
+                catalog.drops(reward.itemid, c.randomInt, budget),
+            ).flat()
+        })
+        const rewards = grantRewards(tables, c.state, rewardRows)
+        const record = {
+            ...old,
+            obj_id: r.obj_id,
+            complete: true,
+            state_data: { ...old?.state_data, step: 1, complete: true },
+            claims: { ...old?.claims, repair: { id: r.repair_id, time: c.now } },
+        }
+        records[key] = record
+        syncPlayer({ ...c, push: c.pushBefore })
+        const { claims, ...obj } = record
+        return { obj, rewards: { rewards } }
+    })
     on('WorldObjInteract', (c, r) => {
         const requested = r.objs ?? []
         ensure(requested.length <= 64, 'Too many object interactions')
