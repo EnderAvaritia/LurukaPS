@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { TaskGraphs, asList } from '../tasks.js'
+import { TaskGraphs, asList, nodeConditions } from '../tasks.js'
 import { ensure, manager, group } from './common.js'
 import { syncBattle, pairs } from '../battle.js'
 import { petData } from '../pets.js'
@@ -206,9 +206,17 @@ export function expireTaskTrialGroup(tables, state) {
     const storyTrial =
         trial.story_campaign &&
         state.storyCampaign?.map_id === state.world.map_id &&
-        task?.nodes.some((node) => node.node_id === 11) &&
+        task?.nodes.some((node) =>
+            nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some(
+                (condition) =>
+                    condition.__type_TaskConditionBaseData?.__type_TaskCondDungeonData?.dungeonId ===
+                    state.storyCampaign.dungeon_id,
+            ),
+        ) &&
         trial.ids.every((id) =>
-            String(tables.find('dungeon_scene', state.world.map_id)?.extraTrialGroup ?? '')
+            String(
+                tables.find('dungeon_scene', state.world.map_id)?.[trial.scene_trial_field ?? 'extraTrialGroup'] ?? '',
+            )
                 .split('|')
                 .some((entry) => Number(entry.split('#')[0]) === id),
         )
@@ -364,10 +372,20 @@ export function registerTrialGroups(on, tables) {
             requested.length > 0 && requested.length <= 3 && requestedPets.length <= 6,
             'Unsupported trial formation shape',
         )
-        const story =
+        const storyTask =
             c.state.storyCampaign?.map_id === c.state.world.map_id &&
-            c.state.tasks.some((task) => task.task_id === 106014 && task.nodes.some((node) => node.node_id === 11))
-        const maxSlots = story ? 4 : 3
+            c.state.tasks.find((task) =>
+                task.nodes.some((node) =>
+                    nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some(
+                        (condition) =>
+                            condition.__type_TaskConditionBaseData?.__type_TaskCondDungeonData?.dungeonId ===
+                            c.state.storyCampaign.dungeon_id,
+                    ),
+                ),
+            )
+        const story = !!storyTask
+        const sceneTrialField = r.force ? 'trailGroup' : 'extraTrialGroup'
+        const maxSlots = story && !r.force ? 4 : 3
         ensure(
             new Set(requested.map((x) => x.id)).size === requested.length &&
                 requested.every((x) => Number.isInteger(x.pos) && x.pos >= -1 && x.pos < maxSlots),
@@ -390,14 +408,14 @@ export function registerTrialGroups(on, tables) {
             }
         }
         if (story) {
-            const task = c.state.tasks.find((entry) => entry.task_id === 106014)
+            const task = storyTask
             const scene = tables.find('dungeon_scene', c.state.world.map_id)
-            const members = String(scene?.extraTrialGroup ?? '')
+            const members = String(scene?.[sceneTrialField] ?? '')
                 .split('|')
                 .map((entry) => ({ memberId: Number(entry.split('#')[0]) }))
                 .filter((entry) => entry.memberId > 0)
             if (requested.every((entry) => members.some((member) => member.memberId === entry.id)))
-                candidates.push({ task, data: { isForceChange: 0 }, members })
+                candidates.push({ task, data: { isForceChange: r.force ? 1 : 0 }, members })
         }
         ensure(candidates.length === 1, 'Trial formation does not match active task')
         const active = candidates[0]
@@ -477,6 +495,7 @@ export function registerTrialGroups(on, tables) {
             petIds: existing?.petIds ?? [],
             force: !!r.force,
             story_campaign: story,
+            scene_trial_field: story ? sceneTrialField : undefined,
             heroSlots: Object.fromEntries(requested.map((item) => [item.id, item.pos])),
         }
         if (requestedPets.length) attachTrialPets(c, tables, c.state.trialGroup, positions, requestedPets)

@@ -1,10 +1,21 @@
 import { taskEnemyGroups } from '../task-enemy-groups.js'
 import { ensure } from './common.js'
+import { enemyDefinition } from '../enemy-state.js'
 
 export function registerAIHeroes(on, tables) {
     on('CSWorldObjAIHeroInfo', (c, r) => {
         const pack = tables.find('enemy_pack', r.enemy_pack_id)
         ensure(pack?.specialCreateType === 1 && tables.find('hero', pack.enemyId), 'Unknown AI hero pack')
+        // Playable groups receive kind7 UUIDs in WorldObjEnemyInfo. Reuse that
+        // exact actor identity, including for friendly heroes in those groups.
+        for (const [key, entry] of Object.entries(c.state.playableEnemies ?? {})) {
+            const [mapId, , playId] = key.split(':').map(Number)
+            const run = c.state.playableRuns?.[playId]
+            if (mapId !== c.state.world.map_id || run?.map_id !== mapId || ![1, 2].includes(run.status)) continue
+            const entity = entry.entities.find((entity) => entity.config_id === pack.id)
+            if (entity && enemyDefinition(tables, c.state, entity.uuid)?.pack_id === pack.id)
+                return { enemy_pack_id: pack.id, uuid: entity.uuid }
+        }
         for (const entry of taskEnemyGroups(tables, c.state)) {
             const slots = String(tables.find('world_enemy_group', entry.groupId)?.enemyList ?? '')
                 .split('|')
@@ -17,6 +28,6 @@ export function registerAIHeroes(on, tables) {
             const uuid = ((4n << 56n) | (BigInt(slot) << 32n) | BigInt(entry.objectId)).toString()
             return { enemy_pack_id: pack.id, uuid }
         }
-        ensure(false, 'AI hero is not configured in the active task scene')
+        ensure(false, 'AI hero is not configured in the active task scene or playable')
     })
 }

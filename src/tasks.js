@@ -31,6 +31,9 @@ export class TaskGraphs {
         ensure(start.length === 1 && nodes.has(raw.endNodeId), 'Task graph missing start/end', 1007)
         const graph = {
             config,
+            dungeonId: this.tables
+                .get('dungeon_task')
+                .find((row) => String(row.taskIds).split('|').map(Number).includes(id))?.dungeonId,
             nodes,
             start: start[0].id,
             end: raw.endNodeId,
@@ -234,6 +237,7 @@ export function advancePetChoiceBranch(graph, task, state) {
 }
 
 export function taskUnlocked(graph, state, context) {
+    if (graph.dungeonId && state.storyCampaign?.dungeon_id !== graph.dungeonId) return false
     const rules = String(graph.config.unlockcondition || '')
         .split('|')
         .filter(Boolean)

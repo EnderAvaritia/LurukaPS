@@ -3,6 +3,7 @@ import { applyTaskItemActions } from '../task-items.js'
 import { grantRewards, parseRewards } from '../rewards.js'
 import { ensure } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
+import { advanceStoryCampaignTask } from './story-campaign.js'
 import {
     TaskGraphs,
     activeTask,
@@ -112,6 +113,7 @@ export function registerTasks(register, tables) {
         record.count++
         record.time = c.now
         c.state.tasks = c.state.tasks.filter((t) => t.task_id !== r.u32)
+        advanceStoryCampaignTask(c, r.u32)
         if (c.state.pendingTaskStorySync?.task_id === r.u32) delete c.state.pendingTaskStorySync
         c.push('CSProtoSyncPlayerData', c.state.player)
         sync(c, { del_tasks: [r.u32], del_trace_list: [r.u32] })

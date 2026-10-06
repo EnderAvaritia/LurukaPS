@@ -2,7 +2,7 @@ import { ensure } from './handlers/common.js'
 import { combatState } from './combat-state.js'
 import { enemyDefinition } from './enemy-state.js'
 
-// The table has no dungeon -> scene column. This chapter's task condition
+// Legacy dungeon10010 has no dungeon_task mapping. Its task condition
 // names dungeon 10010; its victory condition matches scene 6200 exactly, and
 // scene 6200/6201 carry the consecutive story IDs 1011001..101105.
 const chapterScenes = [6200, 6201]
@@ -13,22 +13,38 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         .filter((row) => row.groupId === groupId && row.dungeonGroupOrder === difficulty)
     ensure(matches.length === 1, 'Unknown campaign difficulty')
     const dungeon = matches[0]
-    ensure(dungeon.id === 10010 && groupId === 200 && difficulty === 1, 'Campaign group is not implemented', 1021)
-    const scenes = chapterScenes.map((id) => {
+    const taskMapping = tables.get('dungeon_task').find((row) => row.dungeonId === dungeon.id)
+    const taskIds = taskMapping ? String(taskMapping.taskIds).split('|').map(Number) : []
+    const taskPoints = taskMapping
+        ? String(taskMapping.taskTeleportIds)
+              .split('|')
+              .map((id) => tables.find('world_borthpos', Number(id)))
+        : []
+    ensure(
+        !taskMapping || (taskIds.length === taskPoints.length && taskPoints.every(Boolean)),
+        'Campaign task scene mapping unavailable',
+        1007,
+    )
+    ensure(taskMapping || dungeon.id === 10010, 'Campaign group is not implemented', 1021)
+    const sceneIds = taskMapping ? [...new Set(taskPoints.map((point) => point.cityId))] : chapterScenes
+    const scenes = sceneIds.map((id) => {
         const city = tables.find('world_city', id),
             scene = tables.find('dungeon_scene', id)
-        const point = tables.get('world_borthpos').find((row) => row.cityId === id && row.mainPoint === 1)
+        const point = taskMapping
+            ? taskPoints.find((point) => point.cityId === id)
+            : tables.get('world_borthpos').find((row) => row.cityId === id && row.mainPoint === 1)
         ensure(city?.type === 2 && scene?.mapId === id && point, 'Campaign scene unavailable', 1007)
         return { city, scene, point }
     })
-    ensure(
-        dungeon.victoryCondition === scenes[0].scene.victoryCondition &&
-            scenes[0].scene.intParam.includes('story_id_0#1011001') &&
-            scenes[1].scene.intParam.includes('story_id_0#101103'),
-        'Campaign story scene mapping changed',
-        1007,
-    )
-    return { dungeon, scenes }
+    if (!taskMapping)
+        ensure(
+            dungeon.victoryCondition === scenes[0].scene.victoryCondition &&
+                scenes[0].scene.intParam.includes('story_id_0#1011001') &&
+                scenes[1].scene.intParam.includes('story_id_0#101103'),
+            'Campaign story scene mapping changed',
+            1007,
+        )
+    return { dungeon, scenes, taskMapping, taskIds, taskPoints }
 }
 
 export function storyCampaignSnapshot(state) {
@@ -83,7 +99,7 @@ export function ensureStoryCampaignScene(tables, state, now) {
             ensure(pos.length === 3 && pos.every(Number.isFinite), 'Campaign object position missing', 1007)
             record = records[key] = {
                 obj_id: row.id,
-                active: true,
+                active: run.task_ids?.length ? row.initStatus !== 1 : true,
                 complete: false,
                 pos: { x: pos[0], y: pos[1], z: pos[2] },
                 state_data: { step: 0, complete: false },
@@ -136,6 +152,15 @@ export function ensureStoryCampaignScene(tables, state, now) {
 
 export function storySceneDefeated(tables, state) {
     const run = state.storyCampaign
+    if (run?.task_ids?.length) {
+        const dungeon = tables.find('dungeon', run.dungeon_id)
+        const [kind, taskId] = String(dungeon.victoryCondition).split('#').map(Number)
+        return (
+            kind === 2007 &&
+            run.task_ids.includes(taskId) &&
+            (state.taskRecords ?? []).some((record) => record.task_id === taskId && record.count > 0)
+        )
+    }
     if (!run || state.world.map_id !== run.map_id || state.combat?.map_id !== run.map_id) return false
     const scene = tables.find('dungeon_scene', run.map_id)
     const [kind, spawner, , , count] = String(scene?.victoryCondition).split('#').map(Number)

@@ -2,6 +2,7 @@ import { ensure } from './common.js'
 import { syncBattle } from '../battle.js'
 import { grantRewards } from '../rewards.js'
 import { worldSync } from './world.js'
+import { TaskGraphs, nodeConditions, acceptTask, taskSnapshot } from '../tasks.js'
 import {
     storyCampaignConfig,
     storyCampaignSnapshot,
@@ -34,7 +35,11 @@ export function enterStoryCampaignScene(c, r) {
             'Previous story dungeon scene is not complete',
         )
         run.map_id = requestedScene
-        Object.assign(c.state.world, c.tables.position(storyCampaignConfig(c.tables, 200, 1).scenes[1].point))
+        const config = storyCampaignConfig(c.tables, run.group_id, run.difficulty)
+        Object.assign(
+            c.state.world,
+            c.tables.position(config.scenes.find(({ scene }) => scene.id === requestedScene).point),
+        )
         delete c.state.combat
     }
     ensureStoryCampaignScene(c.tables, c.state, c.now)
@@ -47,6 +52,7 @@ export function enterStoryCampaignScene(c, r) {
 
 export function settleStoryCampaignScene(c) {
     const run = c.state.storyCampaign
+    if (run?.task_ids?.length) return false // This variant is completed by its dungeon_task chain, not wave deaths.
     if (!run || run.status !== 2 || run.completed_scenes.includes(run.map_id) || c.state.combat?.map_id !== run.map_id)
         return false
     const scene = c.tables.find('dungeon_scene', run.map_id)
@@ -174,7 +180,10 @@ export function endStoryCampaignScene(c, r) {
     ensure(run?.status === 2 && c.state.world.map_id === run.map_id, 'No active story dungeon')
     ensure([1, 3, 4].includes(r.result), 'Invalid dungeon result')
     if (r.result === 3) {
-        ensure(run.completed_scenes.includes(run.map_id), 'Story dungeon enemies are not defeated')
+        ensure(
+            run.task_ids?.length ? storySceneDefeated(c.tables, c.state) : run.completed_scenes.includes(run.map_id),
+            'Story dungeon enemies are not defeated',
+        )
         run.status = 3
         run.end_time = c.now
         creditStoryCampaign(c, run.dungeon_id)
@@ -199,6 +208,7 @@ export function exitStoryCampaign(c) {
     c.pushBefore('CSProtoCampaignInfoSync', { ...storyCampaignSnapshot(c.state), status: final })
     Object.assign(c.state.world, run.return_world)
     delete c.state.storyCampaign
+    if (run.task_ids?.length) c.state.tasks = c.state.tasks.filter((task) => !run.task_ids.includes(task.task_id))
     delete c.state.combat
     worldSync({ ...c, push: c.pushBefore })
     c.pushBefore('CSProtoOnlineModeChange', { mode: 1 })
@@ -206,13 +216,60 @@ export function exitStoryCampaign(c) {
     return {}
 }
 
+export function advanceStoryCampaignTask(c, taskId) {
+    const run = c.state.storyCampaign
+    if (!run?.task_ids?.includes(taskId) || run.status !== 2) return
+    const config = storyCampaignConfig(c.tables, run.group_id, run.difficulty)
+    const nextIndex = run.task_ids.indexOf(taskId) + 1
+    if (nextIndex === run.task_ids.length) {
+        ensure(storySceneDefeated(c.tables, c.state), 'Dungeon victory task is incomplete')
+        run.completed_scenes = [...run.scenes]
+        run.status = 3
+        run.end_time = c.now
+        creditStoryCampaign(c, run.dungeon_id)
+        c.push('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+        // autoExit is explicitly configured by dungeon_task; the client task
+        // after-actions have already finished before its TaskFinish request.
+        if (config.taskMapping.autoExit === 1) exitStoryCampaign(c)
+        return
+    }
+    const nextId = run.task_ids[nextIndex]
+    if (!c.state.tasks.some((task) => task.task_id === nextId))
+        acceptTask(new TaskGraphs(c.tables).get(nextId), c.state, c.now)
+    const point = config.taskPoints[nextIndex]
+    if (point.cityId !== run.map_id) {
+        run.completed_scenes.push(run.map_id)
+        run.map_id = point.cityId
+        run.stage_index = 0
+        delete run.initialized_scene
+        delete c.state.combat
+    }
+    Object.assign(c.state.world, c.tables.position(point))
+    ensureStoryCampaignScene(c.tables, c.state, c.now)
+    c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+    worldSync({ ...c, push: c.pushBefore }, {}, 256, false)
+    syncBattle({ ...c, push: c.pushBefore })
+    syncStoryCampaignEnemies(c)
+}
+
 export function registerStoryCampaign(on, tables) {
     on('CampaignCreate', (c, r) => {
         const config = storyCampaignConfig(tables, r.group_id, r.difficulty)
-        const node = c.state.tasks
-            ?.find((task) => task.task_id === 106014)
-            ?.nodes?.find((entry) => entry.node_id === 11)
-        ensure(node && c.state.player.basic_info.lv >= 15, 'Story dungeon task is not active')
+        const graphs = new TaskGraphs(tables)
+        const requiredByTask = c.state.tasks?.some((task) =>
+            task.nodes.some((node) =>
+                nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some(
+                    (condition) =>
+                        condition.__type_TaskConditionBaseData?.__type_TaskCondDungeonData?.dungeonId ===
+                        config.dungeon.id,
+                ),
+            ),
+        )
+        const [unlockKind, unlockLevel] = String(config.dungeon.unlockCondition).split('#').map(Number)
+        ensure(
+            requiredByTask && unlockKind === 2004 && c.state.player.basic_info.lv >= unlockLevel,
+            'Story dungeon task is not active',
+        )
         ensure(!c.state.entrust?.run && !c.state.multiCampaign && !c.state.storyCampaign, 'Another dungeon is active')
         const w = c.state.world
         const run = (c.state.storyCampaign = {
@@ -223,6 +280,7 @@ export function registerStoryCampaign(on, tables) {
             scenes: config.scenes.map(({ scene }) => scene.id),
             map_id: config.scenes[0].scene.id,
             completed_scenes: [],
+            task_ids: config.taskIds,
             status: 2,
             start_time: c.now,
             return_world: {
@@ -233,6 +291,24 @@ export function registerStoryCampaign(on, tables) {
                 angle: w.angle,
             },
         })
+        if (config.taskIds.length) {
+            // A fresh run replays its internal task chain. Main story receipts
+            // and rewards remain independent from these dungeon-only tasks.
+            c.state.tasks = c.state.tasks.filter((task) => !config.taskIds.includes(task.task_id))
+            c.state.taskRecords = (c.state.taskRecords ?? []).filter((task) => !config.taskIds.includes(task.task_id))
+            for (const taskId of config.taskIds)
+                for (const node of graphs.get(taskId).nodes.values())
+                    for (const condition of nodeConditions(node)) {
+                        const playableId =
+                            condition.__type_TaskConditionBaseData?.__type_TaskCondPlayableIsFinishData?.playableID
+                        if (playableId) {
+                            delete c.state.playableFinishes?.[playableId]
+                            delete c.state.playableRuns?.[playableId]
+                        }
+                    }
+            acceptTask(graphs.get(config.taskIds[0]), c.state, c.now)
+            c.push('CSProtoTaskSync', { ...taskSnapshot(tables, c.state), new_task_ids: [config.taskIds[0]] })
+        }
         c.state.nextStoryCampaignInstanceId = run.instance_id + 1
         Object.assign(w, tables.position(config.scenes[0].point))
         ensureStoryCampaignScene(tables, c.state, c.now)
