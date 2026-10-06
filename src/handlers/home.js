@@ -1,7 +1,7 @@
 import { ensure, textValue, pet } from './common.js'
 import { ensurePetName } from '../pets.js'
 import { caressPet } from '../pet-caress.js'
-import { ensureHome } from '../home.js'
+import { ensureHome, dormSceneMap } from '../home.js'
 import { homeCondition } from '../home-grid.js'
 import { reconcileFormationPets } from '../formation-pets.js'
 import { mountPayload, repairMountSelection } from '../mounts.js'
@@ -242,7 +242,25 @@ export function registerHome(on, tables) {
         return {}
     })
     on('ChangeHeroBackGround', (c, r) => {
-        // Acknowledge background scene changes.
+        const home = ensureHome(tables, c.state)
+        const heroId = String(r.hero_id ?? '0')
+        const bg = (home.dormBackgrounds ??= {})
+        if (r.is_change) {
+            // Look up the scene for this item from the dorm_scene table.
+            const hero = c.state.player.heros_info.heros.find((h) => h.guid === heroId)
+            const scene = hero && dormSceneMap.get(hero.conf_id)
+            if (scene?.exclusivedormScene) {
+                bg[heroId] = {
+                    sceneid: scene.exclusivedormScene,
+                    night_sceneid: scene.exclusivedormSceneNight || scene.sceneIdNight,
+                    itemid: r.itemid || 0,
+                }
+            }
+        } else if (bg[heroId]) {
+            // Restore to default exclusive scene.
+            delete bg[heroId]
+        }
+        change(c)
         return {}
     })
     on('HomeFurnitureRecommend', () => {

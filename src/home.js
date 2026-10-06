@@ -7,7 +7,7 @@ const dormItemMap = new Map(
         fs.readFileSync(new URL('../configs/client-tables-builtin/home_dorm_item.json', import.meta.url), 'utf8'),
     ).map((row) => [row.heroId, row.id]),
 )
-const dormSceneMap = new Map(
+export const dormSceneMap = new Map(
     JSON.parse(
         fs.readFileSync(new URL('../configs/client-tables-builtin/home_dorm_scene.json', import.meta.url), 'utf8'),
     ).map((row) => [row.heroId, row]),
@@ -120,17 +120,21 @@ export function homePayload(tables, state) {
         if (build.build_type !== 5 || !build.dorm?.hero_ids?.length) continue
         for (const heroId of build.dorm.hero_ids) checkedIn.add(heroId)
     }
+    const saved = h.dormBackgrounds ?? {}
     for (const [heroId, confId] of heroMap) {
         const itemId = dormItemMap.get(confId)
         if (!itemId) continue
         heroPajamas.push({ hero_id: heroId, pajamas_itemid: itemId })
+        // Use saved background choice, or default to the exclusive scene if one
+        // exists (the exclusive scene is what the dorm item unlocks).
         const scene = dormSceneMap.get(confId)
         if (scene) {
+            const bg = saved[heroId]
             heroBackGround.push({
                 hero_id: heroId,
-                sceneid: scene.sceneId ?? 0,
-                night_sceneid: scene.sceneIdNight ?? 0,
-                itemid: itemId,
+                sceneid: bg?.sceneid ?? scene.exclusivedormScene || scene.sceneId,
+                night_sceneid: bg?.night_sceneid ?? scene.exclusivedormSceneNight || scene.sceneIdNight,
+                itemid: bg?.itemid ?? itemId,
             })
         }
     }
