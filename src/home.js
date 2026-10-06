@@ -126,7 +126,7 @@ const ownedItems = []
         const itemId = dormItemMap.get(confId)
         if (!itemId) continue
         heroPajamas.push({ hero_id: heroId, pajamas_itemid: itemId })
-ownedItems.push({ item_id: itemId, item_num: 1 })
+ownedItems.push({ itemid: itemId, itemnum: 1 })
         // Use saved background choice, or default to the exclusive scene if one
         // exists (the exclusive scene is what the dorm item unlocks).
         const scene = dormSceneMap.get(confId)
@@ -162,7 +162,7 @@ ownedItems.push({ item_id: itemId, item_num: 1 })
         home_level_new_base: { level: h.level, exp: h.exp, option_setting: 0 },
         dorm: {
             hero_pajamas: heroPajamas,
-            back_ground_scene: ownedItems.length ? { items: ownedItems } : { items: [] },
+            back_ground_scene: ownedItems.length ? { rewards: ownedItems } : { rewards: [] },
             hero_back_ground: heroBackGround,
         },
     }
