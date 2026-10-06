@@ -112,6 +112,7 @@ import { mountPayload, repairMountSelection } from './mounts.js'
 import { GameError, ensure, textValue } from './handlers/common.js'
 
 import { registerCore } from './handlers/core.js'
+import { registerAIHeroes } from './handlers/ai-heroes.js'
 import { ensureAppearance, clothesSnapshot, heroSkinsSnapshot } from './appearance.js'
 import { registerCollection } from './handlers/collection.js'
 import { registerWorld, repairLegacyMountState } from './handlers/world.js'
@@ -259,6 +260,7 @@ export class Game {
         registerPlayableLifecycle(on, tables)
         const runGM = registerGM(on, { enabled: gmEnabled })
         registerCore(on)
+        registerAIHeroes(on, tables)
         registerMonthly(on, tables)
         registerLocalPayments(on, tables, store, { enabled: offlinePayments })
         registerChat(on, store, { runGM })

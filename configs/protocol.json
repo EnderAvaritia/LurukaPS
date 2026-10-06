@@ -2005,6 +2005,13 @@
     "desc": "大世界 检查区域buff"
   },
   {
+    "id": 9141,
+    "name": "CSWorldObjAIHeroInfo",
+    "req": "cs.CSWorldObjAIHeroInfoReq",
+    "rsp": "cs.SCWorldObjAIHeroInfoRsp",
+    "desc": "世界 AI 角色信息（C# 协议枚举，Lua 导出遗漏）"
+  },
+  {
     "id": 9142,
     "name": "SCProtoServerDamageModeSync",
     "rsp": "cs.SCServerDamageModeSync",

@@ -1,6 +1,7 @@
 import { WorldObjectCatalog } from './world-objects.js'
 import { TaskGraphs, asList, nodeConditions } from './tasks.js'
 import { pairs } from './battle.js'
+import { taskEnemyGroups } from './task-enemy-groups.js'
 const catalogs = new WeakMap()
 export function enemyDefinition(tables, state, uuid) {
     const id = BigInt(uuid),
@@ -37,6 +38,13 @@ export function enemyDefinition(tables, state, uuid) {
                         }
                 }
             }
+        if (!groupId && kind === 4) {
+            const configured = taskEnemyGroups(tables, state).find((group) => group.objectId === object)
+            if (configured) {
+                groupId = configured.groupId
+                taskConfig = configured.taskConfig
+            }
+        }
         if (!groupId && kind === 3) {
             let row
             try {
@@ -60,7 +68,10 @@ export function enemyDefinition(tables, state, uuid) {
     }
     if (!packId) return null
     const pack = tables.find('enemy_pack', packId),
-        enemy = tables.find('enemy', pack?.enemyId || packId)
+        enemy =
+            pack?.specialCreateType === 1
+                ? tables.find('hero', pack.enemyId)
+                : tables.find('enemy', pack?.enemyId || packId)
     if (!enemy) return null
     const property = tables.find('unit_property', pack?.propertyId || enemy.propertyId)
     // EntityLevelUtility0600e009 uses the first worldAreaId override.
