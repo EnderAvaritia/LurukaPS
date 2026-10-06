@@ -237,8 +237,12 @@ export function registerHome(on, tables) {
                         rememberMap(c, c.state.world.map_id)
                         Object.assign(c.state.world, tables.position(point))
                         delete c.state.combat
+                        // Push the home sync BEFORE the scene transition so the
+                        // client has fresh dorm data (background, outfit) when
+                        // the hero NPC spawns in the dorm scene.
                         change(c)
                         const sceneContext = { ...c, push: c.pushBefore }
+                        sceneContext.push('CSProtoHomeSync', homePayload(tables, c.state))
                         sceneContext.push('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
                         worldSync(sceneContext, r, WORLD_MAP_CMD_ENTER)
                         syncBattle(sceneContext)
