@@ -113,6 +113,7 @@ import { GameError, ensure, textValue } from './handlers/common.js'
 
 import { registerCore } from './handlers/core.js'
 import { registerAIHeroes } from './handlers/ai-heroes.js'
+import { repairSavedWorldRepairs } from './world-repairs.js'
 import { ensureAppearance, clothesSnapshot, heroSkinsSnapshot } from './appearance.js'
 import { registerCollection } from './handlers/collection.js'
 import { registerWorld, repairLegacyMountState } from './handlers/world.js'
@@ -457,6 +458,7 @@ export class Game {
                 reconcileFormationPets(state)
                 upgradeInventory(state)
                 reconcileWorldCollectionFinalDrops(this.tables, state)
+                repairSavedWorldRepairs(this.tables, state)
                 repairLegacyMountState(state)
                 this.recoverFailedPetChoice(state, session.id, now)
                 this.recoverClosedPetPageAfterChoice(state, session.id)

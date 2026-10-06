@@ -2,6 +2,7 @@ import { ensure, syncPlayer } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards, parseRewards } from '../rewards.js'
 import { spend, spendCurrency } from '../inventory.js'
+import { applyRepairVisuals } from '../world-repairs.js'
 import { randomInt } from 'node:crypto'
 import { completeEntrustObject, validateEntrustObjectInteraction } from './entrust.js'
 import { taskNodeCompleted } from '../tasks.js'
@@ -129,6 +130,19 @@ export function registerWorldObjects(on, tables) {
             records = (c.state.worldObjects ??= {}),
             old = records[key]
         if (old?.complete || old?.claims?.repair) {
+            const objects = applyRepairVisuals(tables, c.state, c.state.world.map_id, r.obj_id, catalog)
+            if (objects.length)
+                c.pushBefore('CSProtoWorldMapSync', {
+                    cmd: 2,
+                    map_id: c.state.world.map_id,
+                    map_info: {
+                        creator_id: c.id,
+                        map_id: c.state.world.map_id,
+                        exist: true,
+                        area_id: c.state.world.area_id,
+                        objs: objects,
+                    },
+                })
             const { claims, ...obj } = old
             return { obj, rewards: { rewards: [] } }
         }
@@ -161,6 +175,18 @@ export function registerWorldObjects(on, tables) {
             claims: { ...old?.claims, repair: { id: r.repair_id, time: c.now } },
         }
         records[key] = record
+        const objects = applyRepairVisuals(tables, c.state, c.state.world.map_id, r.obj_id, catalog)
+        c.pushBefore('CSProtoWorldMapSync', {
+            cmd: 2,
+            map_id: c.state.world.map_id,
+            map_info: {
+                creator_id: c.id,
+                map_id: c.state.world.map_id,
+                exist: true,
+                area_id: c.state.world.area_id,
+                objs: objects,
+            },
+        })
         syncPlayer({ ...c, push: c.pushBefore })
         const { claims, ...obj } = record
         return { obj, rewards: { rewards } }

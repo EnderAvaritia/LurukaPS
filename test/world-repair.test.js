@@ -55,14 +55,28 @@ test('real bridge request spends configured wood once, persists repaired state a
         assert.equal(reply.obj.obj_id, 902630)
         assert.equal(reply.obj.state_data.step, 1)
         assert.equal(reply.obj.complete, true)
+        assert.equal(reply.obj.active, true)
+        const delta = protocol.decode(protocol.byId.get(9103).rsp, packets.find((p) => p.id === 9103).payload)
+        assert.equal(delta.cmd, 2, 'repair uses an incremental interaction update, not a scene reload')
+        assert.equal(delta.map_info.objs.find((obj) => obj.obj_id === 902631).active, true)
+        for (const id of [902632, 902633, 902634, 902635])
+            assert.equal(delta.map_info.objs.find((obj) => obj.obj_id === id).active, false)
         assert.equal(f.state().player.sbag_infos.items.find((item) => item.itemid === 300000).itemnum, 163)
         assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_values[0], 1)
         f.call('WorldCommonRepair', request)
         assert.equal(f.state().player.sbag_infos.items.find((item) => item.itemid === 300000).itemnum, 163)
+        f.store.transact(1, 0, (state) => {
+            // Migration from the earlier repair that saved only the task flag.
+            delete state.worldObjects['100:902630'].active
+            for (const id of [902631, 902632, 902633, 902634, 902635]) delete state.worldObjects[`100:${id}`]
+        })
         f.call('EnterGame', { open_id: 'bridge-repair', reconnect: true }, {})
         const entered = f.call('EnterWorldMap', { map_id: 100 })
         const map = protocol.decode(protocol.byId.get(9103).rsp, entered.find((p) => p.id === 9103).payload)
         assert.equal(map.map_info.objs.find((obj) => obj.obj_id === 902630).state_data.step, 1)
+        assert.equal(map.map_info.objs.find((obj) => obj.obj_id === 902631).active, true)
+        assert.equal(map.map_info.objs.find((obj) => obj.obj_id === 902632).active, false)
+        assert.equal(f.state().player.sbag_infos.items.find((item) => item.itemid === 300000).itemnum, 163)
         f.call('TaskClientCondAfter', { task_id: 107016, node_id: 11, indexes: [0] })
         f.call('TaskClientAfter', { task_id: 107016, node_id: 11 })
         assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_id, 12)
