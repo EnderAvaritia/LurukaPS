@@ -291,6 +291,8 @@ export function registerHome(on, tables) {
             // Restore to default exclusive scene.
             delete bg[heroId]
         }
+        // Push a re-enter notification so the decoration UI refreshes.
+        c.push('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
         change(c)
         return {}
     })
