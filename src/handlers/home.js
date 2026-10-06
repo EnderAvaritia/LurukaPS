@@ -1,7 +1,7 @@
 import { ensure, textValue, pet } from './common.js'
 import { ensurePetName } from '../pets.js'
 import { caressPet } from '../pet-caress.js'
-import { ensureHome, homePayload, dormSceneMap } from '../home.js'
+import { ensureHome, dormSceneMap } from '../home.js'
 import { homeCondition } from '../home-grid.js'
 import { reconcileFormationPets } from '../formation-pets.js'
 import { mountPayload, repairMountSelection } from '../mounts.js'
@@ -228,7 +228,7 @@ export function registerHome(on, tables) {
             const scene = dormSceneMap.get(hero.conf_id)
             const bg = home.dormBackgrounds?.[heroId]
             if (scene) {
-                const sceneId = Number(bg?.sceneid ?? scene.sceneId)
+                const sceneId = Number(bg?.sceneid ?? (scene.exclusivedormScene || scene.sceneId))
                 if (sceneId) {
                     const point = tables
                         .get('world_borthpos')
@@ -237,12 +237,8 @@ export function registerHome(on, tables) {
                         rememberMap(c, c.state.world.map_id)
                         Object.assign(c.state.world, tables.position(point))
                         delete c.state.combat
-                        // Push the home sync BEFORE the scene transition so the
-                        // client has fresh dorm data (background, outfit) when
-                        // the hero NPC spawns in the dorm scene.
                         change(c)
                         const sceneContext = { ...c, push: c.pushBefore }
-                        sceneContext.push('CSProtoHomeSync', homePayload(tables, c.state))
                         sceneContext.push('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
                         worldSync(sceneContext, r, WORLD_MAP_CMD_ENTER)
                         syncBattle(sceneContext)
@@ -270,28 +266,9 @@ export function registerHome(on, tables) {
     on('HomeHeroDressUp', (c, r) => {
         const hero = c.state.player.heros_info.heros.find((h) => h.guid === String(r.hero_id ?? '0'))
         ensure(hero, 'Hero not found', 1021)
-        console.log('[HomeHeroDressUp] req:', JSON.stringify(r), 'hero.guid:', hero?.guid)
-        const home = ensureHome(tables, c.state)
-        const bg = (home.dormBackgrounds ??= {})
-        if (r.item_id) {
-            // hearthDormItem on hero state tracks which dorm pajama is equipped.
-            c.state.heroDormItems ??= {}
-            c.state.heroDormItems[hero.guid] = r.item_id
-            // Also sync dormBackgrounds so homePayload picks up the change.
-            const scene = dormSceneMap.get(hero.conf_id)
-            if (scene?.exclusivedormScene) {
-                bg[hero.guid] = {
-                    sceneid: scene.exclusivedormScene,
-                    night_sceneid: scene.exclusivedormSceneNight || scene.sceneIdNight,
-                    itemid: r.item_id,
-                }
-            }
-        } else {
-            if (c.state.heroDormItems) delete c.state.heroDormItems[hero.guid]
-            delete bg[hero.guid]
-        }
-        // Push notification so the decoration / outfit UI refreshes.
-        c.push('SCProtoHomeDormReEnterNtf', { hero_id: hero.guid })
+        // hearthDormItem on hero state tracks which dorm pajama is equipped.
+        c.state.heroDormItems ??= {}
+        c.state.heroDormItems[hero.guid] = r.item_id
         change(c)
         return {}
     })
@@ -299,30 +276,21 @@ export function registerHome(on, tables) {
         const home = ensureHome(tables, c.state)
         const heroId = String(r.hero_id ?? '0')
         const bg = (home.dormBackgrounds ??= {})
-        console.log('[ChangeHeroBackGround] req:', JSON.stringify(r), 'heroId:', heroId)
-        if (r.itemid) {
-            // itemid is set → select the exclusive background for this item.
+        if (r.is_change) {
+            // Look up the scene for this item from the dorm_scene table.
             const hero = c.state.player.heros_info.heros.find((h) => h.guid === heroId)
-            console.log('[ChangeHeroBackGround] hero found:', !!hero, 'conf_id:', hero?.conf_id)
             const scene = hero && dormSceneMap.get(hero.conf_id)
-            console.log('[ChangeHeroBackGround] scene:', scene ? `exclusive=${scene.exclusivedormScene}` : 'null')
             if (scene?.exclusivedormScene) {
                 bg[heroId] = {
                     sceneid: scene.exclusivedormScene,
                     night_sceneid: scene.exclusivedormSceneNight || scene.sceneIdNight,
-                    itemid: r.itemid,
+                    itemid: r.itemid || 0,
                 }
-                // Sync heroDormItems so pajamas match the exclusive background.
-                c.state.heroDormItems ??= {}
-                c.state.heroDormItems[heroId] = r.itemid
             }
-        } else {
-            // itemid is 0 → revert to normal background.
+        } else if (bg[heroId]) {
+            // Restore to default exclusive scene.
             delete bg[heroId]
-            if (c.state.heroDormItems) delete c.state.heroDormItems[heroId]
         }
-        // Push notification (without pushSeq) + inline home sync.
-        c.pushBefore('SCProtoHomeDormReEnterNtf', { hero_id: heroId })
         change(c)
         return {}
     })

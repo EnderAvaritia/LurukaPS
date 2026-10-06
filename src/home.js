@@ -121,24 +121,21 @@ export function homePayload(tables, state) {
         for (const heroId of build.dorm.hero_ids) checkedIn.add(heroId)
     }
     const saved = h.dormBackgrounds ?? {}
-const dressed = state.heroDormItems ?? {}
 const ownedItems = []
     for (const [heroId, confId] of heroMap) {
         const itemId = dormItemMap.get(confId)
         if (!itemId) continue
-        ownedItems.push({ itemid: itemId, itemnum: 1 })
-        // Pajamas priority: explicit dress-up → exclusive background → default.
+        heroPajamas.push({ hero_id: heroId, pajamas_itemid: itemId })
+ownedItems.push({ itemid: itemId, itemnum: 1 })
+        // Use saved background choice, or default to the exclusive scene if one
+        // exists (the exclusive scene is what the dorm item unlocks).
         const scene = dormSceneMap.get(confId)
         if (scene) {
             const bg = saved[heroId]
-            heroPajamas.push({
-                hero_id: heroId,
-                pajamas_itemid: dressed[heroId] ?? (bg?.itemid ? itemId : 0),
-            })
             heroBackGround.push({
                 hero_id: heroId,
-                sceneid: bg?.sceneid ?? scene.sceneId,
-                night_sceneid: bg?.night_sceneid ?? scene.sceneIdNight,
+                sceneid: bg?.sceneid ?? (scene.exclusivedormScene || scene.sceneId),
+                night_sceneid: bg?.night_sceneid ?? (scene.exclusivedormSceneNight || scene.sceneIdNight),
                 itemid: bg?.itemid ?? itemId,
             })
         }
