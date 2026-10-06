@@ -183,4 +183,52 @@ export function registerHome(on, tables) {
             change(c)
             return {}
         })
+    // Dorm / 宿舍角色入住
+    on('HomeDormCheckIn', (c, r) => {
+        const home = ensureHome(tables, c.state)
+        const build = home.builds.find((b) => b.guid === r.build_guid)
+        ensure(build?.build_type === 5, 'Building is not a dorm', 1021)
+        build.dorm ??= { hero_ids: [], dorm_heros: [] }
+        const inId = String(r.hero_in ?? '0'),
+            outId = String(r.hero_out ?? '0')
+        if (outId !== '0') {
+            build.dorm.hero_ids = build.dorm.hero_ids.filter((id) => id !== outId)
+            build.dorm.dorm_heros = build.dorm.dorm_heros.filter((h) => h.hero_id !== outId)
+        }
+        if (inId !== '0') {
+            if (build.dorm.hero_ids.includes(inId)) {
+                // Already checked in; client may re-send after login sync. Silently accept.
+                return {}
+            }
+            const config = tables.find('home_building', build.build_id)
+            const max = config?.dormCharacterNum ?? 3
+            ensure(build.dorm.hero_ids.length < max, 'Dorm is full')
+            build.dorm.hero_ids.push(inId)
+            build.dorm.dorm_heros.push({ hero_id: inId, dorm_index: r.dorm_index ?? build.dorm.dorm_heros.length })
+        }
+        build.dorm.dorm_heros = build.dorm.dorm_heros.filter((h) => build.dorm.hero_ids.includes(h.hero_id))
+        change(c)
+        return {}
+    })
+    on('HomeDormEnter', (c, r) => {
+        const home = ensureHome(tables, c.state)
+        const build = home.builds.find((b) => b.guid === r.build_guid)
+        ensure(build?.build_type === 5, 'Building is not a dorm', 1021)
+        ensure(build.dorm, 'Dorm has no resident heroes', 1021)
+        // Notify the client about the hero being visited in the dorm scene.
+        c.push('SCProtoHomeDormReEnterNtf', { hero_id: r.hero_id ?? '0' })
+        return {}
+    })
+    on('HomeDormQuit', () => {
+        return {}
+    })
+    on('HomeDormChangeName', (c, r) => {
+        const home = ensureHome(tables, c.state)
+        const build = home.builds.find((b) => b.guid === r.build_guid)
+        ensure(build?.build_type === 5, 'Building is not a dorm', 1021)
+        build.dorm ??= { hero_ids: [], dorm_heros: [] }
+        build.dorm.name = textValue(r.name, 30)
+        change(c)
+        return {}
+    })
 }
