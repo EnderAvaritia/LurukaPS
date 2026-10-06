@@ -13,11 +13,19 @@ export function recoverFailedSpecialNpcEvents(c, protocol, filename, records) {
         for (const node of task.nodes) {
             if (!node.client_before) continue
             nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).forEach((condition, index) => {
-                const data = condition.__type_TaskConditionBaseData?.__type_TaskCondActiveSpecialNPCTriggerData
+                const base = condition.__type_TaskConditionBaseData,
+                    signal = base?.__type_TaskCondSignalReceiverData,
+                    data = signal ?? base?.__type_TaskCondActiveSpecialNPCTriggerData
                 const key = deliveryKey(c.state, task.task_id, node.node_id, index)
                 if (condition.conditionId !== 2519 || !data || c.state.taskEvents?.[key]) return
-                const target = data.isNowCreate ? data.npcData?.createNpcId : data.createNpcId
-                if (!Number.isSafeInteger(target) || target <= 0 || target > 0xffffffff) return
+                // TaskEntitySignalReceiver reports signalType, including 0,
+                // rather than the task NPC's ID from mapData.targetId.
+                const target = signal
+                    ? data.signalType
+                    : data.isNowCreate
+                      ? data.npcData?.createNpcId
+                      : data.createNpcId
+                if (!Number.isSafeInteger(target) || target < (signal ? 0 : 1) || target > 0xffffffff) return
                 const request = { key: 2519, args: [target, task.task_id, node.node_id, index, 1] }
                 const payload = protocol.encode(protocol.byId.get(9904).req, request)
                 candidates.push({ task, key, request, hash: createHash('sha256').update(payload).digest('hex') })

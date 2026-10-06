@@ -203,7 +203,8 @@ export function recordTaskBehaviour(c, r) {
         base.__type_TaskCondActiveSpecialNPCTriggerData ??
         base.__type_TaskCondEnemiesGroupData ??
         base.__type_TaskCondPhotoSceneData ??
-        base.__type_TaskCondPackageDownloadCompleteData
+        base.__type_TaskCondPackageDownloadCompleteData ??
+        base.__type_TaskCondSignalReceiverData
     ensure(
         data,
         `Task event configuration unavailable (${taskId}/${nodeId}/${index}, content ${condition.contentType})`,
@@ -223,13 +224,15 @@ export function recordTaskBehaviour(c, r) {
     if (!photo) {
         const expected =
             scene?.sceneId ??
-            (base.__type_TaskCondPackageDownloadCompleteData
-                ? 0xffffffff
-                : r.key === 1001
-                  ? data.npcId
-                  : r.key === 2519 && data.isNowCreate
-                    ? data.npcData?.createNpcId
-                    : data.createNpcId)
+            (base.__type_TaskCondSignalReceiverData
+                ? data.signalType
+                : base.__type_TaskCondPackageDownloadCompleteData
+                  ? 0xffffffff
+                  : r.key === 1001
+                    ? data.npcId
+                    : r.key === 2519 && data.isNowCreate
+                      ? data.npcData?.createNpcId
+                      : data.createNpcId)
         ensure(Number.isSafeInteger(expected) && expected === target, 'Task event target mismatch')
     }
     // These reports attest client-owned interactions. They cannot grant items or

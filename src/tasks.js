@@ -122,7 +122,17 @@ export function conditionValue(condition, state, context) {
     if ([2501, 2513, 2514].includes(condition.conditionId)) return deliveryComplete(state, condition, context) ? 1 : 0
     if (condition.conditionId === 2519 && base.__type_TaskCondInSceneData) {
         const scene = base.__type_TaskCondInSceneData.sceneId
-        return Number.isInteger(scene) && scene > 0 && state.world.map_id === scene ? 1 : 0
+        if (!Number.isInteger(scene) || scene <= 0) return 0
+        if (state.world.map_id === scene) return 1
+        if (!context) return 0
+        // The node's after-actions can immediately transfer out of the target
+        // scene. Retain a server-validated event/CondAfter receipt, rather than
+        // revoking it when TaskClientAfter arrives from the performance scene.
+        const recorded = state.taskEvents?.[deliveryKey(state, context.taskId, context.nodeId, context.index)] ?? 0
+        const node = state.tasks
+            ?.find((task) => task.task_id === context.taskId)
+            ?.nodes.find((node) => node.node_id === context.nodeId)
+        return recorded > 0 || node?.client_cond_after?.[context.index] === true ? 1 : 0
     }
     if ([1001, 2500, 2519, 2520, 2512].includes(condition.conditionId) && context) {
         const data =
@@ -131,7 +141,8 @@ export function conditionValue(condition, state, context) {
             base.__type_TaskCondActiveSpecialNPCTriggerData ??
             base.__type_TaskCondEnemiesGroupData ??
             base.__type_TaskCondPhotoSceneData ??
-            base.__type_TaskCondPackageDownloadCompleteData
+            base.__type_TaskCondPackageDownloadCompleteData ??
+            base.__type_TaskCondSignalReceiverData
         return (state.taskEvents?.[deliveryKey(state, context.taskId, context.nodeId, context.index)] ?? 0) >=
             Math.max(1, Number(data?.count) || 1)
             ? 1
@@ -243,7 +254,7 @@ export function acceptTask(graph, state, now) {
         nodes: [makeNode(graph, graph.start, state)],
         finish_nodes: [],
         reward_nodes: [],
-        client_trace: false,
+        client_trace: graph.config.type === 1,
         start_time: now,
     }
     advanceStartNodes(graph, task, state)
@@ -292,10 +303,21 @@ export function unlockAutomaticTasks(tables, state, now) {
         const graph = graphs.get(config.id)
         if (!taskUnlocked(graph, state)) continue
         const task = acceptTask(graph, state, now)
-        if (config.type === 1 && !state.tasks.some((t) => t.client_trace)) task.client_trace = true
         added.push(config.id)
     }
     return added
+}
+export function repairMainTaskTrace(tables, state) {
+    const mains = state.tasks.filter(
+        (task) => tables.find('task', task.task_id)?.type === 1 && taskVisibleAtLevel(tables, state, task),
+    )
+    if (mains.some((task) => task.client_trace)) return false
+    const candidate = mains.find(
+        (task) => state.taskTraceChoices?.[`${task.task_id}:${state.taskEpochs?.[task.task_id] ?? 0}`] !== false,
+    )
+    if (!candidate) return false
+    candidate.client_trace = true
+    return true
 }
 export function taskNodeCompleted(state, taskId, nodeId) {
     return (

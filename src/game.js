@@ -11,7 +11,14 @@ import {
 } from './handlers/trial-groups.js'
 import { prepareTaskScenes } from './task-scenes.js'
 import { worldSync } from './handlers/world.js'
-import { TaskGraphs, unlockAutomaticTasks, taskSnapshot, taskVisibleAtLevel, refreshTaskProgress } from './tasks.js'
+import {
+    TaskGraphs,
+    unlockAutomaticTasks,
+    taskSnapshot,
+    taskVisibleAtLevel,
+    refreshTaskProgress,
+    repairMainTaskTrace,
+} from './tasks.js'
 import { recoverMissingTaskItems, taskItemSnapshot } from './task-items.js'
 import { deliveryKey } from './task-delivery.js'
 import { recoverFailedSpecialNpcEvents } from './task-event-recovery.js'
@@ -440,6 +447,7 @@ export class Game {
                 delete state.pendingTaskStorySync
                 repairPendingDuelEntry(state)
                 unlockAutomaticTasks(this.tables, state, now)
+                repairMainTaskTrace(this.tables, state)
                 repairCharacterCreationMarker(state)
                 restoreLegacyHomeFormation(state)
                 repairMainHeroType(this.tables, state)
