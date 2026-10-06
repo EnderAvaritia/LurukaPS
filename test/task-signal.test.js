@@ -72,7 +72,7 @@ test('actual Miti follow signal validates type 0 and opens the configured next s
         f.call('TaskClientCondAfter', { task_id: 106016, node_id: 35, indexes: [0] })
         f.call('TaskClientAfter', { task_id: 106016, node_id: 35 })
         assert.equal(f.state().tasks[0].nodes[0].node_id, 36)
-        assert.equal(f.state().pendingTaskStorySync.stories[0].story_id, 101190)
+        assert.equal(f.state().pendingTaskStorySync, undefined, '101190 uses the story-end callback')
         f.call('SetStoryId', { story_id: 101190, story_type: 0 })
         assert.equal(f.state().pendingTaskStorySync, undefined)
         const inventory = f.state().player.sbag_infos

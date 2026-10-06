@@ -424,6 +424,10 @@ export function deferTaskSyncUntilAfterStories(state, taskId, nodeId, config) {
     const node = config.__type_TaskConditionNodeData ?? config,
         stories = asList(node.afterActionList)
             .map((action) => action.dataType?.__type_TaskOpenStoryData)
+            // TaskEntityOpenStory binds PlayStoryOver to WaitFlow's end callback
+            // for 0, and begin callback for 1. After already proves end for 0;
+            // only a begin callback needs a separate story-completion barrier.
+            .filter((story) => story?.isPlayEndCb === 1)
             .filter((story) => Number.isInteger(story?.storyId) && story.storyId > 0)
             .map((story) => ({ story_id: story.storyId, tag: story.storyTag ?? 0 }))
             .filter((story) => !storyReported(state, story.story_id, story.tag))

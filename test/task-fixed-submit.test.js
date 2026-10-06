@@ -84,7 +84,7 @@ test('actual empty9854 request consumes only the configured three fruits and rem
             after.indexOf(potionSync) <
                 after.findIndex((packet) => packet.id === p.byName.get('CSProtoTaskClientAfter').id),
         )
-        assert.ok(f.state().pendingTaskStorySync, 'item sync must not depend on finishing story101155')
+        assert.ok(f.state().pendingTaskStorySync, '101155 uses the begin callback; item sync remains independent')
         f.call('TaskClientAfter', { task_id: 106015, node_id: 30 })
         assert.equal(taskItemCount(f.state(), 450125), 1)
         assert.equal(f.state().tasks[0].nodes[0].node_id, 33)

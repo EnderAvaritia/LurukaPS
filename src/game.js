@@ -446,8 +446,8 @@ export class Game {
                 return [reply({ open_id: r.open_id, pid: a.id, guid: a.id, server_token: session.token })]
             }
             const packets = this.store.transact(session.id, e.id, (state) => {
-                // A reconnect sends a complete task snapshot, so an interrupted
-                // story transition must not leave task sync held behind its old barrier.
+                // The login sends the canonical active node. Do not replay a
+                // completed node or retain a barrier from the previous client.
                 delete state.pendingTaskStorySync
                 repairPendingDuelEntry(state)
                 unlockAutomaticTasks(this.tables, state, now)
@@ -734,7 +734,11 @@ export class Game {
                     context.pushBefore('CSProtoTaskSync', taskItemSnapshot(state))
                 syncCurrencyMirrors(state.player)
                 const updatedTasks = refreshTaskProgress(this.tables, state)
-                const visibleUpdates = updatedTasks.filter((task) => taskVisibleAtLevel(this.tables, state, task))
+                const visibleUpdates = updatedTasks.filter(
+                    (task) =>
+                        taskVisibleAtLevel(this.tables, state, task) &&
+                        task.task_id !== state.pendingTaskStorySync?.task_id,
+                )
                 if (visibleUpdates.length) context.push('CSProtoTaskSync', { tasks: visibleUpdates })
                 const levelChanged = state.player.basic_info.lv !== playerLevelBefore
                 const newTasks = battleReport && !levelChanged ? [] : unlockAutomaticTasks(this.tables, state, now)
@@ -926,7 +930,11 @@ export class Game {
                         }),
                     )
                     const updated = refreshTaskProgress(this.tables, state)
-                    const visible = updated.filter((task) => taskVisibleAtLevel(this.tables, state, task))
+                    const visible = updated.filter(
+                        (task) =>
+                            taskVisibleAtLevel(this.tables, state, task) &&
+                            task.task_id !== state.pendingTaskStorySync?.task_id,
+                    )
                     if (visible.length) packets.push(this.packet('CSProtoTaskSync', { tasks: visible }))
                 }
             }

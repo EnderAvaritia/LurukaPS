@@ -119,7 +119,7 @@ test('battle controller monsters receive authoritative death and unblock the con
         f.call('TaskClientCondAfter', { task_id: 107016, node_id: 10, indexes: [0] })
         f.call('TaskClientAfter', { task_id: 107016, node_id: 10 })
         assert.equal(f.state().tasks.find((t) => t.task_id === 107016).nodes[0].node_id, 11)
-        assert.equal(f.state().pendingTaskStorySync.stories[0].story_id, 101224)
+        assert.equal(f.state().pendingTaskStorySync, undefined, '101224 uses the story-end callback')
     } finally {
         f.store.close()
     }
