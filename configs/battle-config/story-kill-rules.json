@@ -12,6 +12,19 @@
           ]
         }
       ]
+    },
+    {
+      "battleFsmType": 40007601,
+      "sourceGraph": "ast_fsm_battle_boss_400076",
+      "sourceSha256": "b700d3d536bda94e96920266f143426986a6fa5b021195441d21037f4503588b",
+      "rules": [
+        {
+          "fsmNode": "9",
+          "stories": [
+            101230
+          ]
+        }
+      ]
     }
   ]
 }

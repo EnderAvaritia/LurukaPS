@@ -114,6 +114,7 @@ import { GameError, ensure, textValue } from './handlers/common.js'
 import { registerCore } from './handlers/core.js'
 import { registerAIHeroes } from './handlers/ai-heroes.js'
 import { repairSavedWorldRepairs } from './world-repairs.js'
+import { recoverFailedStoryKills } from './story-battle.js'
 import { ensureAppearance, clothesSnapshot, heroSkinsSnapshot } from './appearance.js'
 import { registerCollection } from './handlers/collection.js'
 import { registerWorld, repairLegacyMountState } from './handlers/world.js'
@@ -472,6 +473,12 @@ export class Game {
                     this.taskEventDiagnosticsFile,
                 )
                 recoverCachedTaskTimeEvent({ state, tables: this.tables, id: session.id, now })
+                recoverFailedStoryKills(
+                    { state, tables: this.tables, id: session.id, now },
+                    this.protocol,
+                    this.taskEventDiagnosticsFile,
+                    this.handlers.get(10799),
+                )
                 recoverMissingTaskItems(this.tables, new TaskGraphs(this.tables), state)
                 refreshTaskProgress(this.tables, state)
                 ensureAppearance(this.tables, state)
