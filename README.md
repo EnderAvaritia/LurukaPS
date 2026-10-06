@@ -8,6 +8,8 @@ The project is under active development.
 
 AzurJS was the project's former internal name.
 
+[Telegram Channel](https://t.me/LurukaPS) | [Telegram Group](https://t.me/+VY_nbsZQeVc0YTdh)
+
 ![Example](images/example.jpg)
 
 ## Features
