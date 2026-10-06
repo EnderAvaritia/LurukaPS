@@ -508,6 +508,62 @@ export function refreshTaskProgress(tables, state) {
                     }
                     return
                 }
+                if (q.conditionId === 2519 && node.client_before) {
+                    const base = q.__type_TaskConditionBaseData ?? {},
+                        data = base.__type_TaskCondEnemiesGroupData
+                    if (
+                        data?.useExistEnemy &&
+                        data.createNpcId > 0 &&
+                        state.combat?.map_id === state.world.map_id &&
+                        !state.taskEvents?.[deliveryKey(state, task.task_id, node.node_id, index)]
+                    ) {
+                        // Existing task units live in a CreateBattleUnit controller,
+                        // not this condition's enemiesDatas. Client group-removal
+                        // callbacks may be absent; verify every configured slot.
+                        const groups = graph.controllers
+                            .filter((controller) => asList(controller.field_530003).includes(node.node_id))
+                            .flatMap((controller) =>
+                                asList(controller.__type_TaskCreateBattleUnitDataController?.enemiesDatas),
+                            )
+                            .filter(
+                                (group) =>
+                                    group?.createNpcId === data.createNpcId && group.sceneId === state.world.map_id,
+                            )
+                        const complete =
+                            groups.length > 0 &&
+                            groups.every((group) => {
+                                const config = tables.find(
+                                    'world_enemy_group',
+                                    group.__type_TaskEnemiesOverrideData?.enemiesGroupId,
+                                )
+                                const packs = String(config?.enemyList ?? '')
+                                    .split('|')
+                                    .filter(Boolean)
+                                    .map(Number)
+                                return (
+                                    packs.length > 0 &&
+                                    packs.every((pack, slot) => {
+                                        const uuid = (
+                                            (4n << 56n) |
+                                            (BigInt(slot) << 32n) |
+                                            BigInt(group.createNpcId)
+                                        ).toString()
+                                        const entity = state.combat.entities[uuid]
+                                        return (
+                                            entity?.object_id === group.createNpcId &&
+                                            entity.slot === slot &&
+                                            entity.pack_id === pack &&
+                                            entity.hp === 0
+                                        )
+                                    })
+                                )
+                            })
+                        if (complete) {
+                            state.taskEvents ??= {}
+                            state.taskEvents[deliveryKey(state, task.task_id, node.node_id, index)] = 1
+                        }
+                    }
+                }
                 if (q.conditionId !== 2520 || !node.client_before) return
                 const data = q.__type_TaskConditionBaseData?.__type_TaskCondEnemiesGroupData,
                     groups = asList(data?.enemiesDatas)

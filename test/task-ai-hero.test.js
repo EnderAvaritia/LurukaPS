@@ -80,6 +80,12 @@ test('battle controller monsters receive authoritative death and unblock the con
     const f = fixture()
     try {
         const source = f.state().player.heros_info.heros[0].guid
+        const allyPackets = f.call('CSWorldObjAIHeroInfo', { enemy_pack_id: 10800301 })
+        const ally = protocol.decode('SCWorldObjAIHeroInfoRsp', allyPackets.find((p) => p.id === 9141).payload).uuid
+        f.call('BattleInfoReduce', {
+            uint64_dic: [source, ally],
+            battle_info: [{ hurt_info: { from_id: '1', tar_id: '2', hp_change: -8 } }],
+        })
         for (let slot = 0; slot < 3; slot++) {
             const uuid = ((4n << 56n) | (BigInt(slot) << 32n) | 107016014n).toString()
             const definition = enemyDefinition(tables, f.state(), uuid)
@@ -90,8 +96,26 @@ test('battle controller monsters receive authoritative death and unblock the con
                 battle_info: [{ hurt_info: { from_id: '1', tar_id: '2', hp_change: -definition.max_hp } }],
             })
             assert.equal(f.state().combat.entities[uuid].hp, 0)
+            assert.equal(
+                f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_values[0],
+                slot === 2 ? 1 : 0,
+            )
         }
-        f.call('ClientBehaviourRecord', { key: 2519, args: [107016014, 107016, 10, 0, 1] })
+        assert.ok(f.state().combat.entities[ally].hp > 0, 'living companion does not block the target enemy group')
+        f.store.transact(f.session.id, 0, (state) => {
+            // Old servers stored all three deaths but never recorded completion.
+            delete state.taskEvents['107016:1:10:0']
+            state.tasks.find((task) => task.task_id === 107016).nodes[0].node_values = [0]
+        })
+        const login = protocol.byId.get(5001),
+            who = {},
+            game = new Game(protocol, f.store, tables)
+        game.dispatch(who, {
+            id: 5001,
+            seq: 1,
+            payload: protocol.encode(login.req, { open_id: 'ai-hero-test', reconnect: true }),
+        })
+        assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_values[0], 1)
         f.call('TaskClientCondAfter', { task_id: 107016, node_id: 10, indexes: [0] })
         f.call('TaskClientAfter', { task_id: 107016, node_id: 10 })
         assert.equal(f.state().tasks.find((t) => t.task_id === 107016).nodes[0].node_id, 11)
