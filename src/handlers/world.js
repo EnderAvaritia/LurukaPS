@@ -8,7 +8,9 @@ import { repairMainHeroType } from '../main-hero.js'
 import { campaignSnapshot, entrustChestSnapshot } from '../entrust.js'
 import { u64 } from '../combat-state.js'
 import { recoverFormationHp } from '../transpoint-recovery.js'
-import { storyCampaignSnapshot } from '../story-campaign.js'
+import { storyCampaignSnapshot, resetCampaignTasks } from '../story-campaign.js'
+import { taskSnapshot } from '../tasks.js'
+import { playableSnapshot } from './playable-lifecycle.js'
 import {
     addWorldMark,
     deleteWorldMarks,
@@ -146,6 +148,12 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
     }
     if (s.storyCampaign && s.storyCampaign.map_id !== w.map_id) {
         c.push('CSProtoCampaignInfoSync', { ...storyCampaignSnapshot(s), status: 1 })
+        const reset = resetCampaignTasks(c.tables, s, s.storyCampaign)
+        if (reset) {
+            c.push('CSProtoTaskSync', reset)
+            c.push('CSProtoTaskSync', taskSnapshot(c.tables, s))
+            c.push('CSProtoPlayableSync', playableSnapshot(s))
+        }
         delete s.storyCampaign
         delete s.combat
     }

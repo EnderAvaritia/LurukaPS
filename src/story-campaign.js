@@ -1,6 +1,82 @@
 import { ensure } from './handlers/common.js'
 import { combatState } from './combat-state.js'
 import { enemyDefinition } from './enemy-state.js'
+import { TaskGraphs, nodeConditions, makeNode } from './tasks.js'
+
+export function campaignEntryTasks(tables, state, dungeonId) {
+    const graphs = new TaskGraphs(tables)
+    return (state.tasks ?? []).filter((task) =>
+        task.nodes.some((node) =>
+            nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).some(
+                (condition) =>
+                    condition.__type_TaskConditionBaseData?.__type_TaskCondDungeonData?.dungeonId === dungeonId,
+            ),
+        ),
+    )
+}
+
+// Called only when leaving a campaign, never on battle/movement reports.
+export function resetCampaignTasks(tables, state, run) {
+    if (!run.task_ids?.length) return null
+    const aborted = run.status !== 3
+    const graphs = new TaskGraphs(tables)
+    const restored = []
+    state.tasks = state.tasks.filter((task) => !run.task_ids.includes(task.task_id))
+    if (aborted) {
+        state.taskRecords = (state.taskRecords ?? []).filter((task) => !run.task_ids.includes(task.task_id))
+        // Old active saves lack entry snapshots. Their still-active dungeon
+        // condition is enough to rebuild its client actions without rewinding
+        // unrelated story nodes or fabricating a prior task position.
+        for (const saved of run.entry_tasks ?? campaignEntryTasks(tables, state, run.dungeon_id)) {
+            const current = state.tasks.find((task) => task.task_id === saved.task_id)
+            if (!current) continue
+            const task = structuredClone(saved)
+            task.reward_nodes = [...new Set([...(saved.reward_nodes ?? []), ...(current.reward_nodes ?? [])])]
+            task.nodes = task.nodes.map((node) => ({
+                ...node,
+                ...makeNode(graphs.get(task.task_id), node.node_id, state),
+            }))
+            state.tasks[state.tasks.indexOf(current)] = task
+            restored.push(task.task_id)
+            for (const node of task.nodes)
+                delete state.taskSceneReceipts?.[
+                    `${task.task_id}:${state.taskEpochs?.[task.task_id] ?? 0}:${node.node_id}`
+                ]
+        }
+    }
+    if (
+        run.task_ids.includes(state.pendingTaskStorySync?.task_id) ||
+        restored.includes(state.pendingTaskStorySync?.task_id)
+    )
+        delete state.pendingTaskStorySync
+    if (run.task_ids.includes(state.pendingTaskScene?.task_id) || restored.includes(state.pendingTaskScene?.task_id))
+        delete state.pendingTaskScene
+    const playableIds = new Set(
+        run.task_ids.flatMap((id) =>
+            [...graphs.get(id).nodes.values()].flatMap((node) =>
+                nodeConditions(node)
+                    .map(
+                        (condition) =>
+                            condition.__type_TaskConditionBaseData?.__type_TaskCondPlayableIsFinishData?.playableID,
+                    )
+                    .filter(Boolean),
+            ),
+        ),
+    )
+    for (const id of playableIds) {
+        delete state.playableRuns?.[id]
+        if (aborted) delete state.playableFinishes?.[id]
+    }
+    for (const key of Object.keys(state.playableEnemies ?? {})) {
+        const [map, , play] = key.split(':').map(Number)
+        if (run.scenes.includes(map) && playableIds.has(play)) delete state.playableEnemies[key]
+    }
+    return {
+        del_tasks: [...run.task_ids, ...restored],
+        del_task_records: aborted ? run.task_ids : [],
+        del_trace_list: run.task_ids,
+    }
+}
 
 // Legacy dungeon10010 has no dungeon_task mapping. Its task condition
 // names dungeon 10010; its victory condition matches scene 6200 exactly, and

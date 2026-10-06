@@ -56,6 +56,7 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         const wire = protocol.decode('CampaignInfo', packets.find((packet) => packet.id === 9505).payload)
         assert.equal(wire.cur_scene_id, 6231)
         assert.equal(wire.dungeon_instance_id, 10068)
+        const entryTask = structuredClone(state().tasks.find((task) => task.task_id === 107016))
         const originalFormation = structuredClone(state().player.group_mgrs)
         const trialRequest = {
             trial_heros: [
@@ -94,11 +95,53 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
             },
         )
         assert.deepEqual(state().trialGroup.ids, [2108103, 2108001])
+        // Abort in scene2 after two internal tasks, rather than only testing
+        // a quit immediately after creation.
+        for (const id of [500011, 500012]) {
+            store.transact(session.id, 0, (s) => {
+                s.tasks.find((task) => task.task_id === id).nodes = [makeNode(graphs.get(id), graphs.get(id).end, s)]
+            })
+            call('TaskFinish', { u32: id })
+        }
+        assert.equal(state().world.map_id, 6232)
+        assert.ok(state().taskRecords.some((record) => record.task_id === 500012))
+        call('TaskClientBefore', { task_id: 107016, node_id: 26 })
+        call('PlayableStart', { u32: 62113 })
         assert.throws(() => call('EndDungeonScene', { result: 3 }), /not defeated/)
-        call('CampaignQuit')
+        const quit = call('CampaignQuit')
         assert.equal(state().world.map_id, 100)
+        const resetPackets = quit
+            .filter((packet) => packet.id === 9853)
+            .map((packet) => protocol.decode('SCTaskSync', packet.payload))
+        assert.ok(
+            resetPackets.some(
+                (sync) =>
+                    sync.del_tasks.includes(500013) &&
+                    sync.del_tasks.includes(107016) &&
+                    sync.del_task_records.includes(500012),
+            ),
+            'exit must explicitly remove cached client tasks and completion records',
+        )
+        assert.deepEqual(
+            state().tasks.find((task) => task.task_id === 107016),
+            entryTask,
+        )
+        assert.ok(!state().taskRecords.some((record) => config.taskIds.includes(record.task_id)))
+        assert.equal(state().playableRuns[62113], undefined)
+        assert.equal(state().storyCampaignClears?.[10068], undefined)
         assert.equal(state().trialGroup, undefined)
         assert.deepEqual(state().player.group_mgrs[0].groups, originalFormation[0].groups)
+        assert.ok(!state().tasks.some((task) => config.taskIds.includes(task.task_id)))
+        call('CampaignCreate', { group_id: 216, difficulty: 1 })
+        call('TaskClientBefore', { task_id: 107016, node_id: 26 })
+        store.transact(session.id, 0, (s) => {
+            delete s.storyCampaign.entry_tasks
+        })
+        // Legacy saves and exits through the ordinary map-transfer path use
+        // the same reset without needing a freshly captured entry snapshot.
+        call('EnterWorldMap', { map_id: 100, point_id: 10082 })
+        assert.equal(state().storyCampaign, undefined)
+        assert.equal(state().tasks.find((task) => task.task_id === 107016).nodes[0].client_before, false)
         assert.ok(!state().tasks.some((task) => config.taskIds.includes(task.task_id)))
         call('CampaignCreate', { group_id: 216, difficulty: 1 })
         call('StartDungeonClientOk')

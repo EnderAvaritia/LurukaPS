@@ -8,7 +8,10 @@ import {
     storyCampaignSnapshot,
     ensureStoryCampaignScene,
     storySceneDefeated,
+    campaignEntryTasks,
+    resetCampaignTasks,
 } from '../story-campaign.js'
+import { playableSnapshot } from './playable-lifecycle.js'
 
 export function syncStoryCampaignEnemies(c) {
     const run = c.state.storyCampaign
@@ -208,7 +211,12 @@ export function exitStoryCampaign(c) {
     c.pushBefore('CSProtoCampaignInfoSync', { ...storyCampaignSnapshot(c.state), status: final })
     Object.assign(c.state.world, run.return_world)
     delete c.state.storyCampaign
-    if (run.task_ids?.length) c.state.tasks = c.state.tasks.filter((task) => !run.task_ids.includes(task.task_id))
+    const reset = resetCampaignTasks(c.tables, c.state, run)
+    if (reset) {
+        c.pushBefore('CSProtoTaskSync', reset)
+        c.pushBefore('CSProtoTaskSync', taskSnapshot(c.tables, c.state))
+        c.pushBefore('CSProtoPlayableSync', playableSnapshot(c.state))
+    }
     delete c.state.combat
     worldSync({ ...c, push: c.pushBefore })
     c.pushBefore('CSProtoOnlineModeChange', { mode: 1 })
@@ -281,6 +289,9 @@ export function registerStoryCampaign(on, tables) {
             map_id: config.scenes[0].scene.id,
             completed_scenes: [],
             task_ids: config.taskIds,
+            entry_tasks: config.taskIds.length
+                ? structuredClone(campaignEntryTasks(tables, c.state, config.dungeon.id))
+                : undefined,
             status: 2,
             start_time: c.now,
             return_world: {
