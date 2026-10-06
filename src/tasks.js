@@ -113,6 +113,17 @@ export function conditionValue(condition, state, context) {
         if (context?.taskId === 106010 && d?.playableId === 62102) return 1
         return d && finish && (!base.mapData?.sceneId || finish.map_id === base.mapData.sceneId) ? 1 : 0
     }
+    if (condition.conditionId === 2519 && base.__type_TaskCondPlayableIsFinishData) {
+        const data = base.__type_TaskCondPlayableIsFinishData,
+            finish = state.playableFinishes?.[data.playableID],
+            scene = data.sceneID || base.mapData?.sceneId
+        return Number.isSafeInteger(data.playableID) &&
+            data.playableID > 0 &&
+            finish &&
+            (!scene || finish.map_id === scene)
+            ? 1
+            : 0
+    }
     if (condition.conditionId === 2523 && context) {
         const group = base.__type_TaskCondPetCheckData?.petId
         return Number.isInteger(group) && state.taskPetChoices?.[context.taskId] === group ? 1 : 0

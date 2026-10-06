@@ -183,7 +183,9 @@ export function recordTaskBehaviour(c, r) {
         ensure(
             completed?.conditionId === r.key &&
                 ((c.state.taskEvents?.[deliveryKey(c.state, taskId, nodeId, index)] ?? 0) > 0 ||
-                    !!completed.__type_TaskConditionBaseData?.__type_TaskCondInSceneData),
+                    !!completed.__type_TaskConditionBaseData?.__type_TaskCondInSceneData ||
+                    (completed.__type_TaskConditionBaseData?.__type_TaskCondPlayableIsFinishData &&
+                        conditionValue(completed, c.state, { taskId, nodeId, index }) > 0)),
             'Task event was not previously completed',
         )
         return true
@@ -196,8 +198,10 @@ export function recordTaskBehaviour(c, r) {
     ensure(condition && condition.conditionId === r.key, 'Task event condition mismatch')
     const base = condition.__type_TaskConditionBaseData ?? {}
     const scene = base.__type_TaskCondInSceneData
+    const playable = base.__type_TaskCondPlayableIsFinishData
     const data =
         scene ??
+        playable ??
         base.__type_TaskCondNPCTriggerData ??
         base.__type_TaskCondActiveNPCTriggerData ??
         base.__type_TaskCondActiveSpecialNPCTriggerData ??
@@ -217,24 +221,32 @@ export function recordTaskBehaviour(c, r) {
         activeNpc = base.__type_TaskCondActiveNPCTriggerData ?? base.__type_TaskCondActiveSpecialNPCTriggerData
     const map =
         scene?.sceneId ??
-        (base.mapData?.sceneId ||
+        (playable?.sceneID ||
+            base.mapData?.sceneId ||
             activeNpc?.npcData?.sceneId ||
             (!npc && !activeNpc ? data.sceneId || data.enemiesDatas?.sceneId : 0))
     ensure(!map || map === c.state.world.map_id, 'Task event is in a different map')
     if (!photo) {
         const expected =
             scene?.sceneId ??
-            (base.__type_TaskCondSignalReceiverData
-                ? data.signalType
-                : base.__type_TaskCondPackageDownloadCompleteData
-                  ? 0xffffffff
-                  : r.key === 1001
-                    ? data.npcId
-                    : r.key === 2519 && data.isNowCreate
-                      ? data.npcData?.createNpcId
-                      : data.createNpcId)
+            (playable
+                ? playable.playableID
+                : base.__type_TaskCondSignalReceiverData
+                  ? data.signalType
+                  : base.__type_TaskCondPackageDownloadCompleteData
+                    ? 0xffffffff
+                    : r.key === 1001
+                      ? data.npcId
+                      : r.key === 2519 && data.isNowCreate
+                        ? data.npcData?.createNpcId
+                        : data.createNpcId)
         ensure(Number.isSafeInteger(expected) && expected === target, 'Task event target mismatch')
     }
+    if (playable)
+        ensure(
+            conditionValue(condition, c.state, { taskId, nodeId, index }) > 0,
+            'Playable has no matching server completion record',
+        )
     // These reports attest client-owned interactions. They cannot grant items or
     // bypass exact-item submission, account-level or other server-owned conditions.
     const key = deliveryKey(c.state, taskId, nodeId, index),
