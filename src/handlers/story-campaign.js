@@ -2,7 +2,7 @@ import { ensure } from './common.js'
 import { syncBattle } from '../battle.js'
 import { grantRewards } from '../rewards.js'
 import { worldSync } from './world.js'
-import { TaskGraphs, nodeConditions, acceptTask, taskSnapshot } from '../tasks.js'
+import { TaskGraphs, nodeConditions, acceptTask, taskSnapshot, reconcileClearedDungeonBefore } from '../tasks.js'
 import {
     storyCampaignConfig,
     storyCampaignSnapshot,
@@ -141,8 +141,28 @@ export function settleStoryCampaignScene(c) {
 
 function creditStoryCampaign(c, dungeonId) {
     const clears = (c.state.storyCampaignClears ??= {})
-    if (clears[dungeonId]) return false
-    clears[dungeonId] = { count: 1, time: c.now }
+    const existing = clears[dungeonId]
+    const clear = (clears[dungeonId] ??= { count: 1, time: c.now })
+    const mapping = c.tables.get('dungeon_task').find((row) => row.dungeonId === dungeonId)
+    const ids = String(mapping?.taskIds ?? '')
+        .split('|')
+        .filter(Boolean)
+        .map(Number)
+    const [kind, victoryTask] = String(c.tables.find('dungeon', dungeonId)?.victoryCondition ?? '')
+        .split('#')
+        .map(Number)
+    if (
+        !clear.task_proof &&
+        kind === 2007 &&
+        ids.length &&
+        ids.at(-1) === victoryTask &&
+        ids.every((id) => (c.state.taskRecords ?? []).some((record) => record.task_id === id && record.count > 0))
+    )
+        clear.task_proof = { victory_task_id: victoryTask, task_ids: ids }
+    const graphs = new TaskGraphs(c.tables)
+    for (const task of campaignEntryTasks(c.tables, c.state, dungeonId))
+        for (const node of task.nodes) reconcileClearedDungeonBefore(c.tables, graphs.get(task.task_id), node, c.state)
+    if (existing) return false
     const exp = c.tables.find('dungeon', dungeonId)?.userExp
     if (exp > 0) {
         const rewards = grantRewards(c.tables, c.state, [{ itemtype: 10, itemid: 10, itemnum: exp }])
@@ -296,6 +316,11 @@ export function registerStoryCampaign(on, tables) {
         })
         run.return_world = storyCampaignReturnWorld(tables, c.state, run)
         if (config.taskIds.length) {
+            c.pushBefore('CSProtoTaskSync', {
+                del_tasks: config.taskIds,
+                del_task_records: config.taskIds,
+                del_trace_list: config.taskIds,
+            })
             // A fresh run replays its internal task chain. Main story receipts
             // and rewards remain independent from these dungeon-only tasks.
             c.state.tasks = c.state.tasks.filter((task) => !config.taskIds.includes(task.task_id))

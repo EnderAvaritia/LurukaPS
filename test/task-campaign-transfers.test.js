@@ -32,6 +32,13 @@ function fixture(name) {
         call,
         state: () => store.load(session.id).state,
         edit: (fn) => store.transact(session.id, 0, fn),
+        relogin: () => {
+            const entry = protocol.byName.get('CSProtoEnterGame')
+            return game.dispatch(
+                {},
+                { id: entry.id, seq: 1, payload: protocol.encode(entry.req, { open_id: name, reconnect: true }) },
+            )
+        },
     }
 }
 
@@ -233,6 +240,149 @@ test('creation from an orphaned legacy dungeon repairs the next quit destination
         f.call('CampaignQuit')
         assert.equal(f.state().world.map_id, 100)
         assert.equal(f.state().storyCampaign, undefined)
+    } finally {
+        f.store.close()
+    }
+})
+
+function seedCompletedEntry(s, config, withClear = true) {
+    seed(s, config, 107016, 26, 10053)
+    s.player.basic_info.lv = 20
+    s.taskRecords = s.taskRecords.filter((record) => record.task_id !== 107016)
+    s.taskRecords.push(...config.taskIds.map((task_id) => ({ task_id, count: 1, time: 1800000000 })))
+    s.tasks[0].client_trace = true
+    if (withClear) s.storyCampaignClears = { [config.dungeon.id]: { count: 1, time: 1800000000 } }
+    delete s.storyCampaign
+}
+
+test('successful campaign auto-exit reconciles a cached entry Before reset and accepts the actual completion callbacks', () => {
+    const f = fixture('campaign-clear-before-race')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        f.edit((s) => {
+            seed(s, config, 500016, graphs.get(500016).end, 623302)
+            s.player.basic_info.lv = 20
+            const parent = {
+                task_id: 107016,
+                nodes: [makeNode(graphs.get(107016), 26, s)],
+                finish_nodes: [25],
+                reward_nodes: [24],
+                client_trace: true,
+            }
+            s.tasks.unshift(parent)
+            s.taskRecords = s.taskRecords.filter((record) => record.task_id !== 107016)
+            s.taskRecords.push(
+                ...config.taskIds.slice(0, -1).map((task_id) => ({ task_id, count: 1, time: 1800000000 })),
+            )
+            s.storyCampaign.entry_tasks = [structuredClone(parent)]
+            s.storyCampaign.return_world = tables.position(tables.find('world_borthpos', 10053))
+        })
+        f.call('TaskFinish', { u32: 500016 })
+        assert.equal(f.state().world.map_id, 100)
+        assert.equal(f.state().storyCampaign, undefined)
+        assert.equal(f.state().storyCampaignClears[10068].count, 1)
+        const xp = f.state().player.basic_info.exp
+        assert.equal(
+            f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_id,
+            32,
+            'advance the completed node without requiring lost client callbacks',
+        )
+        f.call('TaskClientCondAfter', { task_id: 107016, node_id: 26, indexes: [0] })
+        f.call('TaskClientAfter', { task_id: 107016, node_id: 26 })
+        assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_id, 32)
+        assert.equal(
+            f.state().player.basic_info.exp,
+            xp,
+            'reconciling the acknowledgment must not grant clear XP again',
+        )
+    } finally {
+        f.store.close()
+    }
+})
+
+test('login repairs the completed legacy entry acknowledgment using all table-defined victory records', () => {
+    const f = fixture('campaign-complete-recover')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        f.edit((s) => seedCompletedEntry(s, config))
+        const xp = f.state().player.basic_info.exp
+        f.relogin()
+        assert.equal(
+            f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_id,
+            32,
+            'advance the completed node without requiring lost client callbacks',
+        )
+        f.call('TaskClientCondAfter', { task_id: 107016, node_id: 26, indexes: [0] })
+        f.call('TaskClientAfter', { task_id: 107016, node_id: 26 })
+        assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_id, 32)
+        assert.equal(f.state().player.basic_info.exp, xp)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('a clear receipt without the full victory chain cannot bypass the normal Before requirement', () => {
+    const f = fixture('campaign-incomplete-before')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        for (const completeReceipt of [false, true]) {
+            f.edit((s) => {
+                seedCompletedEntry(s, config, completeReceipt)
+                if (!completeReceipt) delete s.storyCampaignClears
+                else s.taskRecords = s.taskRecords.filter((record) => record.task_id !== config.taskIds[0])
+            })
+            f.relogin()
+            assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].client_before, false)
+            assert.throws(
+                () => f.call('TaskClientCondAfter', { task_id: 107016, node_id: 26, indexes: [0] }),
+                /pre-action is not acknowledged/,
+            )
+        }
+    } finally {
+        f.store.close()
+    }
+})
+
+test('a cleared entry recovers after reentry erased mutable records, using durable finish receipts', () => {
+    const f = fixture('campaign-clear-erased-records')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        f.edit((s) => {
+            seedCompletedEntry(s, config)
+            s.taskRecords = s.taskRecords.filter((record) => !config.taskIds.includes(record.task_id))
+            s.taskFinishReceipts = Object.fromEntries(config.taskIds.map((id) => [id + ':1', []]))
+            s.tasks[0].reward_nodes = [24]
+        })
+        const xp = f.state().player.basic_info.exp
+        f.relogin()
+        assert.equal(f.state().tasks.find((task) => task.task_id === 107016).nodes[0].node_id, 32)
+        assert.deepEqual(f.state().tasks.find((task) => task.task_id === 107016).reward_nodes, [24])
+        assert.equal(f.state().player.basic_info.exp, xp)
+        assert.equal(f.state().storyCampaign, undefined)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('fresh campaign creation explicitly removes cached internal task completion records before publishing the new run', () => {
+    const f = fixture('campaign-replay-cache-reset')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        f.edit((s) => {
+            seedCompletedEntry(s, config, false)
+            delete s.storyCampaignClears
+        })
+        const packets = f.call('CampaignCreate', { group_id: 216, difficulty: 1 })
+        const syncs = packets
+            .filter((packet) => packet.id === 9853)
+            .map((packet) => protocol.decode('SCTaskSync', packet.payload))
+        const reset = syncs.findIndex((sync) => config.taskIds.every((id) => sync.del_task_records.includes(id)))
+        const start = syncs.findIndex((sync) => sync.tasks.some((task) => task.task_id === config.taskIds[0]))
+        assert.ok(reset >= 0 && start > reset, 'old cached records must be removed before the current task is added')
+        assert.ok(syncs[reset].del_tasks.includes(500011))
+        assert.ok(!syncs[reset].del_tasks.includes(107016), 'keep parent automatic-entry preference')
+        assert.ok(!f.state().taskRecords.some((record) => config.taskIds.includes(record.task_id)))
+        assert.equal(f.state().tasks.find((task) => task.task_id === 500011).nodes[0].node_id, 3)
     } finally {
         f.store.close()
     }

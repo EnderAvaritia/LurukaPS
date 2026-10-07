@@ -456,8 +456,85 @@ export function flushTaskSyncAfterStories(tables, state, push) {
     return true
 }
 
+export function hasVerifiedTaskDungeonClear(tables, state, dungeonId) {
+    const clear = state.storyCampaignClears?.[dungeonId]
+    if (!clear?.count) return false
+    const dungeon = tables.find('dungeon', dungeonId)
+    const mapping = tables.get('dungeon_task').find((row) => row.dungeonId === dungeonId)
+    const ids = String(mapping?.taskIds ?? '')
+        .split('|')
+        .filter(Boolean)
+        .map(Number)
+    const [kind, victoryTask] = String(dungeon?.victoryCondition ?? '')
+        .split('#')
+        .map(Number)
+    if (kind !== 2007 || !ids.length || ids.at(-1) !== victoryTask) return false
+    const proof = clear.task_proof
+    if (
+        proof?.victory_task_id === victoryTask &&
+        Array.isArray(proof.task_ids) &&
+        proof.task_ids.length === ids.length &&
+        ids.every((id, index) => proof.task_ids[index] === id)
+    )
+        return true
+    // Old clear receipts predate task_proof. Finish response receipts are
+    // durable across reentry, unlike the per-run completion record list.
+    const receipted = new Set(
+        Object.keys(state.taskFinishReceipts ?? {})
+            .filter((key) => /^\d+:\d+$/.test(key))
+            .map((key) => Number(key.split(':')[0])),
+    )
+    return ids.every(
+        (id) =>
+            receipted.has(id) || (state.taskRecords ?? []).some((record) => record.task_id === id && record.count > 0),
+    )
+}
+
+function clearedDungeonNode(tables, graph, node, state) {
+    const config = graph.nodes.get(node.node_id)
+    if (config?.nodeType !== 30) return null
+    const before = asList(config.__type_TaskConditionNodeData?.beforActionList || [])
+    if (before.some((action) => action.contentType !== 1400 || !action.dataType?.__type_TaskCreatNPCExportData))
+        return null
+    const required = nodeConditions(config).filter(
+        (condition) => condition.__type_TaskConditionBaseData?.unneedCompleted !== 1,
+    )
+    if (
+        !required.length ||
+        required.some((condition) => {
+            const data = condition.__type_TaskConditionBaseData?.__type_TaskCondDungeonData
+            return (
+                condition.conditionId !== 12017 ||
+                data?.isOver !== 1 ||
+                conditionValue(condition, state) < 1 ||
+                !hasVerifiedTaskDungeonClear(tables, state, data.dungeonId)
+            )
+        })
+    )
+        return null
+    return config
+}
+
+export function reconcileClearedDungeonBefore(tables, graph, node, state) {
+    if (node.client_before || !clearedDungeonNode(tables, graph, node, state)) return false
+    node.client_before = true
+    return true
+}
+
+export function canRecoverClearedDungeonNode(tables, graph, node, state) {
+    const config = clearedDungeonNode(tables, graph, node, state)
+    if (!config) return false
+    const data = config.__type_TaskConditionNodeData
+    if (asList(data.afterActionList || []).length || asList(data.taskCondAfterActionList || []).length) return false
+    return nodeConditions(config).every((condition) => {
+        const map = condition.__type_TaskConditionBaseData?.mapData?.sceneId
+        return !map || map === state.world.map_id
+    })
+}
+
 export function reconcileTaskBefore(tables, graph, task, node, state) {
     if (node.client_before) return false
+    if (reconcileClearedDungeonBefore(tables, graph, node, state)) return true
     const config = graph.nodes.get(node.node_id),
         actions = asList(config?.__type_TaskConditionNodeData?.beforActionList)
     if (

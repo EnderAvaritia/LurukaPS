@@ -18,6 +18,8 @@ import {
     taskSnapshot,
     advancePetChoiceBranch,
     deferTaskSyncUntilAfterStories,
+    canRecoverClearedDungeonNode,
+    reconcileClearedDungeonBefore,
 } from '../tasks.js'
 export function registerTasks(register, tables) {
     const handlers = new Map()
@@ -293,7 +295,7 @@ export function registerTasks(register, tables) {
             }
             return suffix === 'After' ? { rewards } : {}
         })
-    return (c) => {
+    const finishPendingCharacterTask = (c) => {
         const pending = c.state.pendingCharacterTask
         if (!pending || !c.state.characterCustomized) return
         if ((c.state.taskEpochs?.[pending.task_id] ?? 0) !== pending.epoch) {
@@ -307,4 +309,37 @@ export function registerTasks(register, tables) {
         }
         handlers.get('TaskClientAfter')(c, pending)
     }
+    const recoverCompletedCampaignTasks = (c) => {
+        if (c.state.storyCampaign || c.state.entrust?.run || c.state.multiCampaign) return []
+        const recovered = []
+        for (const task of [...c.state.tasks]) {
+            if (c.state.pendingTaskStorySync?.task_id === task.task_id) continue
+            const graph = graphs.get(task.task_id)
+            for (const node of [...task.nodes]) {
+                if (!canRecoverClearedDungeonNode(tables, graph, node, c.state)) continue
+                const conditions = nodeConditions(graph.nodes.get(node.node_id))
+                if (
+                    !conditions.every((condition, index) =>
+                        conditionSatisfied(
+                            condition,
+                            conditionValue(condition, c.state, { taskId: task.task_id, nodeId: node.node_id, index }),
+                        ),
+                    )
+                )
+                    continue
+                const next = asList(graph.nodes.get(node.node_id).nextNodeIdList)
+                if (!next.length || next.some((id) => task.finish_nodes.includes(id))) continue
+                reconcileClearedDungeonBefore(tables, graph, node, c.state)
+                const request = { task_id: task.task_id, node_id: node.node_id }
+                const indexes = conditions.flatMap((condition, index) =>
+                    condition.conditionId === 12017 ? [index] : [],
+                )
+                handlers.get('TaskClientCondAfter')(c, { ...request, indexes })
+                handlers.get('TaskClientAfter')(c, request)
+                recovered.push(request)
+            }
+        }
+        return recovered
+    }
+    return { finishPendingCharacterTask, recoverCompletedCampaignTasks }
 }

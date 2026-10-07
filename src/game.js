@@ -284,7 +284,9 @@ export class Game {
         registerWorld(on)
         registerMail(on)
         registerProgression(on)
-        this.finishPendingCharacterTask = registerTasks(on, tables)
+        const taskHandlers = registerTasks(on, tables)
+        this.finishPendingCharacterTask = taskHandlers.finishPendingCharacterTask
+        this.recoverCompletedCampaignTasks = taskHandlers.recoverCompletedCampaignTasks
         registerStory(on, tables)
         registerItems(on)
         registerShops(on, tables)
@@ -484,6 +486,15 @@ export class Game {
                 )
                 recoverMissingTaskItems(this.tables, new TaskGraphs(this.tables), state)
                 refreshTaskProgress(this.tables, state)
+                this.recoverCompletedCampaignTasks({
+                    state,
+                    tables: this.tables,
+                    id: session.id,
+                    now,
+                    randomInt: this.rng,
+                    push: () => {},
+                    pushBefore: () => {},
+                })
                 ensureAppearance(this.tables, state)
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
@@ -736,6 +747,7 @@ export class Game {
                 const response = recoveredChoice ? {} : handler(context, r)
                 if (!battleReport && retimeProduction(this.tables, state, now)) refreshProduction(state, now)
                 if (e.name === 'CSProtoPlayerCustomData') this.finishPendingCharacterTask(context)
+                if (!battleReport) this.recoverCompletedCampaignTasks(context)
                 if ((state.taskItemRevision ?? 0) !== taskItemRevision)
                     context.pushBefore('CSProtoTaskSync', taskItemSnapshot(state))
                 syncCurrencyMirrors(state.player)
