@@ -35,6 +35,19 @@ export function actor(c, value) {
     return id
 }
 const itemSkillCatalogs = new WeakMap()
+function isFormationPassive(c, skillId) {
+    const manager = c.state.player.group_mgrs.find((m) => m.type === 1),
+        formation = manager?.groups.find((g) => g.id === manager.cur_group)
+    const active = new Set((formation?.heros ?? []).map((h) => h.hero_id))
+    return [...c.state.player.heros_info.heros, ...(c.state.trialGroup?.heroes ?? [])].some(
+        (hero) =>
+            active.has(hero.guid) &&
+            String(c.tables.find('hero', hero.conf_id)?.passiveSkillList ?? '')
+                .split('|')
+                .map(Number)
+                .includes(skillId),
+    )
+}
 function skillActorKey(c, request, skillId, stopping = false) {
     if (u64(request.unit_id) !== '0') return actor(c, request.unit_id)
     let skills = itemSkillCatalogs.get(c.tables)
@@ -44,7 +57,8 @@ function skillActorKey(c, request, skillId, stopping = false) {
     }
     // Scene battle items can have selfId=0. Match the configured item skill,
     // then track its cast by verify index, never by the player's current hero.
-    ensure(skills.has(skillId), 'Missing combat actor')
+    const passive = isFormationPassive(c, skillId)
+    ensure(skills.has(skillId) || passive, 'Missing combat actor')
     const verify = request.verify_info
     // Battle.proto SkillVerifyType describes the trigger (skill, effect,
     // bullet, behavior, etc.), not actor ownership. Chained item casts use
@@ -56,7 +70,7 @@ function skillActorKey(c, request, skillId, stopping = false) {
     )
     const index = u64(stopping ? verify.related_index : verify.battle_index)
     ensure(index !== '0', 'Missing local item skill index')
-    return `local-item:${index}`
+    return passive ? `local-passive:${skillId}:${index}` : `local-item:${index}`
 }
 function limits(c, id) {
     const hero = [...c.state.player.heros_info.heros, ...(c.state.trialGroup?.heroes ?? [])].find((h) => h.guid === id)
@@ -177,6 +191,24 @@ export function registerCombat(on) {
     })
     on('SkillStop', (c, r) => {
         if (isRetiredTrialActor(c.state, r.unit_id)) return
+        const skillId = Number(u64(r.skill_id))
+        if (
+            u64(r.unit_id) === '0' &&
+            isFormationPassive(c, skillId) &&
+            r.verify_info &&
+            u64(r.verify_info.battle_index) === '0' &&
+            u64(r.verify_info.related_index) === '0'
+        ) {
+            const sourceType = r.verify_info.source_type ?? 0
+            ensure(
+                Number.isInteger(sourceType) && sourceType >= 0 && sourceType <= 12,
+                'Invalid local passive skill source',
+            )
+            const battle = combatState(c.state, c.now)
+            for (const [key, cast] of Object.entries(battle.skills))
+                if (key.startsWith('local-passive:' + skillId + ':') && cast.unit_id === '0') delete battle.skills[key]
+            return
+        }
         const id = skillActorKey(c, r, Number(u64(r.skill_id)), true),
             battle = combatState(c.state, c.now),
             active = battle.skills[id]

@@ -164,6 +164,14 @@ export function recoverCachedTaskTimeEvent(c) {
 export function virtualStateReportTarget(data) {
     return data?.createNpcId > 0 ? data.createNpcId : data?.worldMapId
 }
+function isLateOptionalNpc(condition, target) {
+    const base = condition?.__type_TaskConditionBaseData
+    if (base?.unneedCompleted !== 1) return false
+    const npc = base.__type_TaskCondNPCTriggerData
+    const active = base.__type_TaskCondActiveNPCTriggerData ?? base.__type_TaskCondActiveSpecialNPCTriggerData
+    const expected = npc?.npcId ?? (active?.isNowCreate ? active.npcData?.createNpcId : active?.createNpcId)
+    return Number.isSafeInteger(expected) && expected > 0 && expected === target
+}
 export function recordTaskBehaviour(c, r) {
     if (!indexed.has(r.key) && ![1100, 2508, 2526].includes(r.key)) return false
     let graphs = catalogs.get(c.tables)
@@ -178,8 +186,13 @@ export function recordTaskBehaviour(c, r) {
     ensure(a.length === (photo ? 4 : 5) && a.every(Number.isInteger), 'Invalid task event arguments')
     const [target, taskId, nodeId, index, count] = photo ? [0, ...a] : a
     ensure(count === 1, 'Invalid task event count')
-    const graph = graphs.get(taskId),
-        task = activeTask(c.state, taskId),
+    const graph = graphs.get(taskId)
+    const previousTask = c.state.tasks?.find((task) => task.task_id === taskId)
+    if (!previousTask && c.state.taskRecords?.some((record) => record.task_id === taskId && record.count > 0)) {
+        const completed = nodeConditions(graph.nodes.get(nodeId))[index]
+        if (completed?.conditionId === r.key && isLateOptionalNpc(completed, target)) return true
+    }
+    const task = activeTask(c.state, taskId),
         node = task.nodes.find((n) => n.node_id === nodeId)
     if (!node && task.finish_nodes.includes(nodeId)) {
         const completed = nodeConditions(graph.nodes.get(nodeId))[index]
@@ -187,6 +200,7 @@ export function recordTaskBehaviour(c, r) {
             completed?.conditionId === r.key &&
                 ((c.state.taskEvents?.[deliveryKey(c.state, taskId, nodeId, index)] ?? 0) > 0 ||
                     !!completed.__type_TaskConditionBaseData?.__type_TaskCondInSceneData ||
+                    isLateOptionalNpc(completed, target) ||
                     (completed.__type_TaskConditionBaseData?.__type_TaskCondPlayableIsFinishData &&
                         conditionValue(completed, c.state, { taskId, nodeId, index }) > 0)),
             'Task event was not previously completed',
