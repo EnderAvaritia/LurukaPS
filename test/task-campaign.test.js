@@ -36,6 +36,7 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         assert.throws(() => call('CampaignCreate', { group_id: 216, difficulty: 1 }), /task is not active/)
         store.transact(session.id, 0, (s) => {
             s.world.map_id = 100
+            s.player.basic_info.lv = 20
             s.taskRecords = tables
                 .get('task')
                 .filter((row) => row.type === 1 && row.id !== 107016)
@@ -61,6 +62,9 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         assert.equal(initialContext.tasks[0].task_id, 500011)
         assert.equal(initialContext.tasks[0].nodes[0].node_id, 3)
         assert.equal(initialContext.tasks[0].nodes[0].client_before, false)
+        assert.equal(initialContext.tasks[0].client_trace, true)
+        assert.equal(initialContext.trace_id, 500011)
+        assert.ok(initialContext.trace_list.includes(500011))
         assert.ok(!loaded.some((packet) => packet.id === 9103), 'guide readiness must not reload the map')
         assert.ok(
             !call('MultiCampaignPlayerLoaded').some((packet) => packet.id === 9853),
@@ -95,6 +99,9 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
             () => call('TrialGroupChange', { ...trialRequest, trial_heros: [{ pos: 0, id: 107001 }] }),
             /active task/,
         )
+        store.transact(session.id, 0, (s) => {
+            s.tasks.find((task) => task.task_id === 500011).client_trace = false
+        })
         const login = protocol.byName.get('CSProtoEnterGame')
         game.dispatch(
             {},
@@ -107,6 +114,11 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         assert.ok(
             call('MultiCampaignPlayerLoaded').some((packet) => packet.id === 9853),
             'a new login needs a fresh post-load task context',
+        )
+        assert.equal(
+            state().tasks.find((task) => task.task_id === 500011).client_trace,
+            true,
+            'repair legacy dungeon trace on login',
         )
         assert.deepEqual(state().trialGroup.ids, [2108103, 2108001])
         // Abort in scene2 after two internal tasks, rather than only testing
@@ -130,13 +142,12 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
             .filter((packet) => packet.id === 9853)
             .map((packet) => protocol.decode('SCTaskSync', packet.payload))
         assert.ok(
-            resetPackets.some(
-                (sync) =>
-                    sync.del_tasks.includes(500013) &&
-                    sync.del_tasks.includes(107016) &&
-                    sync.del_task_records.includes(500012),
-            ),
+            resetPackets.some((sync) => sync.del_tasks.includes(500013) && sync.del_task_records.includes(500012)),
             'exit must explicitly remove cached client tasks and completion records',
+        )
+        assert.ok(
+            resetPackets.every((sync) => !sync.del_tasks.includes(107016)),
+            'keep the parent automatic-entry preference',
         )
         assert.deepEqual(
             state().tasks.find((task) => task.task_id === 107016),

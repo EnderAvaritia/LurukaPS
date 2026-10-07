@@ -9,6 +9,7 @@ import {
     ensureStoryCampaignScene,
     storySceneDefeated,
     campaignEntryTasks,
+    storyCampaignReturnWorld,
     resetCampaignTasks,
 } from '../story-campaign.js'
 import { playableSnapshot } from './playable-lifecycle.js'
@@ -209,7 +210,7 @@ export function exitStoryCampaign(c) {
     }
     const final = run.status === 3 ? 5 : 1
     c.pushBefore('CSProtoCampaignInfoSync', { ...storyCampaignSnapshot(c.state), status: final })
-    Object.assign(c.state.world, run.return_world)
+    Object.assign(c.state.world, storyCampaignReturnWorld(c.tables, c.state, run))
     delete c.state.storyCampaign
     const reset = resetCampaignTasks(c.tables, c.state, run)
     if (reset) {
@@ -243,7 +244,7 @@ export function advanceStoryCampaignTask(c, taskId) {
     }
     const nextId = run.task_ids[nextIndex]
     if (!c.state.tasks.some((task) => task.task_id === nextId))
-        acceptTask(new TaskGraphs(c.tables).get(nextId), c.state, c.now)
+        acceptTask(new TaskGraphs(c.tables).get(nextId), c.state, c.now).client_trace = true
     if (run.pending_task_transfer?.task_id === taskId) delete run.pending_task_transfer
     // TaskFinish acknowledges the task, not a scene transfer. Transfers run
     // through the task's configured client action and EnterWorldMap, including
@@ -293,6 +294,7 @@ export function registerStoryCampaign(on, tables) {
                 angle: w.angle,
             },
         })
+        run.return_world = storyCampaignReturnWorld(tables, c.state, run)
         if (config.taskIds.length) {
             // A fresh run replays its internal task chain. Main story receipts
             // and rewards remain independent from these dungeon-only tasks.
@@ -308,7 +310,7 @@ export function registerStoryCampaign(on, tables) {
                             delete c.state.playableRuns?.[playableId]
                         }
                     }
-            acceptTask(graphs.get(config.taskIds[0]), c.state, c.now)
+            acceptTask(graphs.get(config.taskIds[0]), c.state, c.now).client_trace = true
             c.push('CSProtoTaskSync', { ...taskSnapshot(tables, c.state), new_task_ids: [config.taskIds[0]] })
         }
         c.state.nextStoryCampaignInstanceId = run.instance_id + 1

@@ -45,7 +45,7 @@ import {
     settleStoryCampaignScene,
     recoverStoryCampaignClear,
 } from './handlers/story-campaign.js'
-import { ensureStoryCampaignScene, storyCampaignSnapshot } from './story-campaign.js'
+import { traceStoryCampaignTask, ensureStoryCampaignScene, storyCampaignSnapshot } from './story-campaign.js'
 import {
     entrustInfoSnapshot,
     entrustStarRewardSnapshot,
@@ -486,6 +486,7 @@ export class Game {
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
                 ensureStoryCampaignScene(this.tables, state, now)
+                traceStoryCampaignTask(state)
                 if (state.storyCampaign)
                     settleStoryCampaignScene({ state, tables: this.tables, id: session.id, now, push: () => {} })
                 expireTaskTrialGroup(this.tables, state)

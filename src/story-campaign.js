@@ -16,6 +16,40 @@ export function campaignEntryTasks(tables, state, dungeonId) {
     )
 }
 
+export function storyCampaignReturnWorld(tables, state, run) {
+    const saved = run.return_world
+    if (saved && tables.find('world_city', saved.map_id) && !run.scenes.includes(saved.map_id)) return saved
+    const graphs = new TaskGraphs(tables)
+    const points = (run.entry_tasks ?? campaignEntryTasks(tables, state, run.dungeon_id)).flatMap((task) =>
+        task.nodes.flatMap((node) =>
+            nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).flatMap((condition) => {
+                const base = condition.__type_TaskConditionBaseData
+                if (base?.__type_TaskCondDungeonData?.dungeonId !== run.dungeon_id) return []
+                const point = tables.find('world_borthpos', base.mapData?.birthId)
+                return point && point.cityId === base.mapData?.sceneId && !run.scenes.includes(point.cityId)
+                    ? [point]
+                    : []
+            }),
+        ),
+    )
+    const previous = [...(state.worldHistory ?? [])]
+        .reverse()
+        .find((world) => points.some((point) => point.cityId === world.map_id))
+    if (previous) return previous
+    ensure(points.length > 0, 'Story dungeon return entrance unavailable', 1007)
+    // An internal return map is a legacy bad snapshot. Recover the actual
+    // entrance from the active parent condition, never from a dungeon checkpoint.
+    return tables.position(points[0])
+}
+
+export function traceStoryCampaignTask(state) {
+    const run = state.storyCampaign
+    if (run?.status !== 2 || run.map_id !== state.world.map_id) return null
+    const task = state.tasks.find((task) => run.task_ids?.includes(task.task_id))
+    if (task) task.client_trace = true
+    return task ?? null
+}
+
 // EnterWorldMap has already validated the active task/node's configured
 // transfer point. End-node transfers arrive before TaskFinish in CBT3.
 export function preserveCampaignTaskTransfer(tables, state, request, point) {
@@ -103,7 +137,10 @@ export function resetCampaignTasks(tables, state, run) {
         if (run.scenes.includes(map) && playableIds.has(play)) delete state.playableEnemies[key]
     }
     return {
-        del_tasks: [...run.task_ids, ...restored],
+        // Deleting the parent clears TaskManager's consumed auto-entry PlayerPrefs.
+        // Update its reset node in place so returning to the overworld does not
+        // trigger gotoDungeon again. Internal tasks are still fully removed.
+        del_tasks: [...run.task_ids],
         del_task_records: aborted ? run.task_ids : [],
         del_trace_list: run.task_ids,
     }

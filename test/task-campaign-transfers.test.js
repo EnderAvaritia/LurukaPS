@@ -174,3 +174,66 @@ for (const scenario of [
         }
     })
 }
+
+test('legacy internal return snapshots quit to the configured overworld entrance without deleting the parent', () => {
+    const f = fixture('campaign-quit-legacy-return')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        f.edit((s) => {
+            seed(s, config, 500011, 3, 623101)
+            s.player.basic_info.lv = 20
+            const parent = {
+                task_id: 107016,
+                nodes: [{ ...makeNode(graphs.get(107016), 26, s), client_before: true }],
+                finish_nodes: [25],
+                reward_nodes: [24],
+                client_trace: true,
+            }
+            s.tasks.unshift(parent)
+            s.taskRecords = s.taskRecords.filter((record) => record.task_id !== 107016)
+            s.storyCampaign.entry_tasks = [structuredClone(parent)]
+            s.storyCampaign.return_world = tables.position(tables.find('world_borthpos', 623201))
+            s.worldHistory = [tables.position(tables.find('world_borthpos', 623106))]
+        })
+        const packets = f.call('CampaignQuit')
+        assert.equal(f.state().world.map_id, 100)
+        assert.equal(f.state().world.point_id, 10053)
+        assert.equal(f.state().storyCampaign, undefined)
+        assert.ok(!f.state().tasks.some((task) => config.taskIds.includes(task.task_id)))
+        const parent = f.state().tasks.find((task) => task.task_id === 107016)
+        assert.equal(parent.nodes[0].node_id, 26)
+        assert.equal(parent.nodes[0].client_before, false)
+        assert.deepEqual(parent.reward_nodes, [24])
+        for (const packet of packets.filter((packet) => packet.id === 9853))
+            assert.ok(!protocol.decode('SCTaskSync', packet.payload).del_tasks.includes(107016))
+        f.call('TaskClientBefore', { task_id: 107016, node_id: 26 })
+        assert.equal(f.state().storyCampaign, undefined, 'callbacks alone do not recreate a dungeon')
+        f.call('CampaignCreate', { group_id: 216, difficulty: 1 })
+        assert.equal(f.state().storyCampaign.return_world.map_id, 100)
+        assert.equal(f.state().world.map_id, 6231)
+        assert.equal(f.state().tasks.find((task) => task.task_id === 500011).client_trace, true)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('creation from an orphaned legacy dungeon repairs the next quit destination before saving it', () => {
+    const f = fixture('campaign-create-orphan-return')
+    try {
+        const config = storyCampaignConfig(tables, 216, 1)
+        f.edit((s) => {
+            seed(s, config, 107016, 26, 623201)
+            s.player.basic_info.lv = 20
+            delete s.storyCampaign
+            s.taskRecords = s.taskRecords.filter((record) => record.task_id !== 107016)
+        })
+        f.call('CampaignCreate', { group_id: 216, difficulty: 1 })
+        assert.equal(f.state().storyCampaign.return_world.map_id, 100)
+        assert.equal(f.state().storyCampaign.return_world.point_id, 10053)
+        f.call('CampaignQuit')
+        assert.equal(f.state().world.map_id, 100)
+        assert.equal(f.state().storyCampaign, undefined)
+    } finally {
+        f.store.close()
+    }
+})
