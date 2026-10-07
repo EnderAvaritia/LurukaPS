@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { ensure } from './common.js'
 import { WorldObjectCatalog } from '../world-objects.js'
+import { syncAIHeroBeforeCreate } from './ai-heroes.js'
 export function registerPlayableEnemies(on, tables, store) {
     const file = new URL('../../configs/playable-enemies.json', import.meta.url),
         source = JSON.parse(fs.readFileSync(file)),
@@ -38,6 +39,9 @@ export function registerPlayableEnemies(on, tables, store) {
             }
             cache[key] = entry
         }
+        for (const entity of entry.entities)
+            if (tables.find('enemy_pack', entity.config_id)?.specialCreateType === 1)
+                syncAIHeroBeforeCreate(c, entity.uuid)
         return { play_id: r.play_id, monster_info: { monsters: entry.monsters } }
     })
 }

@@ -171,6 +171,39 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         assert.equal(aiDefinition.config_id, 108001)
         assert.equal(aiDefinition.level, 30)
         assert.ok(aiDefinition.max_hp > 0)
+        for (const [packets, responseId] of [
+            [enemyPackets, protocol.byName.get('CSProtoWorldObjEnemyInfo').id],
+            [aiPackets, aiProtocol.id],
+        ]) {
+            const hpIndex = packets.findIndex(
+                (packet) => packet.id === protocol.byName.get('CSProtoObjBattleInfoSync').id,
+            )
+            assert.ok(
+                hpIndex >= 0 && hpIndex < packets.findIndex((packet) => packet.id === responseId),
+                'AI current HP must arrive before the UUID creation callback',
+            )
+            const hp = protocol
+                .decode(protocol.byName.get('CSProtoObjBattleInfoSync').rsp, packets[hpIndex].payload)
+                .infos.find((info) => info.uuid === aiReply.uuid)
+            assert.equal(hp.hp, aiDefinition.max_hp)
+            assert.equal(hp.alive_state, 0)
+        }
+        store.transact(session.id, 0, (s) => {
+            s.combat.entities[aiReply.uuid].hp -= 10
+        })
+        const repeated = game.dispatch(session, {
+            id: aiProtocol.id,
+            seq: seq++,
+            payload: protocol.encode(aiProtocol.req, aiRequest),
+        })
+        assert.equal(
+            protocol.decode(
+                protocol.byName.get('CSProtoObjBattleInfoSync').rsp,
+                repeated.find((packet) => packet.id === protocol.byName.get('CSProtoObjBattleInfoSync').id).payload,
+            ).infos[0].hp,
+            aiDefinition.max_hp - 10,
+            'repeated identity queries must not heal an existing actor',
+        )
         assert.equal(state().trialGroup.heroes.length, 2, 'AI actor must not change the trial formation')
         call('PlayableCancel', { playId: 62111 })
         assert.throws(
