@@ -2,7 +2,9 @@ import { populateParty } from './party-fixture.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { configuration } from '../src/config.js'
-import { Tables } from '../src/player.js'
+import { Tables, seedPlayer } from '../src/player.js'
+import { repairTrialActorGuids } from '../src/handlers/trial-groups.js'
+import { mainHeroConfigId } from '../src/main-hero.js'
 import { Store } from '../src/store.js'
 import { Protocol } from '../src/protocol.js'
 import { Game } from '../src/game.js'
@@ -444,5 +446,166 @@ test('logged reconnect request can restore trial hero and duplicated trial pet t
         assert.equal(store.load(session.id).state.trialGroup.pets.length, 1)
     } finally {
         store.close()
+    }
+})
+
+test('dungeon6207 publishes table-defined forced trial formation before its loading-completion ACK', () => {
+    const store = new Store(':memory:'),
+        game = new Game(protocol, store, tables),
+        session = {}
+    let seq = 1
+    const call = (name, value = {}) => {
+        const e = protocol.byName.get('CSProto' + name)
+        return game
+            .dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, value) })
+            .map((packet) => ({
+                id: packet.id,
+                data: protocol.decode(protocol.byId.get(packet.id).rsp, packet.payload),
+            }))
+    }
+    const state = () => store.load(session.id).state
+    try {
+        call('EnterGame', { open_id: 'dungeon6207-trial-ready' })
+        store.transact(session.id, 0, (s) => {
+            populateParty(s)
+            s.player.basic_info.lv = 20
+            s.world.map_id = 100
+            s.taskEpochs[107016] = 1
+            s.tasks = [
+                {
+                    task_id: 107016,
+                    nodes: [{ node_id: 34, node_values: [0], client_before: true }],
+                    finish_nodes: [26, 32, 33],
+                    reward_nodes: [],
+                },
+            ]
+            s.taskRecords = tables
+                .get('task')
+                .filter((row) => row.type === 1 && row.id !== 107016)
+                .map((row) => ({ task_id: row.id, count: 1, time: 1 }))
+            s.taskSceneReceipts['107016:1:34'] = true
+            delete s.pendingTaskStorySync
+            delete s.pendingTaskScene
+        })
+        call('CampaignCreate', { group_id: 219, difficulty: 1 })
+        assert.equal(state().world.map_id, 6207)
+        const original = structuredClone(
+            state()
+                .player.group_mgrs.find((m) => m.type === 1)
+                .groups.find((g) => g.id === 1),
+        )
+        const ids = String(tables.find('dungeon_scene', 6207).trailGroup)
+            .split('|')
+            .map((entry) => Number(entry.split('#')[0]))
+        assert.deepEqual(ids, [1070161, 1070162, 1070163])
+        const request = {
+            open: true,
+            force: true,
+            trial_heros: ids.map((id, pos) => ({ id, pos })),
+            trial_control: { id: ids[0] },
+        }
+        const ready = (packets) => {
+            const ack = packets.findIndex((p) => p.id === 5987)
+            for (const id of [5988, 10006, 10009])
+                assert.ok(
+                    packets.findIndex((p) => p.id === id) < ack,
+                    'trial data and battle state must arrive before the dungeon loading callback',
+                )
+            assert.ok(
+                packets.findIndex((p) => p.id === 5008 && p.data.group_mgrs?.length) < ack,
+                'the active group must be installed before loading completes',
+            )
+            const trial = packets.find((p) => p.id === 5988).data.trial_heros
+            assert.equal(trial.length, 3)
+            assert.equal(trial[0].conf_id, mainHeroConfigId(tables, state().player.basic_info.wardrobe.sex))
+            const active = packets
+                .find((p) => p.id === 5008 && p.data.group_mgrs?.length)
+                .data.group_mgrs.find((m) => m.type === 1)
+                .groups.find((g) => g.id === 0)
+            assert.deepEqual(
+                active.heros.map((h) => h.hero_id),
+                trial.map((h) => h.guid),
+            )
+            assert.equal(active.control, trial[0].guid)
+            for (const h of trial)
+                assert.ok(packets.find((p) => p.id === 10009).data.infos.find((info) => info.uuid === h.guid).hp > 0)
+        }
+        ready(call('TrialGroupChange', request))
+        const protagonist = state().trialGroup.heroes[0].guid
+        call('SwitchGroupControlEnd', { uuid: protagonist })
+        assert.equal(state().world.control_ready, protagonist)
+        store.transact(session.id, 0, (s) => {
+            s.player.heros_info.battle_infos.find((h) => h.hero_id === protagonist).hp -= 10
+        })
+        const hp = state().player.heros_info.battle_infos.find((h) => h.hero_id === protagonist).hp
+        ready(call('TrialGroupChange', request))
+        assert.equal(state().player.heros_info.battle_infos.find((h) => h.hero_id === protagonist).hp, hp)
+        assert.deepEqual(
+            state()
+                .player.group_mgrs.find((m) => m.type === 1)
+                .groups.find((g) => g.id === 1),
+            original,
+        )
+        const closed = call('TrialGroupChange', { open: false, force: true })
+        assert.ok(
+            closed.findIndex((p) => p.id === 5008 && p.data.group_mgrs?.length) <
+                closed.findIndex((p) => p.id === 5987),
+        )
+        assert.equal(state().trialGroup, undefined)
+    } finally {
+        store.close()
+    }
+})
+
+test('main-avatar trial config matches both sexes clothing animation maps and repairs old male prototypes without changing actor or HP', () => {
+    const interim = tables.find('hero_interim', 1070161),
+        clothing = tables.find('clothing_item', 10001)
+    assert.equal(interim.heroType, 1)
+    assert.equal(interim.heroId, 199002)
+    for (const sex of [1, 2]) {
+        const state = seedPlayer(tables, 1, 'trial-main-sex-' + sex)
+        state.player.basic_info.sex = sex
+        state.player.basic_info.wardrobe.sex = sex
+        const guid = ((5n << 56n) | (1070161n << 32n) | 1n).toString()
+        state.trialGroup = {
+            ids: [1070161],
+            heroes: [{ guid, conf_id: interim.heroId, hero_lv: interim.level, type: interim.heroType }],
+            pets: [],
+            previous_group: 1,
+            force: true,
+        }
+        const manager = state.player.group_mgrs.find((m) => m.type === 1)
+        manager.cur_group = 0
+        manager.groups.push({ id: 0, heros: [{ hero_id: guid, pet_id: '0' }], control: guid })
+        state.player.heros_info.battle_infos.push({ hero_id: guid, hp: 123, sp: 17, alive_state: 0 })
+        const before = structuredClone({
+            owned: state.player.heros_info.heros,
+            battle: state.player.heros_info.battle_infos,
+            groups: manager.groups,
+            wardrobe: state.player.basic_info.wardrobe,
+        })
+        assert.equal(repairTrialActorGuids(tables, state), sex === 2)
+        const hero = state.trialGroup.heroes[0]
+        assert.equal(hero.conf_id, mainHeroConfigId(tables, sex))
+        assert.equal(hero.guid, guid)
+        const paths = new Map(
+            String(sex === 1 ? clothing.clothingAstM : clothing.clothingAstF)
+                .split('|')
+                .map((entry) => entry.split('#')),
+        )
+        assert.ok(
+            paths.get(String(hero.conf_id)),
+            'the client clothing animator lookup must have a nonempty path for this hero/sex',
+        )
+        assert.deepEqual(
+            {
+                owned: state.player.heros_info.heros,
+                battle: state.player.heros_info.battle_infos,
+                groups: manager.groups,
+                wardrobe: state.player.basic_info.wardrobe,
+            },
+            before,
+        )
+        assert.equal(repairTrialActorGuids(tables, state), false)
     }
 })

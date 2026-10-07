@@ -4,6 +4,7 @@ import { ensure, manager, group } from './common.js'
 import { syncBattle, pairs } from '../battle.js'
 import { petData } from '../pets.js'
 import { retireTrialActors } from '../trial-actors.js'
+import { mainHeroConfigId } from '../main-hero.js'
 export function trialPayload(state) {
     return { trial_heros: state.trialGroup?.heroes ?? [], trial_pets: state.trialGroup?.pets ?? [] }
 }
@@ -33,6 +34,15 @@ export function refreshTrialPetBindings(state) {
 // looks that ID up directly; adding 0x800000 made row 102 appear as 8388710.
 const trialPetGuid = (account, id) => ((9n << 56n) | (BigInt(id) << 32n) | BigInt(account)).toString()
 const trialHeroGuid = (account, id) => ((5n << 56n) | (BigInt(id) << 32n) | BigInt(account)).toString()
+function trialHeroConfigId(tables, config, state) {
+    // Main-avatar interim rows use a male prototype. FormationUtil retains the
+    // player's real avatar, so the hero ID must match its sex or clothingAstF/M
+    // has no animation mapping (199002 + female clothes10001 was empty).
+    if (config.heroType === 1 && [mainHeroConfigId(tables, 1), mainHeroConfigId(tables, 2)].includes(config.heroId))
+        return mainHeroConfigId(tables, state.player.basic_info.wardrobe?.sex ?? state.player.basic_info.sex)
+    return config.heroId
+}
+
 function applyTrialPetComprehension(pet, cfg) {
     // rsp_syncTrialPetItem replaces aptitude with pet_interim.param in the client.
     // The battle attribute packet must use those same values, not an owned-pet roll.
@@ -58,7 +68,14 @@ export function repairTrialActorGuids(tables, state) {
     for (let index = 0; index < (trial.heroes ?? []).length; index++) {
         const hero = trial.heroes[index],
             interimId = trial.ids[index]
-        if (tables.find('hero_interim', interimId)?.heroId !== hero.conf_id) continue
+        const config = tables.find('hero_interim', interimId)
+        if (!config) continue
+        const configId = trialHeroConfigId(tables, config, state)
+        if (![config.heroId, configId].includes(hero.conf_id)) continue
+        if (hero.conf_id !== configId) {
+            hero.conf_id = configId
+            changed = true
+        }
         const old = hero.guid,
             correct = trialHeroGuid(account, interimId)
         if (old === correct) continue
@@ -294,14 +311,17 @@ function attachTrialPets(c, tables, trial, positions, requested) {
     trial.petIds = petIds
 }
 export function registerTrialGroups(on, tables) {
-    // ACK arms ChangeTrialFormation's event listeners. TrialDatas itself can
-    // recreate entities, so attribute/skill caches must precede it as well.
-    const publish = (c) => {
+    // Task ChangeTrialFormation needs ACK first to arm its event listeners.
+    // Dungeon TrialFormationSPC instead treats ACK as loading complete; its
+    // new actors and active group must be installed before that callback runs.
+    // Attribute/skill caches precede TrialDatas because it can recreate entities.
+    const publish = (c, sceneTrial = c.state.trialGroup?.story_campaign) => {
+        const output = sceneTrial ? { ...c, push: c.pushBefore } : c
         refreshTrialPetBindings(c.state)
-        syncBattle(c)
-        c.push('CSProtoTrialDatas', trialPayload(c.state))
-        c.push('CSProtoSyncPlayerData', { heros_info: c.state.player.heros_info })
-        c.push('CSProtoSyncPlayerData', { group_mgrs: c.state.player.group_mgrs })
+        syncBattle(output)
+        output.push('CSProtoTrialDatas', trialPayload(c.state))
+        output.push('CSProtoSyncPlayerData', { heros_info: c.state.player.heros_info })
+        output.push('CSProtoSyncPlayerData', { group_mgrs: c.state.player.group_mgrs })
     }
     const graphs = new TaskGraphs(tables),
         rows = JSON.parse(
@@ -347,7 +367,7 @@ export function registerTrialGroups(on, tables) {
             m.cur_group = existing.previous_group
             m.src = 0
             delete c.state.trialGroup
-            publish(c)
+            publish(c, existing.story_campaign)
             return {}
         }
         const requested = r.trial_heros ?? [],
@@ -431,7 +451,7 @@ export function registerTrialGroups(on, tables) {
             const guid = trialHeroGuid(c.id, cfg.id)
             return {
                 guid,
-                conf_id: cfg.heroId,
+                conf_id: trialHeroConfigId(tables, cfg, c.state),
                 hero_lv: cfg.level,
                 hero_exp: 0,
                 hero_rank: cfg.rank,
