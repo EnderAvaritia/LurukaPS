@@ -1,6 +1,7 @@
 import { ensure } from './common.js'
 import { syncBattle } from '../battle.js'
-import { finishEnemyGroupRelations } from './world-combat.js'
+import { finishEnemyGroupRelations, pruneInactiveCampaignRelations } from './world-combat.js'
+import { inactiveCampaignEnemyGroup } from '../inactive-campaign-enemies.js'
 import { grantRewards } from '../rewards.js'
 import { worldSync } from './world.js'
 import { TaskGraphs, nodeConditions, acceptTask, taskSnapshot, reconcileClearedDungeonBefore } from '../tasks.js'
@@ -18,15 +19,18 @@ import { playableSnapshot } from './playable-lifecycle.js'
 export function syncStoryCampaignEnemies(c) {
     const run = c.state.storyCampaign
     if (c.state.combat?.map_id !== run?.map_id) return
-    const infos = Object.values(c.state.combat.entities ?? {}).map((enemy) => ({
-        uuid: enemy.uuid,
-        hp: enemy.hp,
-        sp: enemy.sp ?? 0,
-        alive_state: enemy.alive_state ?? (enemy.hp > 0 ? 0 : 1),
-        reason: 1,
-        ...(enemy.final_blow_guid ? { final_blow_guid: enemy.final_blow_guid } : {}),
-    }))
+    const infos = Object.values(c.state.combat.entities ?? {})
+        .filter((enemy) => !inactiveCampaignEnemyGroup(c.tables, c.state, enemy.uuid))
+        .map((enemy) => ({
+            uuid: enemy.uuid,
+            hp: enemy.hp,
+            sp: enemy.sp ?? 0,
+            alive_state: enemy.alive_state ?? (enemy.hp > 0 ? 0 : 1),
+            reason: 1,
+            ...(enemy.final_blow_guid ? { final_blow_guid: enemy.final_blow_guid } : {}),
+        }))
     if (infos.length) c.pushBefore('CSProtoObjBattleInfoSync', { infos })
+    pruneInactiveCampaignRelations({ ...c, push: c.pushBefore })
     // Loading recovery uses the same all-slots proof as the death event.
     for (const enemy of Object.values(c.state.combat.entities ?? {}))
         if (enemy.hp === 0 && enemy.alive_state === 1)

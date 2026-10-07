@@ -1,6 +1,7 @@
 import { ensure } from './handlers/common.js'
 import { combatState } from './combat-state.js'
 import { enemyDefinition } from './enemy-state.js'
+import { inactiveCampaignEnemyGroup } from './inactive-campaign-enemies.js'
 import { TaskGraphs, nodeConditions, makeNode } from './tasks.js'
 import { taskActions } from './task-scenes.js'
 
@@ -267,6 +268,14 @@ export function ensureStoryCampaignScene(tables, state, now) {
             record.active = wave === (run.stage_index ?? 0)
             record.complete = wave < (run.stage_index ?? 0)
             record.state_data = { ...record.state_data, step: record.complete ? 1 : 0, complete: record.complete }
+        }
+        if (inactiveCampaignEnemyGroup(tables, state, ((3n << 56n) | BigInt(row.id)).toString())) {
+            if (record.expand_data?.battle_group) {
+                const { battle_group, ...other } = record.expand_data
+                record.expand_data = other
+                changed = true
+            }
+            continue
         }
         const group = tables.find('world_enemy_group', row.expandId)
         const packs = String(group?.enemyList ?? '')

@@ -3,6 +3,7 @@ import { actor } from './combat.js'
 import { u64, combatState, boundedSet } from '../combat-state.js'
 import { isRetiredTrialActor } from '../trial-actors.js'
 import { completedEnemyGroup } from '../enemy-group-completion.js'
+import { inactiveCampaignEnemyGroup } from '../inactive-campaign-enemies.js'
 function runtime(c) {
     const state = combatState(c.state, c.now)
     state.summons ??= {}
@@ -49,6 +50,32 @@ export function retireCapturedEnemy(c, id) {
     const hatredChanged = clearHatred(battle, id)
     battle.entities[id] = { ...previous, uuid: id, hp: 0, alive_state: 1, captured: true, updated_at: c.now }
     if (hatredChanged) syncHatred(c, battle)
+}
+export function pruneInactiveCampaignRelations(c, ids = []) {
+    const battle = runtime(c),
+        groups = new Map()
+    const candidates = [
+        ...ids,
+        ...Object.keys(battle.hatred.objects),
+        ...Object.values(battle.hatred.objects).flatMap((info) => info.target_obj_ids),
+        ...Object.values(battle.hatred.players).flatMap((info) => info.target_obj_ids),
+    ]
+    for (const id of candidates) {
+        const group = inactiveCampaignEnemyGroup(c.tables, c.state, id)
+        if (group) groups.set(group.root, group)
+    }
+    if (!groups.size) return false
+    battle.hatred = Object.fromEntries(
+        Object.entries(battle.hatred).map(([name, entries]) => [
+            name,
+            Object.fromEntries(Object.entries(entries).map(([key, info]) => [key, { ...info }])),
+        ]),
+    )
+    for (const group of groups.values()) {
+        for (const id of group.members) clearHatred(battle, id)
+        c.push('CSProtoHatredResetSync', { is_player: false, obj_id: group.root })
+    }
+    return true
 }
 export function finishEnemyGroupRelations(c, id) {
     const group = completedEnemyGroup(c.tables, c.state, id)
@@ -112,11 +139,19 @@ export function registerWorldCombat(on) {
             )
             const battle = runtime(c)
             const root = (BigInt(id) & ~(0xffffffn << 32n)).toString()
+            if (inactiveCampaignEnemyGroup(c.tables, c.state, id)) {
+                pruneInactiveCampaignRelations({ ...c, push: c.pushBefore }, [id])
+                return { inc: false, info: { id, target_obj_ids: targetIds, player_obj_ids: playerIds } }
+            }
             if (battle.completedRelationGroups?.[root])
                 return { inc: false, info: { id, target_obj_ids: targetIds, player_obj_ids: playerIds } }
             if (r.inc) {
+                const dormant = targetIds.filter((target) => inactiveCampaignEnemyGroup(c.tables, c.state, target))
+                if (dormant.length) pruneInactiveCampaignRelations({ ...c, push: c.pushBefore }, dormant)
                 const retired = targetIds.filter(
-                    (target) => battle.completedRelationGroups?.[(BigInt(target) & ~(0xffffffn << 32n)).toString()],
+                    (target) =>
+                        dormant.includes(target) ||
+                        battle.completedRelationGroups?.[(BigInt(target) & ~(0xffffffn << 32n)).toString()],
                 )
                 if (retired.length) {
                     targetIds.splice(0, targetIds.length, ...targetIds.filter((target) => !retired.includes(target)))
