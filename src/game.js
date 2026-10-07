@@ -67,6 +67,7 @@ import { registerProfileQueries } from './handlers/profile-queries.js'
 import { registerWorldObjects, reconcileWorldCollectionFinalDrops } from './handlers/world-objects.js'
 import { registerWorldCombat } from './handlers/world-combat.js'
 import { registerWorldSearch } from './handlers/world-search.js'
+import { recoverInitialDungeonKills } from './task-kills.js'
 import { registerAIControl, clientAIReports } from './handlers/ai-control.js'
 import { retireCapturedEnemy } from './handlers/world-combat.js'
 import { registerEcology } from './handlers/ecology.js'
@@ -138,6 +139,14 @@ const deferredMessages = new Set([
     'CSProtoStateUpdate',
     'CSProtoPlayableStart',
     'CSProtoWorldEventTrigger',
+])
+// These client deltas have replies, but must not reset the relation graph or
+// use ordinary request persistence while combat is running.
+const fastCombatReplies = new Set([
+    'CSProtoObjHatredIncSync',
+    'CSProtoPlayerHatredIncSync',
+    'CSProtoHatredResetSync',
+    'CSProtoHatredResetToHomeSync',
 ])
 const fastCombatTelemetry = new Set([
     'CSProtoSkillStart',
@@ -211,6 +220,13 @@ function forkFastCombat(base, name, request) {
     // combatState expires bullets on every access, even when the handler itself
     // only touches a skill. Copy the map so a failed request cannot prune live data.
     battle.bullets = { ...battle.bullets }
+    if (fastCombatReplies.has(name) && battle.hatred)
+        battle.hatred = Object.fromEntries(
+            Object.entries(battle.hatred).map(([field, entries]) => [
+                field,
+                Object.fromEntries(Object.entries(entries).map(([id, info]) => [id, { ...info }])),
+            ]),
+        )
     if (name === 'CSProtoSkillStart' || name === 'CSProtoSkillStop') battle.skills = { ...battle.skills }
     if (name === 'CSProtoSkillStart') {
         battle.petSp = { ...battle.petSp }
@@ -501,6 +517,8 @@ export class Game {
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
                 ensureStoryCampaignScene(this.tables, state, now)
+                recoverInitialDungeonKills(this.tables, state)
+                refreshTaskProgress(this.tables, state)
                 beginSceneTransition(state, previousMapId, now, 256)
                 traceStoryCampaignTask(state)
                 if (state.storyCampaign)
@@ -650,7 +668,7 @@ export class Game {
             )
             return []
         }
-        if (fastCombatTelemetry.has(e.name) || e.name === 'CSProtoStateUpdate')
+        if (fastCombatTelemetry.has(e.name) || fastCombatReplies.has(e.name) || e.name === 'CSProtoStateUpdate')
             return this.store.transact(
                 session.id,
                 e.id,
@@ -667,8 +685,8 @@ export class Game {
                         pushBefore: (name, value) => before.push(this.packet(name, value)),
                         push: (name, value) => after.push(this.packet(name, value, { pushSeq: frame.pushSeq })),
                     }
-                    handler(context, r)
-                    return [...before, ...after]
+                    const response = handler(context, r)
+                    return [...before, ...(fastCombatReplies.has(e.name) ? [reply(response)] : []), ...after]
                 },
                 {
                     defer: true,

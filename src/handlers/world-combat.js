@@ -108,21 +108,18 @@ export function registerWorldCombat(on) {
             ensure(value.target_obj_ids.length <= 256 && value.player_obj_ids.length <= 64, 'Hatred list too large')
             if (!value.target_obj_ids.length && !value.player_obj_ids.length) delete table[id]
             else boundedSet(table, id, value, 512)
-            syncHatred(c, battle)
             return { inc: !!r.inc, info: { id, target_obj_ids: targetIds, player_obj_ids: playerIds } }
         })
     on('HatredResetSync', (c, r) => {
         const id = actor(c, r.obj_id),
             battle = runtime(c)
         clearHatred(battle, id, !!r.is_player)
-        syncHatred(c, battle)
         return { is_player: !!r.is_player, obj_id: id }
     })
     on('HatredResetToHomeSync', (c, r) => {
         const id = actor(c, r.obj_id),
             battle = runtime(c)
         clearHatred(battle, id)
-        syncHatred(c, battle)
         return { obj_id: id }
     })
     on('CreateSummon', (c, r) => {

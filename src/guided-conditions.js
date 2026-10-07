@@ -1,11 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { configuration } from './config.js'
+import { deliveryKey } from './task-delivery.js'
 
 const conditions = new Map(
-    JSON.parse(fs.readFileSync(new URL('../configs/task-tables/task_condition.json', import.meta.url), 'utf8')).map(
-        (row) => [row.id, row],
-    ),
+    JSON.parse(fs.readFileSync(path.join(configuration().tables, 'task_condition.json'), 'utf8')).map((row) => [
+        row.id,
+        row,
+    ]),
 )
 const buildingGroups = new Map(
     JSON.parse(fs.readFileSync(new URL('../configs/client-tables/home_building.json', import.meta.url), 'utf8')).map(
@@ -26,7 +28,23 @@ const petGroups = new Map(
     ]),
 )
 
+export function guidedKillRule(id) {
+    const parts = String(conditions.get(id)?.condition ?? '')
+        .split('|')
+        .map(Number)
+    if (
+        parts.length !== 6 ||
+        parts[0] !== 12002 ||
+        !parts.every(Number.isInteger) ||
+        parts.slice(1).some((n) => n < 0) ||
+        parts[5] <= 0
+    )
+        return null
+    return { sceneType: parts[1], monsterType: parts[2], groupId: parts[3], monsterId: parts[4], count: parts[5] }
+}
 export function guidedRequirement(id) {
+    const kill = guidedKillRule(id)
+    if (kill) return kill.count
     const param = Number(conditions.get(id)?.param)
     return Number.isInteger(param) && param > 0 ? param : 1
 }
@@ -37,6 +55,10 @@ export function guidedConditionValue(id, state, context) {
     const parts = String(row.condition || '')
         .split('|')
         .map(Number)
+    if (guidedKillRule(id))
+        return context?.taskId !== undefined && context.nodeId !== undefined && context.index !== undefined
+            ? (state.taskEvents?.[deliveryKey(state, context.taskId, context.nodeId, context.index)] ?? 0)
+            : 0
     // HaveCommonItem checks current bag stock, irrespective of how it was
     // granted. Finished-but-unclaimed production and lifetime craft counts
     // are not owned items. Sum all stacks of the exact configured item ID.

@@ -30,7 +30,8 @@ test('hatred deltas merge/remove edges and node resets remove incoming reference
             inc: true,
             info: { id: enemy, target_obj_ids: [hero, hero], player_obj_ids: [f.session.id] },
         })
-        assert.equal(packets[0].id, 10808)
+        assert.equal(packets.length, 1)
+        assert.equal(packets[0].id, 10805)
         assert.equal(packets.at(-1).id, 10805)
         assert.deepEqual(f.state().combat.hatred.objects[enemy].target_obj_ids, [hero])
         f.call('PlayerHatredIncSync', { inc: true, info: { id: String(f.session.id), target_obj_ids: [enemy] } })
@@ -245,6 +246,38 @@ test('pet presentation relays only to map peers without echo or ownership change
         const before = f.store.load(f.session.id)
         assert.throws(() => f.call('SwitchPetAction', { uuid: '18446744073709551615', type: 1 }), /not owned/)
         assert.deepEqual(f.store.load(f.session.id), before)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('frequent hatred deltas preserve battle relations without global10808 or immediate SQLite writes', () => {
+    const f = fixture()
+    try {
+        const hero = f.state().player.heros_info.heros[0].guid,
+            enemy = '216172782118283809'
+        const db = () => f.store.db.prepare('select state,revision from players where account_id=?').get(f.session.id)
+        const before = db(),
+            count = f.store.db.prepare('select count(*) n from request_log').get().n
+        for (let i = 0; i < 20; i++) {
+            const packets = f.call('ObjHatredIncSync', { inc: true, info: { id: enemy, target_obj_ids: [hero] } })
+            assert.deepEqual(
+                packets.map((p) => p.id),
+                [10805],
+            )
+            assert.deepEqual(packets[0].data.info.target_obj_ids, [hero])
+            assert.equal(packets[0].data.inc, true)
+        }
+        assert.deepEqual(db(), before)
+        assert.equal(f.store.db.prepare('select count(*) n from request_log').get().n, count)
+        const committed = f.store.load(f.session.id)
+        assert.throws(() => f.call('ObjHatredIncSync', { inc: false, info: { id: enemy, target_obj_ids: ['0'] } }))
+        assert.deepEqual(f.store.load(f.session.id), committed)
+        assert.deepEqual(
+            f.call('HatredResetToHomeSync', { obj_id: enemy }).map((p) => p.id),
+            [10809],
+        )
+        assert.deepEqual(f.state().combat.hatred, { objects: {}, players: {} })
     } finally {
         f.store.close()
     }

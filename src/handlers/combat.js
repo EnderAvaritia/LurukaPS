@@ -1,4 +1,5 @@
 import { enemyDefinition } from '../enemy-state.js'
+import { recordGuidedKill } from '../task-kills.js'
 import { isPlayerDamageSource } from '../damage-owner.js'
 import { advanceEntrustCombat } from './entrust.js'
 import { settleStoryCampaignScene } from './story-campaign.js'
@@ -277,6 +278,7 @@ export function registerCombat(on) {
                         entrustDamageChanged = true
                     }
                     boundedSet(battle.entities, id, value, 512)
+                    if ((previous.hp ?? definition.max_hp) > 0 && hp === 0) recordGuidedKill(c.tables, c.state, value)
                     changed.set(id, { uuid: id, hp, sp: value.sp, alive_state: value.alive_state, reason: 0 })
                 } else boundedSet(battle.entities, id, { ...previous, ...values, updated_at: c.now }, 512)
             }
