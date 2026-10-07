@@ -90,7 +90,7 @@ export function registerPlayableLifecycle(on, tables) {
                     return (
                         condition.conditionId === 2525 &&
                         d?.playableId === playId &&
-                        base.mapData?.sceneId === state.world.map_id &&
+                        (!base.mapData?.sceneId || base.mapData.sceneId === state.world.map_id) &&
                         d.playableData?.sceneId === state.world.map_id
                     )
                 }),
