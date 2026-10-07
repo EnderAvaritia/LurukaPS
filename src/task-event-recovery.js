@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { createHash } from 'node:crypto'
 import { TaskGraphs, nodeConditions } from './tasks.js'
 import { deliveryKey } from './task-delivery.js'
-import { recordTaskBehaviour } from './task-events.js'
+import { recordTaskBehaviour, virtualStateReportTarget } from './task-events.js'
 
 const catalogs = new WeakMap()
 export function recoverFailedSpecialNpcEvents(c, protocol, filename, records) {
@@ -15,16 +15,19 @@ export function recoverFailedSpecialNpcEvents(c, protocol, filename, records) {
             nodeConditions(graphs.get(task.task_id).nodes.get(node.node_id)).forEach((condition, index) => {
                 const base = condition.__type_TaskConditionBaseData,
                     signal = base?.__type_TaskCondSignalReceiverData,
-                    data = signal ?? base?.__type_TaskCondActiveSpecialNPCTriggerData
+                    virtualState = base?.__type_TaskCondWorldUnitVirtualStateData,
+                    data = signal ?? virtualState ?? base?.__type_TaskCondActiveSpecialNPCTriggerData
                 const key = deliveryKey(c.state, task.task_id, node.node_id, index)
                 if (condition.conditionId !== 2519 || !data || c.state.taskEvents?.[key]) return
                 // TaskEntitySignalReceiver reports signalType, including 0,
                 // rather than the task NPC's ID from mapData.targetId.
                 const target = signal
                     ? data.signalType
-                    : data.isNowCreate
-                      ? data.npcData?.createNpcId
-                      : data.createNpcId
+                    : virtualState
+                      ? virtualStateReportTarget(virtualState)
+                      : data.isNowCreate
+                        ? data.npcData?.createNpcId
+                        : data.createNpcId
                 if (!Number.isSafeInteger(target) || target < (signal ? 0 : 1) || target > 0xffffffff) return
                 const request = { key: 2519, args: [target, task.task_id, node.node_id, index, 1] }
                 const payload = protocol.encode(protocol.byId.get(9904).req, request)

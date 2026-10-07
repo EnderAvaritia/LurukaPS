@@ -155,6 +155,7 @@ export function conditionValue(condition, state, context) {
             base.__type_TaskCondActiveSpecialNPCTriggerData ??
             base.__type_TaskCondEnemiesGroupData ??
             base.__type_TaskCondPhotoSceneData ??
+            base.__type_TaskCondWorldUnitVirtualStateData ??
             base.__type_TaskCondPackageDownloadCompleteData ??
             base.__type_TaskCondSignalReceiverData
         return (state.taskEvents?.[deliveryKey(state, context.taskId, context.nodeId, context.index)] ?? 0) >=

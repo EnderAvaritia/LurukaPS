@@ -219,7 +219,7 @@ export function storyCampaignSnapshot(state) {
             scene_id: id,
             scene_status: run.completed_scenes.includes(id) ? 1 : 0,
             cur_step: id === run.map_id ? (run.stage_index ?? 0) : 0,
-            objs: id === run.map_id ? (run.scene_objects ?? []) : [],
+            objs: id === run.map_id ? (run.scene_objects ?? []).map(({ claims, ...object }) => object) : [],
         })),
     }
 }

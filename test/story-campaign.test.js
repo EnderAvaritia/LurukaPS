@@ -5,7 +5,7 @@ import { Protocol } from '../src/protocol.js'
 import { Tables } from '../src/player.js'
 import { Store } from '../src/store.js'
 import { Game } from '../src/game.js'
-import { storyCampaignConfig } from '../src/story-campaign.js'
+import { storyCampaignConfig, storyCampaignSnapshot } from '../src/story-campaign.js'
 
 const cfg = configuration(),
     protocol = new Protocol(cfg.base),
@@ -140,4 +140,29 @@ test('chapter 106014 opens its table-matched dungeon and only credits a defeated
     } finally {
         store.close()
     }
+})
+
+test('campaign object snapshots omit internal claims while retaining server reward receipts', () => {
+    const object = {
+        obj_id: 1300001,
+        active: true,
+        complete: false,
+        state_data: { step: 1 },
+        claims: { complete: true },
+    }
+    const state = {
+        storyCampaign: {
+            dungeon_id: 10071,
+            map_id: 6224,
+            status: 2,
+            start_time: 1800000000,
+            completed_scenes: [],
+            scene_objects: [object],
+        },
+    }
+    const snapshot = storyCampaignSnapshot(state)
+    assert.equal('claims' in snapshot.scene_datas[0].objs[0], false)
+    assert.deepEqual(object.claims, { complete: true })
+    assert.deepEqual(snapshot.scene_datas[0].objs[0].state_data, { step: 1 })
+    assert.doesNotThrow(() => protocol.encode(protocol.byName.get('CSProtoCampaignInfoSync').rsp, snapshot))
 })

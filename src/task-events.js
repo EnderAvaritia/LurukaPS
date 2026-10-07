@@ -161,6 +161,9 @@ export function recoverCachedTaskTimeEvent(c) {
         return false
     }
 }
+export function virtualStateReportTarget(data) {
+    return data?.createNpcId > 0 ? data.createNpcId : data?.worldMapId
+}
 export function recordTaskBehaviour(c, r) {
     if (!indexed.has(r.key) && ![1100, 2508, 2526].includes(r.key)) return false
     let graphs = catalogs.get(c.tables)
@@ -199,9 +202,11 @@ export function recordTaskBehaviour(c, r) {
     const base = condition.__type_TaskConditionBaseData ?? {}
     const scene = base.__type_TaskCondInSceneData
     const playable = base.__type_TaskCondPlayableIsFinishData
+    const virtualState = base.__type_TaskCondWorldUnitVirtualStateData
     const data =
         scene ??
         playable ??
+        virtualState ??
         base.__type_TaskCondNPCTriggerData ??
         base.__type_TaskCondActiveNPCTriggerData ??
         base.__type_TaskCondActiveSpecialNPCTriggerData ??
@@ -214,6 +219,17 @@ export function recordTaskBehaviour(c, r) {
         `Task event configuration unavailable (${taskId}/${nodeId}/${index}, content ${condition.contentType})`,
         1007,
     )
+    if (virtualState)
+        ensure(
+            condition.contentType === 16660 &&
+                r.key === 2519 &&
+                Number.isSafeInteger(virtualState.worldMapId) &&
+                virtualState.worldMapId > 0 &&
+                typeof virtualState.virtualState === 'string' &&
+                virtualState.virtualState.length > 0,
+            'Invalid world virtual-state condition',
+            1007,
+        )
     // The exported NPC-trigger payload calls its storyId `sceneId`; the CBT3
     // TaskCondNPCTriggerData/TaskCondActiveNPCTriggerData classes confirm that
     // field identifies a story, not a world map. Use only actual map fields.
@@ -231,15 +247,17 @@ export function recordTaskBehaviour(c, r) {
             scene?.sceneId ??
             (playable
                 ? playable.playableID
-                : base.__type_TaskCondSignalReceiverData
-                  ? data.signalType
-                  : base.__type_TaskCondPackageDownloadCompleteData
-                    ? 0xffffffff
-                    : r.key === 1001
-                      ? data.npcId
-                      : r.key === 2519 && data.isNowCreate
-                        ? data.npcData?.createNpcId
-                        : data.createNpcId)
+                : virtualState
+                  ? virtualStateReportTarget(virtualState)
+                  : base.__type_TaskCondSignalReceiverData
+                    ? data.signalType
+                    : base.__type_TaskCondPackageDownloadCompleteData
+                      ? 0xffffffff
+                      : r.key === 1001
+                        ? data.npcId
+                        : r.key === 2519 && data.isNowCreate
+                          ? data.npcData?.createNpcId
+                          : data.createNpcId)
         ensure(Number.isSafeInteger(expected) && expected === target, 'Task event target mismatch')
     }
     if (playable)

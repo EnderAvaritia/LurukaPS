@@ -112,9 +112,10 @@ export function settleStoryCampaignScene(c) {
         }
         c.state.worldObjects[key] = record
     }
-    run.scene_objects = c.tables
-        .get(`worldmap_${run.map_id}`)
-        .map((row) => c.state.worldObjects[`${run.map_id}:${row.id}`])
+    run.scene_objects = c.tables.get(`worldmap_${run.map_id}`).map((row) => {
+        const { claims, ...object } = c.state.worldObjects[`${run.map_id}:${row.id}`]
+        return object
+    })
     if (run.stage_index === waves.length && storySceneDefeated(c.tables, c.state)) run.completed_scenes.push(run.map_id)
     c.push('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
     c.push('CSProtoWorldMapSync', {
