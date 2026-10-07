@@ -1,6 +1,7 @@
 import { isPreviousTrialActor } from './trial-groups.js'
 import { ensure, group } from './common.js'
 import { recordTaskBehaviour } from '../task-events.js'
+import { storyCampaignSnapshot } from '../story-campaign.js'
 export function registerClientState(on) {
     on('GamePause', (c, r) => {
         const gameTime = String(r.game_time ?? '0')
@@ -16,6 +17,23 @@ export function registerClientState(on) {
     on('MultiCampaignPlayerLoaded', (c) => {
         c.state.world.client_loaded = true
         c.state.world.loaded_at = c.now
+        const run = c.state.storyCampaign
+        if (
+            run?.status === 2 &&
+            run.task_ids?.length &&
+            run.map_id === c.state.world.map_id &&
+            run.task_context_loaded_map !== run.map_id
+        ) {
+            // DungeonTaskRuntime.Start clears its task-sync readiness during
+            // entry. Re-publish the active dungeon context after scene load,
+            // so the initial trace/target is not lost before listeners exist.
+            run.task_context_loaded_map = run.map_id
+            c.push('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+            c.push('CSProtoTaskSync', {
+                tasks: c.state.tasks.filter((task) => run.task_ids.includes(task.task_id)),
+                task_records: (c.state.taskRecords ?? []).filter((record) => run.task_ids.includes(record.task_id)),
+            })
+        }
     })
     on('SwitchGroupControlEnd', (c, r) => {
         const g = group(c.state)

@@ -56,6 +56,16 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         const wire = protocol.decode('CampaignInfo', packets.find((packet) => packet.id === 9505).payload)
         assert.equal(wire.cur_scene_id, 6231)
         assert.equal(wire.dungeon_instance_id, 10068)
+        const loaded = call('MultiCampaignPlayerLoaded')
+        const initialContext = protocol.decode('SCTaskSync', loaded.find((packet) => packet.id === 9853).payload)
+        assert.equal(initialContext.tasks[0].task_id, 500011)
+        assert.equal(initialContext.tasks[0].nodes[0].node_id, 3)
+        assert.equal(initialContext.tasks[0].nodes[0].client_before, false)
+        assert.ok(!loaded.some((packet) => packet.id === 9103), 'guide readiness must not reload the map')
+        assert.ok(
+            !call('MultiCampaignPlayerLoaded').some((packet) => packet.id === 9853),
+            'duplicate load acknowledgments do not reset the target',
+        )
         const entryTask = structuredClone(state().tasks.find((task) => task.task_id === 107016))
         const originalFormation = structuredClone(state().player.group_mgrs)
         const trialRequest = {
@@ -93,6 +103,10 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
                 seq: 1,
                 payload: protocol.encode(login.req, { open_id: 'task-dungeon216', reconnect: true }),
             },
+        )
+        assert.ok(
+            call('MultiCampaignPlayerLoaded').some((packet) => packet.id === 9853),
+            'a new login needs a fresh post-load task context',
         )
         assert.deepEqual(state().trialGroup.ids, [2108103, 2108001])
         // Abort in scene2 after two internal tasks, rather than only testing
@@ -234,7 +248,39 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
                 const task = s.tasks.find((task) => task.task_id === id)
                 task.nodes = [makeNode(graph, graph.end, s)]
             })
-            call('TaskFinish', { u32: id })
+            if ([500012, 500014].includes(id)) {
+                const nextPoint = config.taskPoints[index + 1]
+                const instance = state().storyCampaign.instance_id
+                const records = structuredClone(state().taskRecords)
+                const transfer = call('EnterWorldMap', {
+                    task_id: id,
+                    node_id: graph.end,
+                    map_id: nextPoint.cityId,
+                    point_id: nextPoint.id,
+                })
+                assert.equal(state().storyCampaign.instance_id, instance)
+                assert.equal(state().storyCampaign.map_id, nextPoint.cityId)
+                assert.deepEqual(
+                    state().taskRecords,
+                    records,
+                    "end-node transfer must not erase this run's completed internal tasks",
+                )
+                assert.ok(
+                    state().tasks.some((task) => task.task_id === id),
+                    'TaskFinish has not arrived yet',
+                )
+                assert.ok(
+                    !transfer
+                        .filter((packet) => packet.id === 9853)
+                        .some((packet) => protocol.decode('SCTaskSync', packet.payload).del_tasks.includes(id)),
+                )
+                const finishPackets = call('TaskFinish', { u32: id })
+                assert.ok(
+                    !finishPackets.some((packet) => packet.id === 9103),
+                    'late TaskFinish must not reload an already entered scene',
+                )
+                assert.equal(state().storyCampaign.instance_id, instance)
+            } else call('TaskFinish', { u32: id })
             if (index < config.taskIds.length - 1)
                 assert.deepEqual(
                     state().trialGroup.ids,

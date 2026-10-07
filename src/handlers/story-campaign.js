@@ -245,11 +245,20 @@ export function advanceStoryCampaignTask(c, taskId) {
     if (!c.state.tasks.some((task) => task.task_id === nextId))
         acceptTask(new TaskGraphs(c.tables).get(nextId), c.state, c.now)
     const point = config.taskPoints[nextIndex]
+    const transferred = run.pending_task_transfer
+    if (transferred?.task_id === taskId) delete run.pending_task_transfer
+    if (transferred?.task_id === taskId && transferred.point_id === point.id && run.map_id === point.cityId) {
+        // The client has already completed the end-node scene flow. Only
+        // publish the next task; a second cmd256 would reload that scene.
+        c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+        return
+    }
     if (point.cityId !== run.map_id) {
         run.completed_scenes.push(run.map_id)
         run.map_id = point.cityId
         run.stage_index = 0
         delete run.initialized_scene
+        delete run.task_context_loaded_map
         delete c.state.combat
     }
     Object.assign(c.state.world, c.tables.position(point))

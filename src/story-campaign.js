@@ -15,6 +15,29 @@ export function campaignEntryTasks(tables, state, dungeonId) {
     )
 }
 
+// EnterWorldMap has already validated the active task/node's configured
+// transfer point. End-node transfers arrive before TaskFinish in CBT3.
+export function preserveCampaignTaskTransfer(state, request, point) {
+    const run = state.storyCampaign
+    if (!run?.task_ids?.includes(request.task_id) || !point || !run.scenes.includes(point.cityId)) return false
+    ensure(run.status === 2, 'Story dungeon is not active', 10275)
+    if (run.map_id !== point.cityId) {
+        if (!run.completed_scenes.includes(run.map_id)) run.completed_scenes.push(run.map_id)
+        run.map_id = point.cityId
+        run.stage_index = 0
+        delete run.initialized_scene
+        delete run.loading_complete_at
+        delete run.task_context_loaded_map
+    }
+    run.pending_task_transfer = {
+        task_id: request.task_id,
+        node_id: request.node_id,
+        point_id: point.id,
+        map_id: point.cityId,
+    }
+    return true
+}
+
 // Called only when leaving a campaign, never on battle/movement reports.
 export function resetCampaignTasks(tables, state, run) {
     if (!run.task_ids?.length) return null

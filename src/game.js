@@ -449,6 +449,7 @@ export class Game {
                 // The login sends the canonical active node. Do not replay a
                 // completed node or retain a barrier from the previous client.
                 delete state.pendingTaskStorySync
+                if (state.storyCampaign) delete state.storyCampaign.task_context_loaded_map
                 repairPendingDuelEntry(state)
                 unlockAutomaticTasks(this.tables, state, now)
                 repairMainTaskTrace(this.tables, state)

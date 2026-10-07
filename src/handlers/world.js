@@ -8,7 +8,12 @@ import { repairMainHeroType } from '../main-hero.js'
 import { campaignSnapshot, entrustChestSnapshot } from '../entrust.js'
 import { u64 } from '../combat-state.js'
 import { recoverFormationHp } from '../transpoint-recovery.js'
-import { storyCampaignSnapshot, resetCampaignTasks } from '../story-campaign.js'
+import {
+    storyCampaignSnapshot,
+    resetCampaignTasks,
+    preserveCampaignTaskTransfer,
+    ensureStoryCampaignScene,
+} from '../story-campaign.js'
 import { taskSnapshot } from '../tasks.js'
 import { playableSnapshot } from './playable-lifecycle.js'
 import {
@@ -240,6 +245,10 @@ export function registerWorld(on) {
             rememberMap(c, p.cityId)
             Object.assign(w, c.tables.position(p))
             if (mapChanged) delete c.state.combat
+            if (taskPoint && preserveCampaignTaskTransfer(c.state, r, taskPoint)) {
+                ensureStoryCampaignScene(c.tables, c.state, c.now)
+                c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+            }
         }
         const homeMapId = Number(c.tables.get('game').find((row) => row.title === 'HOME_ID')?.value)
         if (w.map_id === homeMapId) {
