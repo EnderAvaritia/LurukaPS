@@ -85,6 +85,7 @@ export function setWorldMarkTrace(state, guid) {
 export function worldMarkPayload(state, delMarkList = []) {
     return {
         marks: structuredClone(state.worldMarks ?? []),
+        objs: structuredClone(state.worldDiscoveredObjects ?? []),
         trace: state.worldMarkTrace ?? 0,
         del_mark_list: [...delMarkList],
     }

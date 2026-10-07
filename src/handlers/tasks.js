@@ -201,7 +201,8 @@ export function registerTasks(register, tables) {
     })
     on('TaskClientCondAfter', (c, r) => {
         if (finished(c, r)) return {}
-        const { node, config } = current(c, r)
+        const { graph, node, config } = current(c, r)
+        reconcileClearedDungeonBefore(tables, graph, node, c.state)
         ensure(node.client_before, 'Node pre-action is not acknowledged')
         const conditions = nodeConditions(config)
         ensure(

@@ -1,3 +1,4 @@
+import { recordWorldDiscovery } from '../world-discovery.js'
 import { expireTaskTrialGroup, trialPayload } from './trial-groups.js'
 import { validateTaskTransfer } from '../task-scenes.js'
 import { heroBattleLimits, heroModules, syncBattle } from '../battle.js'
@@ -308,6 +309,11 @@ export function registerWorld(on) {
     on('WorldPointAck', (c) => {
         endSceneTransition(c.state, 19)
         c.state.world.last_point_ack = { map_id: c.state.world.map_id, point_id: c.state.world.point_id, time: c.now }
+    })
+    on('WorldObjDiscovery', (c, r) => {
+        const result = recordWorldDiscovery(c.tables, c.state, r.u32s)
+        if (result.changed) c.push('CSProtoWorldMapMarkListSync', worldMarkPayload(c.state))
+        return { u32s: result.ids }
     })
     on('WorldMapMarkAdd', (c, r) => {
         const testTeleport = teleportFromTestMark(c, r)

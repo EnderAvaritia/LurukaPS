@@ -39,6 +39,7 @@ export class TaskGraphs {
             end: raw.endNodeId,
             requirements: asList(raw.openReqContent),
             controllers: asList(raw.commonControllerData),
+            npcs: asList(raw.createNpcData),
             transports: asList(raw.otherData),
         }
         this.cache.set(id, graph)
@@ -497,7 +498,17 @@ function clearedDungeonNode(tables, graph, node, state) {
     const config = graph.nodes.get(node.node_id)
     if (config?.nodeType !== 30) return null
     const before = asList(config.__type_TaskConditionNodeData?.beforActionList || [])
-    if (before.some((action) => action.contentType !== 1400 || !action.dataType?.__type_TaskCreatNPCExportData))
+    if (
+        before.some(
+            (action) =>
+                !(
+                    (action.contentType === 1400 && action.dataType?.__type_TaskCreatNPCExportData) ||
+                    (action.contentType === 1600 &&
+                        action.conditionId === 2705 &&
+                        action.dataType?.__type_TaskDeleteNPCExportData)
+                ),
+        )
+    )
         return null
     const required = nodeConditions(config).filter(
         (condition) => condition.__type_TaskConditionBaseData?.unneedCompleted !== 1,
@@ -507,6 +518,9 @@ function clearedDungeonNode(tables, graph, node, state) {
         required.some((condition) => {
             const data = condition.__type_TaskConditionBaseData?.__type_TaskCondDungeonData
             return (
+                (data?.dungeonId &&
+                    state.storyCampaign?.dungeon_id === data.dungeonId &&
+                    state.storyCampaign.status !== 3) ||
                 condition.conditionId !== 12017 ||
                 data?.isOver !== 1 ||
                 conditionValue(condition, state) < 1 ||

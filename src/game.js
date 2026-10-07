@@ -12,6 +12,7 @@ import {
 import { prepareTaskScenes } from './task-scenes.js'
 import { beginSceneTransition } from './scene-transition.js'
 import { worldSync } from './handlers/world.js'
+import { worldMarkPayload } from './world-marks.js'
 import {
     TaskGraphs,
     unlockAutomaticTasks,
@@ -1069,6 +1070,7 @@ export class Game {
             }),
             this.packet('CSProtoPlayableSync', playableSnapshot(state)),
             this.packet('CSProtoAllRouletteInfoSync', roulettePayload(state)),
+            this.packet('CSProtoWorldMapMarkListSync', worldMarkPayload(state)),
             this.packet('CSProtoChatRoomSync', { chat_type: 2, sysId: String(state.chatWorldRoom ?? 1) }),
             this.packet('CSProtoChatListSync', chatSnapshots(this.store, state, session.id).list),
             this.packet('CSProtoChatMsgCntSync', chatSnapshots(this.store, state, session.id).counts),
