@@ -9,6 +9,13 @@ const configs = new Map(
         r,
     ]),
 )
+// Only confirmed empty rewards are listed here. Unknown missing drops still
+// fail; if the original table later supplies a group, its real rewards win.
+const emptyScoreRewards = new Set(
+    JSON.parse(fs.readFileSync(new URL('../../configs/playable-empty-rewards.json', import.meta.url))).map(
+        (row) => row.play_id + ':' + row.drop_id,
+    ),
+)
 export function playableSnapshot(state) {
     const finish = Object.values(state.playableFinishes ?? {}).filter((r) => r.map_id === state.world.map_id)
     return {
@@ -272,7 +279,11 @@ export function registerPlayableLifecycle(on, tables) {
         const fresh = mask & ~claimed,
             awarded = []
         for (let index = 0; index < dropIds.length; index++)
-            if (fresh & (1n << BigInt(index + 1))) awarded.push(Number(dropIds[index]))
+            if (fresh & (1n << BigInt(index + 1))) {
+                const id = Number(dropIds[index])
+                if (!emptyScoreRewards.has(row.id + ':' + id) || world.get('drop').some((entry) => entry.dropId === id))
+                    awarded.push(id)
+            }
         const rewards = awarded.length
             ? grantRewards(
                   tables,
