@@ -143,3 +143,28 @@ test('legacy recovery rejects deaths before this dungeon run or while the node w
         f.store.close()
     }
 })
+
+test('guided boss FSM story101266 authorizes its exact StoryKill callback and credits the kill goal', () => {
+    const f = fixture()
+    try {
+        f.store.transact(f.session.id, 0, (s) => {
+            s.combat.entities[target].hp = 55
+        })
+        const before = f.store.load(f.session.id)
+        assert.throws(() => f.call('StoryKill', { guid: [target] }), /story has not played/)
+        assert.deepEqual(f.store.load(f.session.id), before)
+        f.call('SetStoryId', { story_id: 101266, story_type: 3, is_skip: false })
+        f.call('StoryKill', { guid: [target] })
+        assert.equal(f.state().combat.entities[target].hp, 0)
+        assert.equal(f.state().tasks.find((t) => t.task_id === 500018).nodes[0].node_values[0], 1)
+        assert.deepEqual(f.state().storyKillReceipts['6207:' + target].story_ids, [101266])
+        f.call('StoryKill', { guid: [target] })
+        assert.equal(guidedConditionValue(1070161, f.state(), context), 1)
+        assert.throws(() => f.call('StoryKill', { guid: ['216172782114383810'] }), /no configured story kill/)
+        f.call('TaskClientCondAfter', { task_id: 500018, node_id: 2, indexes: [0] })
+        f.call('TaskClientAfter', { task_id: 500018, node_id: 2 })
+        assert.equal(f.state().tasks.find((t) => t.task_id === 500018).nodes[0].node_id, 3)
+    } finally {
+        f.store.close()
+    }
+})
