@@ -2,6 +2,7 @@ import { isPreviousTrialActor } from './trial-groups.js'
 import { ensure, group } from './common.js'
 import { recordTaskBehaviour } from '../task-events.js'
 import { storyCampaignSnapshot, traceStoryCampaignTask } from '../story-campaign.js'
+import { endSceneTransition } from '../scene-transition.js'
 export function registerClientState(on) {
     on('GamePause', (c, r) => {
         const gameTime = String(r.game_time ?? '0')
@@ -15,6 +16,7 @@ export function registerClientState(on) {
         return {}
     })
     on('MultiCampaignPlayerLoaded', (c) => {
+        endSceneTransition(c.state)
         c.state.world.client_loaded = true
         c.state.world.loaded_at = c.now
         const run = c.state.storyCampaign

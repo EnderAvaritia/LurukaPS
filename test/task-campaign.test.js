@@ -57,6 +57,24 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         const wire = protocol.decode('CampaignInfo', packets.find((packet) => packet.id === 9505).payload)
         assert.equal(wire.cur_scene_id, 6231)
         assert.equal(wire.dungeon_instance_id, 10068)
+        const entryWorld = structuredClone(state().world)
+        const staleMovement = call('StateUpdate', {
+            move_msg: {
+                map_id: 100,
+                move: [
+                    {
+                        uuid: state().player.group_mgrs[0].groups[0].control,
+                        info: { pos: { x: 58027, y: 10115, z: -10669 } },
+                    },
+                ],
+            },
+        })
+        assert.deepEqual(
+            staleMovement,
+            [],
+            'the real CampaignCreate flow must discard the preceding overworld movement',
+        )
+        assert.deepEqual(state().world, entryWorld)
         const loaded = call('MultiCampaignPlayerLoaded')
         const initialContext = protocol.decode('SCTaskSync', loaded.find((packet) => packet.id === 9853).payload)
         assert.equal(initialContext.tasks[0].task_id, 500011)

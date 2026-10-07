@@ -15,6 +15,7 @@ import {
     ensureStoryCampaignScene,
 } from '../story-campaign.js'
 import { taskSnapshot } from '../tasks.js'
+import { beginSceneTransition, isPreviousSceneMovement, endSceneTransition } from '../scene-transition.js'
 import { playableSnapshot } from './playable-lifecycle.js'
 import {
     addWorldMark,
@@ -134,6 +135,7 @@ export function worldSync(c, r = {}, cmd = WORLD_MAP_CMD_ENTER, includeMarks = t
     }
     const s = c.state,
         w = s.world
+    if ([WORLD_MAP_CMD_ENTER, 49, 19].includes(cmd)) beginSceneTransition(s, c.previousMapId, c.now, cmd)
     const departedEntrust = s.entrust?.run
     if (departedEntrust && departedEntrust.map_id !== w.map_id) {
         // Teleports/GM transfers may bypass CampaignQuit. Do not leave a
@@ -304,6 +306,7 @@ export function registerWorld(on) {
         return {}
     })
     on('WorldPointAck', (c) => {
+        endSceneTransition(c.state, 19)
         c.state.world.last_point_ack = { map_id: c.state.world.map_id, point_id: c.state.world.point_id, time: c.now }
     })
     on('WorldMapMarkAdd', (c, r) => {
@@ -360,6 +363,7 @@ export function registerWorld(on) {
         const m = r.move_msg
         if (!m) return
         const w = c.state.world
+        if (m.map_id !== w.map_id && isPreviousSceneMovement(c.state, m.map_id)) return
         ensure(m.map_id === w.map_id, 'Wrong map')
         const g = group(c.state),
             activeMount = w.status === 1 ? w.mount : null,
@@ -381,6 +385,7 @@ export function registerWorld(on) {
         }
         const confirmed = mountMove ?? heroMove
         if (!confirmed) return
+        endSceneTransition(c.state)
         w.pos = confirmed.info.pos
         w.angle = confirmed.info.angle
         if (confirmed.info.area_id !== undefined) w.area_id = confirmed.info.area_id

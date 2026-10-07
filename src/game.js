@@ -10,6 +10,7 @@ import {
     restoreMixedTrialGroup,
 } from './handlers/trial-groups.js'
 import { prepareTaskScenes } from './task-scenes.js'
+import { beginSceneTransition } from './scene-transition.js'
 import { worldSync } from './handlers/world.js'
 import {
     TaskGraphs,
@@ -446,6 +447,7 @@ export class Game {
                 return [reply({ open_id: r.open_id, pid: a.id, guid: a.id, server_token: session.token })]
             }
             const packets = this.store.transact(session.id, e.id, (state) => {
+                const previousMapId = state.world.map_id
                 // The login sends the canonical active node. Do not replay a
                 // completed node or retain a barrier from the previous client.
                 delete state.pendingTaskStorySync
@@ -486,6 +488,7 @@ export class Game {
                 prepareTaskScenes(this.tables, state, { login: true })
                 ensureEntrustSceneObjects(this.tables, state, now)
                 ensureStoryCampaignScene(this.tables, state, now)
+                beginSceneTransition(state, previousMapId, now, 256)
                 traceStoryCampaignTask(state)
                 if (state.storyCampaign)
                     settleStoryCampaignScene({ state, tables: this.tables, id: session.id, now, push: () => {} })
@@ -703,6 +706,7 @@ export class Game {
                 const pushes = []
                 const context = {
                     id: session.id,
+                    previousMapId: state.world.map_id,
                     combatSessionId: session.token,
                     requestKey: frame.seq ? session.token + ':' + frame.id + ':' + frame.seq : null,
                     state,

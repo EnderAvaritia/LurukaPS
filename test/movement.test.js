@@ -187,3 +187,54 @@ test('mount movement becomes the player position and dismount keeps the latest m
         f.store.close()
     }
 })
+
+test('scene entry ignores only in-flight movement from its previous map until destination confirmation', () => {
+    const f = fixture()
+    try {
+        const origin = f.state().world.map_id
+        const control = f.state().player.group_mgrs[0].groups[0].control
+        const move = (map, uuid = control) =>
+            f.call('StateUpdate', {
+                move_msg: {
+                    map_id: map,
+                    move: [{ uuid, info: { pos: { x: 58027, y: 10115, z: -10669 }, timestamp: '1800000000000' } }],
+                },
+            })
+        f.call('EnterWorldMap', { map_id: 6231, point_id: 623101 })
+        const entered = f.state(),
+            revision = f.store.load(f.session.id).revision
+        const logs = f.store.db.prepare('SELECT COUNT(*) AS count FROM request_log').get().count
+        assert.deepEqual(move(origin), [], 'the source-map movement race must not produce a protocol error')
+        assert.deepEqual(f.state(), entered, 'source movement must not overwrite the dungeon birth position')
+        assert.equal(f.store.load(f.session.id).revision, revision, 'ignored movement must not write player data')
+        assert.equal(f.store.db.prepare('SELECT COUNT(*) AS count FROM request_log').get().count, logs)
+        assert.throws(() => move(9999), /Wrong map/, 'an unrelated map remains invalid')
+        move(6231, '216172790703918911')
+        assert.deepEqual(move(origin), [], 'an uncontrolled actor cannot confirm arrival')
+        assert.ok(move(6231).some((packet) => packet.id === 11074))
+        assert.throws(() => move(origin), /Wrong map/, 'destination movement ends the transition allowance')
+    } finally {
+        f.store.close()
+    }
+})
+
+test('scene loaded and point acknowledgments end the allowance for old-map movement', () => {
+    const f = fixture()
+    try {
+        const origin = f.state().world.map_id
+        const control = f.state().player.group_mgrs[0].groups[0].control
+        const oldMove = (map) =>
+            f.call('StateUpdate', { move_msg: { map_id: map, move: [{ uuid: control, info: { pos: { x: 1 } } }] } })
+        f.call('EnterWorldMap', { map_id: 6231, point_id: 623101 })
+        f.call('WorldPointAck')
+        assert.deepEqual(oldMove(origin), [], 'a point ack cannot acknowledge a different scene-load flow')
+        f.call('MultiCampaignPlayerLoaded')
+        assert.throws(() => oldMove(origin), /Wrong map/)
+        f.call('WorldPoint', { point_id: 10045 })
+        assert.deepEqual(oldMove(6231), [])
+        f.call('WorldPointAck')
+        assert.throws(() => oldMove(6231), /Wrong map/)
+    } finally {
+        f.store.close()
+    }
+})
