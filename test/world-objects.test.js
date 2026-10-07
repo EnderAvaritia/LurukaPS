@@ -68,7 +68,11 @@ test('actual CBT3 collection object grants once and re-entry sync preserves comp
         assert.equal(item.obj.complete, true)
         assert.deepEqual(
             item.rewards.rewards.map(({ itemtype, itemid, itemnum }) => ({ itemtype, itemid, itemnum })),
-            [{ itemtype: 3, itemid: 306000, itemnum: 1 }],
+            // drop44001 has an independent group2 gold roll (minimum4 at RNG0).
+            [
+                { itemtype: 3, itemid: 306000, itemnum: 1 },
+                { itemtype: 3, itemid: 300000, itemnum: 4 },
+            ],
         )
         assert.equal(response.at(-1).id, 9133)
         assert(response.slice(0, -1).length > 0)

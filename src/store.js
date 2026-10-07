@@ -71,6 +71,16 @@ export class Store {
         if (!row) throw Error('Player not found')
         return { state: JSON.parse(row.state), revision: row.revision }
     }
+    // Trusted synchronous queries must not mutate this borrowed state. In-memory
+    // movement/combat can be read without cloning or scheduling a database write.
+    read(id, fn) {
+        const pending = this.pending.get(id),
+            row = pending ? null : this.playerById.get(id)
+        if (!pending && !row) throw Error('Player not found')
+        const result = fn(pending?.state ?? JSON.parse(row.state))
+        if (result?.then) throw Error('Asynchronous player query is forbidden')
+        return result
+    }
     hasFailedRequestAfter(id, messageId, sinceMs) {
         return !!this.failedRequest.get(id, messageId, sinceMs)
     }

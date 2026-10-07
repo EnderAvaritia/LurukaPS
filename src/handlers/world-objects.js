@@ -29,7 +29,7 @@ const collectionFinalDrops = new Map([
     [651013, 43011],
     [651014, 43011],
 ])
-function worldCondition(value, state) {
+export function worldCondition(value, state) {
     if (!value) return true
     return String(value)
         .split('|')

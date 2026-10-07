@@ -66,6 +66,7 @@ import {
 import { registerProfileQueries } from './handlers/profile-queries.js'
 import { registerWorldObjects, reconcileWorldCollectionFinalDrops } from './handlers/world-objects.js'
 import { registerWorldCombat } from './handlers/world-combat.js'
+import { registerWorldSearch } from './handlers/world-search.js'
 import { registerAIControl, clientAIReports } from './handlers/ai-control.js'
 import { retireCapturedEnemy } from './handlers/world-combat.js'
 import { registerEcology } from './handlers/ecology.js'
@@ -275,6 +276,7 @@ export class Game {
         registerProfileQueries(on, tables, store)
         registerWorldObjects(on, tables)
         registerWorldCombat(on)
+        registerWorldSearch(on, tables)
         registerAIControl(on)
         registerEcology(on, tables)
         registerMall(on, tables)
@@ -622,6 +624,8 @@ export class Game {
         if (e.name === 'CSProtoRecycle') return [reply({})]
         const handler = this.handlers.get(e.id)
         if (!handler) throw new GameError(`Unsupported ${e.name}`, 1021)
+        if (e.name === 'CSProtoWorldObjSearch')
+            return this.store.read(session.id, (state) => [reply(handler({ state, tables: this.tables }, r))])
         if (e.name === 'CSProtoWorldMapExtraStatus') {
             const response = handler(
                 {

@@ -124,3 +124,41 @@ test('battle controller monsters receive authoritative death and unblock the con
         f.store.close()
     }
 })
+
+test('map6207 fixed Miti group uses the already synchronized kind3 actor and preserves HP', () => {
+    const f = fixture()
+    try {
+        f.store.transact(f.session.id, 0, (state) => {
+            delete state.pendingTaskScene
+            delete state.pendingTaskStorySync
+            // The entrance's Before transfer has already completed on the client.
+            state.taskSceneReceipts['107016:1:34'] = true
+            const graph = new TaskGraphs(tables).get(107016)
+            state.tasks[0].nodes = [{ ...makeNode(graph, 34, state), client_before: true }]
+            state.tasks[0].finish_nodes = [1, 3, 4, 5, 8, 9, 10, 26, 32, 33]
+        })
+        f.call('CampaignCreate', { group_id: 219, difficulty: 1 })
+        assert.equal(f.state().world.map_id, 6207)
+        const uuid = ((3n << 56n) | 600002n).toString()
+        const before = f.state()
+        assert.equal(before.worldObjects['6207:600002'].expand_data.battle_group.monsters[0].uid, uuid)
+        f.store.transact(f.session.id, 0, (state) => {
+            state.combat.entities[uuid].hp -= 18
+        })
+        const packets = f.call('CSWorldObjAIHeroInfo', { enemy_pack_id: 10800301 })
+        const info = protocol.decode('SCWorldObjAIHeroInfoRsp', packets.find((p) => p.id === 9141).payload)
+        assert.equal(info.uuid, uuid)
+        const syncProtocol = protocol.byName.get('CSProtoObjBattleInfoSync')
+        const sync = protocol.decode(syncProtocol.rsp, packets.find((p) => p.id === syncProtocol.id).payload)
+        assert.equal(sync.infos[0].hp, before.combat.entities[uuid].hp - 18)
+        assert.ok(packets.findIndex((p) => p.id === syncProtocol.id) < packets.findIndex((p) => p.id === 9141))
+        assert.deepEqual(f.state().player.group_mgrs, before.player.group_mgrs)
+        assert.deepEqual(f.state().player.heros_info, before.player.heros_info)
+        f.store.transact(f.session.id, 0, (state) => {
+            state.worldObjects['6207:600002'].active = false
+        })
+        assert.throws(() => f.call('CSWorldObjAIHeroInfo', { enemy_pack_id: 10800301 }), /not configured/)
+    } finally {
+        f.store.close()
+    }
+})
