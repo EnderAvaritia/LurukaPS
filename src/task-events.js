@@ -202,11 +202,13 @@ export function recordTaskBehaviour(c, r) {
     const base = condition.__type_TaskConditionBaseData ?? {}
     const scene = base.__type_TaskCondInSceneData
     const playable = base.__type_TaskCondPlayableIsFinishData
+    const areaTrigger = base.__type_TaskCondAreaTriggerData
     const virtualState = base.__type_TaskCondWorldUnitVirtualStateData
     const data =
         scene ??
         playable ??
         virtualState ??
+        areaTrigger ??
         base.__type_TaskCondNPCTriggerData ??
         base.__type_TaskCondActiveNPCTriggerData ??
         base.__type_TaskCondActiveSpecialNPCTriggerData ??
@@ -230,12 +232,24 @@ export function recordTaskBehaviour(c, r) {
             'Invalid world virtual-state condition',
             1007,
         )
+    const area = areaTrigger ? c.tables.find('world_area_unit_define', areaTrigger.configId) : null
+    if (areaTrigger)
+        ensure(
+            condition.contentType === 16350 &&
+                r.key === 2519 &&
+                area &&
+                Number.isInteger(area.sceneId) &&
+                area.sceneId > 0,
+            'Task area trigger configuration unavailable',
+            1007,
+        )
     // The exported NPC-trigger payload calls its storyId `sceneId`; the CBT3
     // TaskCondNPCTriggerData/TaskCondActiveNPCTriggerData classes confirm that
     // field identifies a story, not a world map. Use only actual map fields.
     const npc = base.__type_TaskCondNPCTriggerData,
         activeNpc = base.__type_TaskCondActiveNPCTriggerData ?? base.__type_TaskCondActiveSpecialNPCTriggerData
     const map =
+        area?.sceneId ??
         scene?.sceneId ??
         (playable?.sceneID ||
             base.mapData?.sceneId ||

@@ -16,7 +16,8 @@ export function recoverFailedSpecialNpcEvents(c, protocol, filename, records) {
                 const base = condition.__type_TaskConditionBaseData,
                     signal = base?.__type_TaskCondSignalReceiverData,
                     virtualState = base?.__type_TaskCondWorldUnitVirtualStateData,
-                    data = signal ?? virtualState ?? base?.__type_TaskCondActiveSpecialNPCTriggerData
+                    area = base?.__type_TaskCondAreaTriggerData,
+                    data = signal ?? virtualState ?? area ?? base?.__type_TaskCondActiveSpecialNPCTriggerData
                 const key = deliveryKey(c.state, task.task_id, node.node_id, index)
                 if (condition.conditionId !== 2519 || !data || c.state.taskEvents?.[key]) return
                 // TaskEntitySignalReceiver reports signalType, including 0,
@@ -28,7 +29,7 @@ export function recoverFailedSpecialNpcEvents(c, protocol, filename, records) {
                       : data.isNowCreate
                         ? data.npcData?.createNpcId
                         : data.createNpcId
-                if (!Number.isSafeInteger(target) || target < (signal ? 0 : 1) || target > 0xffffffff) return
+                if (!Number.isSafeInteger(target) || target < (signal || area ? 0 : 1) || target > 0xffffffff) return
                 const request = { key: 2519, args: [target, task.task_id, node.node_id, index, 1] }
                 const payload = protocol.encode(protocol.byId.get(9904).req, request)
                 candidates.push({ task, key, request, hash: createHash('sha256').update(payload).digest('hex') })
