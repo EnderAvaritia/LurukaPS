@@ -236,11 +236,10 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
         call('TaskClientCondAfter', { task_id: 500011, node_id: 3, indexes: [0] })
         call('TaskClientAfter', { task_id: 500011, node_id: 3 })
         assert.equal(state().tasks.find((task) => task.task_id === 500011).nodes[0].node_id, 6)
-        const expectedPoints = config.taskPoints.map((point) => point.id)
         for (let index = 0; index < config.taskIds.length; index++) {
             const id = config.taskIds[index],
                 graph = graphs.get(id)
-            assert.equal(state().world.point_id, expectedPoints[index])
+            assert.equal(state().world.map_id, config.taskPoints[index].cityId)
             if (index > 0) assert.throws(() => call('TaskFinish', { u32: id }), /acknowledged end node/)
             // Test the server transition after a genuinely acknowledged end;
             // individual NPC/playable callbacks have separate protocol tests.
@@ -274,12 +273,43 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
                         .filter((packet) => packet.id === 9853)
                         .some((packet) => protocol.decode('SCTaskSync', packet.payload).del_tasks.includes(id)),
                 )
+                store.transact(session.id, 0, (s) => {
+                    s.world.pos.x += 91
+                })
+                const arrivedWorld = structuredClone(state().world)
                 const finishPackets = call('TaskFinish', { u32: id })
                 assert.ok(
                     !finishPackets.some((packet) => packet.id === 9103),
                     'late TaskFinish must not reload an already entered scene',
                 )
+                assert.deepEqual(state().world, arrivedWorld, 'late TaskFinish preserves movement after entry')
                 assert.equal(state().storyCampaign.instance_id, instance)
+            } else if (index < config.taskIds.length - 1) {
+                // Finishing 62111 after destroying the rocks does not include
+                // a transfer action. The player must cross the stones; the
+                // next task's checkpoint must not replace their position.
+                store.transact(session.id, 0, (s) => {
+                    s.world.pos = { x: s.world.pos.x + 137, y: s.world.pos.y + 24, z: s.world.pos.z - 83 }
+                    s.world.angle = 1200 + index
+                })
+                const world = structuredClone(state().world),
+                    combat = structuredClone(state().combat)
+                const finishPackets = call('TaskFinish', { u32: id })
+                assert.ok(
+                    !finishPackets.some((packet) => packet.id === 9103),
+                    'same-scene TaskFinish must not reload or teleport to the next checkpoint',
+                )
+                assert.deepEqual(state().world, world, 'preserve the physical position and scene loading state')
+                assert.deepEqual(state().combat, combat, 'same-scene advancement retains existing actors')
+                const next = protocol
+                    .decode('SCTaskSync', finishPackets.find((packet) => packet.id === 9853).payload)
+                    .tasks.find((task) => task.task_id === config.taskIds[index + 1])
+                assert.ok(next, 'publish the next task without reloading the scene')
+                assert.ok(state().taskRecords.some((record) => record.task_id === id))
+                assert.ok(
+                    !call('TaskFinish', { u32: id }).some((packet) => packet.id === 9103),
+                    'duplicate completion must not cause a delayed teleport',
+                )
             } else call('TaskFinish', { u32: id })
             if (index < config.taskIds.length - 1)
                 assert.deepEqual(

@@ -247,20 +247,19 @@ export function advanceStoryCampaignTask(c, taskId) {
     const point = config.taskPoints[nextIndex]
     const transferred = run.pending_task_transfer
     if (transferred?.task_id === taskId) delete run.pending_task_transfer
-    if (transferred?.task_id === taskId && transferred.point_id === point.id && run.map_id === point.cityId) {
-        // The client has already completed the end-node scene flow. Only
-        // publish the next task; a second cmd256 would reload that scene.
+    if (run.map_id === point.cityId) {
+        // A task checkpoint is not a per-task transfer action. Keep the
+        // player's position when the next task shares the current scene,
+        // including when its end-node transfer already loaded that scene.
         c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
         return
     }
-    if (point.cityId !== run.map_id) {
-        run.completed_scenes.push(run.map_id)
-        run.map_id = point.cityId
-        run.stage_index = 0
-        delete run.initialized_scene
-        delete run.task_context_loaded_map
-        delete c.state.combat
-    }
+    run.completed_scenes.push(run.map_id)
+    run.map_id = point.cityId
+    run.stage_index = 0
+    delete run.initialized_scene
+    delete run.task_context_loaded_map
+    delete c.state.combat
     Object.assign(c.state.world, c.tables.position(point))
     ensureStoryCampaignScene(c.tables, c.state, c.now)
     c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
