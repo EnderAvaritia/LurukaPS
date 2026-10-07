@@ -14,12 +14,15 @@ export function enemyDefinition(tables, state, uuid) {
         cached = { world: new WorldObjectCatalog(tables), graphs: new TaskGraphs(tables) }
         catalogs.set(tables, cached)
     }
-    let packId, worldRow, taskConfig
+    let packId, worldRow, taskConfig, groupSize
     if (kind === 7) {
         for (const [key, entry] of Object.entries(state.playableEnemies ?? {})) {
             if (!key.startsWith(state.world.map_id + ':')) continue
             packId = entry.entities.find((e) => e.uuid === uuid)?.config_id
-            if (packId) break
+            if (packId) {
+                groupSize = entry.entities.filter((e) => e.container === object).length
+                break
+            }
         }
     } else {
         let groupId
@@ -60,10 +63,12 @@ export function enemyDefinition(tables, state, uuid) {
         }
         if (groupId) {
             const group = tables.find('world_enemy_group', groupId)
-            packId = String(group?.enemyList ?? '')
+            const packs = String(group?.enemyList ?? '')
                 .split('|')
                 .filter(Boolean)
-                .map(Number)[slot]
+                .map(Number)
+            groupSize = packs.length
+            packId = packs[slot]
         }
     }
     if (!packId) return null
@@ -121,5 +126,13 @@ export function enemyDefinition(tables, state, uuid) {
         Math.fround(Math.fround(pairs(base.baseAttribute).get(5) * pairs(growth.baseAttribute).get(5)) / 10000),
     )
     if (!Number.isSafeInteger(maxHp) || maxHp <= 0 || maxHp > 0xffffffff) return null
-    return { config_id: enemy.id, pack_id: packId, level, max_hp: maxHp, object_id: object, slot }
+    return {
+        config_id: enemy.id,
+        pack_id: packId,
+        level,
+        max_hp: maxHp,
+        object_id: object,
+        slot,
+        group_size: groupSize,
+    }
 }

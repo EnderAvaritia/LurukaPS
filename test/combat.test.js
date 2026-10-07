@@ -46,6 +46,7 @@ test('actual logged enemy4500001 receives cumulative authoritative HP and death 
         assert.equal(f.state().combat.entities[id].hp, definition.max_hp - 12)
         packets = hit(-definition.max_hp)
         assert.equal(f.state().combat.entities[id].hp, 0)
+        assert.ok(packets.findIndex((p) => p.id === 10009) < packets.findIndex((p) => p.id === 10706))
         assert.equal(packets.find((p) => p.id === 10009).data.infos.find((r) => r.uuid === id).alive_state, 1)
         hit(-1)
         assert.equal(f.state().combat.entities[id].hp, 0)

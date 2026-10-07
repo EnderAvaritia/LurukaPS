@@ -1,5 +1,6 @@
 import { enemyDefinition } from '../enemy-state.js'
 import { recordGuidedKill } from '../task-kills.js'
+import { finishEnemyGroupRelations } from './world-combat.js'
 import { isPlayerDamageSource } from '../damage-owner.js'
 import { advanceEntrustCombat } from './entrust.js'
 import { settleStoryCampaignScene } from './story-campaign.js'
@@ -232,7 +233,8 @@ export function registerCombat(on) {
             battle = combatState(c.state, c.now),
             changed = new Map(),
             maximums = new Map(),
-            enemyHurts = []
+            enemyHurts = [],
+            deadGroups = new Set()
         const entrustRun =
             c.state.entrust?.run?.map_id === c.state.world.map_id && c.state.entrust.run.status === 2
                 ? c.state.entrust.run
@@ -272,14 +274,24 @@ export function registerCombat(on) {
                         alive_state: hp > 0 ? 0 : 1,
                         updated_at: c.now,
                     }
+                    const died = (previous.hp ?? definition.max_hp) > 0 && hp === 0
+                    if (died) deadGroups.add(id)
+                    if (died && source && source !== '0') value.final_blow_guid = source
                     const lost = Math.max(0, (previous.hp ?? definition.max_hp) - hp)
                     if (entrustRun && lost > 0 && isPlayerDamageSource(c.state, source)) {
                         entrustRun.damage_total = String(BigInt(entrustRun.damage_total ?? '0') + BigInt(lost))
                         entrustDamageChanged = true
                     }
                     boundedSet(battle.entities, id, value, 512)
-                    if ((previous.hp ?? definition.max_hp) > 0 && hp === 0) recordGuidedKill(c.tables, c.state, value)
-                    changed.set(id, { uuid: id, hp, sp: value.sp, alive_state: value.alive_state, reason: 0 })
+                    if (died) recordGuidedKill(c.tables, c.state, value)
+                    changed.set(id, {
+                        uuid: id,
+                        hp,
+                        sp: value.sp,
+                        alive_state: value.alive_state,
+                        reason: 0,
+                        ...(value.final_blow_guid ? { final_blow_guid: value.final_blow_guid } : {}),
+                    })
                 } else boundedSet(battle.entities, id, { ...previous, ...values, updated_at: c.now }, 512)
             }
         }
@@ -402,6 +414,8 @@ export function registerCombat(on) {
         }
         battle.report_count++
         battle.last_base_time = u64(r.base_time)
+        // HurtInfo updates HP only; publish alive state before its HP callback.
+        if (changed.size) c.push('CSProtoObjBattleInfoSync', { infos: [...changed.values()] })
         if (enemyHurts.length)
             c.push('SCProtoBattleInfoReduceNtf', {
                 uint64_dic: r.uint64_dic ?? [],
@@ -410,7 +424,7 @@ export function registerCombat(on) {
                     hurt_info: { ...r.battle_info[source].hurt_info, cur_hp: hp },
                 })),
             })
-        if (changed.size) c.push('CSProtoObjBattleInfoSync', { infos: [...changed.values()] })
+        for (const id of deadGroups) finishEnemyGroupRelations(c, id)
         advanceEntrustCombat(c)
         settleStoryCampaignScene(c)
         if (entrustDamageChanged && entrustRun.last_damage_sync_at !== c.now) {

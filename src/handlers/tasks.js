@@ -29,13 +29,13 @@ export function registerTasks(register, tables) {
     }
     const graphs = new TaskGraphs(tables)
     const drops = new WorldObjectCatalog(tables)
-    const sync = (c, extra = {}) => {
+    const sync = (c, extra = {}, beforeReply = false) => {
         const barrier = c.state.pendingTaskStorySync
         if (barrier) {
             barrier.extra = { ...(barrier.extra ?? {}), ...extra }
             return
         }
-        c.push('CSProtoTaskSync', { ...taskSnapshot(tables, c.state), ...extra })
+        ;(beforeReply ? c.pushBefore : c.push)('CSProtoTaskSync', { ...taskSnapshot(tables, c.state), ...extra })
     }
     const current = (c, r) => {
         const graph = graphs.get(r.task_id),
@@ -179,9 +179,12 @@ export function registerTasks(register, tables) {
         if (finished(c, r)) return {}
         const { node, config } = current(c, r)
         applyTaskItemActions(tables, c.state, r.task_id, r.node_id, config, 'before')
-        if (node.client_before) return {}
+        if (node.client_before) {
+            sync(c, {}, true)
+            return {}
+        }
         node.client_before = true
-        sync(c)
+        sync(c, {}, true)
         return {}
     })
     on('TaskRewardNode', (c, r) => {
@@ -205,7 +208,6 @@ export function registerTasks(register, tables) {
             r.indexes.length > 0 && r.indexes.every((i) => Number.isInteger(i) && i >= 0 && i < conditions.length),
             'Invalid task condition indexes',
         )
-        let changed = false
         for (const i of new Set(r.indexes)) {
             const value = conditionValue(conditions[i], c.state, {
                 taskId: r.task_id,
@@ -213,11 +215,12 @@ export function registerTasks(register, tables) {
                 index: i,
             })
             ensure(conditionSatisfied(conditions[i], value), 'Server task condition not complete')
-            if (!node.client_cond_after[i] || node.node_values[i] !== value) changed = true
             node.node_values[i] = value
             node.client_cond_after[i] = true
         }
-        if (changed) sync(c)
+        // The reply callback immediately reads TaskStore.IsEntityComplate.
+        // Publish the saved flags first, including retries whose state is unchanged.
+        sync(c, {}, true)
         return {}
     })
     on('TaskClientAfter', (c, r) => {

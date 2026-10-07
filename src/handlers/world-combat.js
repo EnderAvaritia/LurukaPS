@@ -2,6 +2,7 @@ import { ensure } from './common.js'
 import { actor } from './combat.js'
 import { u64, combatState, boundedSet } from '../combat-state.js'
 import { isRetiredTrialActor } from '../trial-actors.js'
+import { completedEnemyGroup } from '../enemy-group-completion.js'
 function runtime(c) {
     const state = combatState(c.state, c.now)
     state.summons ??= {}
@@ -49,6 +50,22 @@ export function retireCapturedEnemy(c, id) {
     battle.entities[id] = { ...previous, uuid: id, hp: 0, alive_state: 1, captured: true, updated_at: c.now }
     if (hatredChanged) syncHatred(c, battle)
 }
+export function finishEnemyGroupRelations(c, id) {
+    const group = completedEnemyGroup(c.tables, c.state, id)
+    if (!group) return false
+    const battle = runtime(c)
+    if (battle.completedRelationGroups?.[group.root]) return false
+    battle.completedRelationGroups = { ...battle.completedRelationGroups, [group.root]: true }
+    battle.hatred = Object.fromEntries(
+        Object.entries(battle.hatred).map(([name, entries]) => [
+            name,
+            Object.fromEntries(Object.entries(entries).map(([key, info]) => [key, { ...info }])),
+        ]),
+    )
+    for (const member of group.members) clearHatred(battle, member)
+    c.push('CSProtoHatredResetSync', { is_player: false, obj_id: group.root })
+    return true
+}
 export function registerWorldCombat(on) {
     on('SwitchPetAction', (c, r) => {
         const uuid = u64(r.uuid),
@@ -93,8 +110,23 @@ export function registerWorldCombat(on) {
                 playerIds.every((n) => Number.isInteger(n) && n > 0),
                 'Invalid hatred player',
             )
-            const battle = runtime(c),
-                table = battle.hatred[field],
+            const battle = runtime(c)
+            const root = (BigInt(id) & ~(0xffffffn << 32n)).toString()
+            if (battle.completedRelationGroups?.[root])
+                return { inc: false, info: { id, target_obj_ids: targetIds, player_obj_ids: playerIds } }
+            if (r.inc) {
+                const retired = targetIds.filter(
+                    (target) => battle.completedRelationGroups?.[(BigInt(target) & ~(0xffffffn << 32n)).toString()],
+                )
+                if (retired.length) {
+                    targetIds.splice(0, targetIds.length, ...targetIds.filter((target) => !retired.includes(target)))
+                    c.pushBefore('CSProto' + name, {
+                        inc: false,
+                        info: { id, target_obj_ids: retired, player_obj_ids: [] },
+                    })
+                }
+            }
+            const table = battle.hatred[field],
                 previous = table[id] ?? { id, target_obj_ids: [], player_obj_ids: [] }
             const value = {
                 id,

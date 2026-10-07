@@ -1,5 +1,6 @@
 import { ensure } from './common.js'
 import { syncBattle } from '../battle.js'
+import { finishEnemyGroupRelations } from './world-combat.js'
 import { grantRewards } from '../rewards.js'
 import { worldSync } from './world.js'
 import { TaskGraphs, nodeConditions, acceptTask, taskSnapshot, reconcileClearedDungeonBefore } from '../tasks.js'
@@ -23,8 +24,13 @@ export function syncStoryCampaignEnemies(c) {
         sp: enemy.sp ?? 0,
         alive_state: enemy.alive_state ?? (enemy.hp > 0 ? 0 : 1),
         reason: 1,
+        ...(enemy.final_blow_guid ? { final_blow_guid: enemy.final_blow_guid } : {}),
     }))
     if (infos.length) c.pushBefore('CSProtoObjBattleInfoSync', { infos })
+    // Loading recovery uses the same all-slots proof as the death event.
+    for (const enemy of Object.values(c.state.combat.entities ?? {}))
+        if (enemy.hp === 0 && enemy.alive_state === 1)
+            finishEnemyGroupRelations({ ...c, push: c.pushBefore }, enemy.uuid)
 }
 
 export function enterStoryCampaignScene(c, r) {
