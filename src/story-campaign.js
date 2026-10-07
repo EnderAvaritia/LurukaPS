@@ -2,6 +2,7 @@ import { ensure } from './handlers/common.js'
 import { combatState } from './combat-state.js'
 import { enemyDefinition } from './enemy-state.js'
 import { TaskGraphs, nodeConditions, makeNode } from './tasks.js'
+import { taskActions } from './task-scenes.js'
 
 export function campaignEntryTasks(tables, state, dungeonId) {
     const graphs = new TaskGraphs(tables)
@@ -17,9 +18,16 @@ export function campaignEntryTasks(tables, state, dungeonId) {
 
 // EnterWorldMap has already validated the active task/node's configured
 // transfer point. End-node transfers arrive before TaskFinish in CBT3.
-export function preserveCampaignTaskTransfer(state, request, point) {
+export function preserveCampaignTaskTransfer(tables, state, request, point) {
     const run = state.storyCampaign
-    if (!run?.task_ids?.includes(request.task_id) || !point || !run.scenes.includes(point.cityId)) return false
+    if (!run?.task_ids?.includes(request.task_id) || !point) return false
+    if (!run.scenes.includes(point.cityId)) {
+        // Old runs only stored checkpoint maps. A validated task transfer can
+        // enter an intermediate scene that has no taskTeleportIds entry.
+        const scenes = storyCampaignConfig(tables, run.group_id, run.difficulty).scenes.map(({ scene }) => scene.id)
+        if (!scenes.includes(point.cityId)) return false
+        run.scenes = scenes
+    }
     ensure(run.status === 2, 'Story dungeon is not active', 10275)
     if (run.map_id !== point.cityId) {
         if (!run.completed_scenes.includes(run.map_id)) run.completed_scenes.push(run.map_id)
@@ -125,12 +133,23 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         1007,
     )
     ensure(taskMapping || dungeon.id === 10010, 'Campaign group is not implemented', 1021)
-    const sceneIds = taskMapping ? [...new Set(taskPoints.map((point) => point.cityId))] : chapterScenes
+    const graphs = taskMapping ? new TaskGraphs(tables) : null
+    const transferPoints = taskIds.flatMap((id) =>
+        [...graphs.get(id).nodes.values()].flatMap((node) =>
+            [...taskActions(node), ...taskActions(node, 'after')]
+                .map((action) => action.__type_TaskTransferBaseData?.transferPointId)
+                .filter(Boolean)
+                .map((id) => tables.find('world_borthpos', id)),
+        ),
+    )
+    ensure(transferPoints.every(Boolean), 'Campaign task transfer point unavailable', 1007)
+    const scenePoints = [...taskPoints, ...transferPoints]
+    const sceneIds = taskMapping ? [...new Set(scenePoints.map((point) => point.cityId))] : chapterScenes
     const scenes = sceneIds.map((id) => {
         const city = tables.find('world_city', id),
             scene = tables.find('dungeon_scene', id)
         const point = taskMapping
-            ? taskPoints.find((point) => point.cityId === id)
+            ? scenePoints.find((point) => point.cityId === id)
             : tables.get('world_borthpos').find((row) => row.cityId === id && row.mainPoint === 1)
         ensure(city?.type === 2 && scene?.mapId === id && point, 'Campaign scene unavailable', 1007)
         return { city, scene, point }

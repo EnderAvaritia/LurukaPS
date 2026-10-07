@@ -115,6 +115,8 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
             store.transact(session.id, 0, (s) => {
                 s.tasks.find((task) => task.task_id === id).nodes = [makeNode(graphs.get(id), graphs.get(id).end, s)]
             })
+            if (id === 500012)
+                call('EnterWorldMap', { task_id: id, node_id: graphs.get(id).end, map_id: 6232, point_id: 623201 })
             call('TaskFinish', { u32: id })
         }
         assert.equal(state().world.map_id, 6232)
@@ -231,7 +233,20 @@ test('task dungeon216 uses external task/teleport mapping, replays on reentry, a
             'a cached actor from an inactive playable must not be accepted',
         )
         call('PlayableStart', { u32: 62111 })
-        call('PlayableStep', { playId: 62111, finish_step: tables.find('playable', 62111).stepMax, is_step: true })
+        const completedStep = call('PlayableStep', {
+            playId: 62111,
+            finish_step: tables.find('playable', 62111).stepMax,
+            is_step: true,
+        })
+        const completeIndex = completedStep.findIndex((packet) => packet.id === 9400)
+        assert.ok(
+            completeIndex >= 0 && completeIndex < completedStep.findIndex((packet) => packet.id === 9406),
+            'sync the completed state before the step callback can request Finish and stop the platform module',
+        )
+        const completeSync = protocol.decode('PlayableSync', completedStep[completeIndex].payload)
+        assert.equal(completeSync.all_sync, false, 'do not recreate the just-merged platform objects')
+        assert.equal(completeSync.plays.find((play) => play.play_id === 62111).status, 2)
+        assert.equal(completeSync.plays.find((play) => play.play_id === 62111).finish_step, 30)
         call('PlayableFinish', { playId: 62111 })
         call('TaskClientCondAfter', { task_id: 500011, node_id: 3, indexes: [0] })
         call('TaskClientAfter', { task_id: 500011, node_id: 3 })

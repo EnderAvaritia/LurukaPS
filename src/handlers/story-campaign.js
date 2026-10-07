@@ -244,28 +244,11 @@ export function advanceStoryCampaignTask(c, taskId) {
     const nextId = run.task_ids[nextIndex]
     if (!c.state.tasks.some((task) => task.task_id === nextId))
         acceptTask(new TaskGraphs(c.tables).get(nextId), c.state, c.now)
-    const point = config.taskPoints[nextIndex]
-    const transferred = run.pending_task_transfer
-    if (transferred?.task_id === taskId) delete run.pending_task_transfer
-    if (run.map_id === point.cityId) {
-        // A task checkpoint is not a per-task transfer action. Keep the
-        // player's position when the next task shares the current scene,
-        // including when its end-node transfer already loaded that scene.
-        c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
-        return
-    }
-    run.completed_scenes.push(run.map_id)
-    run.map_id = point.cityId
-    run.stage_index = 0
-    delete run.initialized_scene
-    delete run.task_context_loaded_map
-    delete c.state.combat
-    Object.assign(c.state.world, c.tables.position(point))
-    ensureStoryCampaignScene(c.tables, c.state, c.now)
+    if (run.pending_task_transfer?.task_id === taskId) delete run.pending_task_transfer
+    // TaskFinish acknowledges the task, not a scene transfer. Transfers run
+    // through the task's configured client action and EnterWorldMap, including
+    // moves to intermediate scenes and points unlike the next task checkpoint.
     c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
-    worldSync({ ...c, push: c.pushBefore }, {}, 256, false)
-    syncBattle({ ...c, push: c.pushBefore })
-    syncStoryCampaignEnemies(c)
 }
 
 export function registerStoryCampaign(on, tables) {

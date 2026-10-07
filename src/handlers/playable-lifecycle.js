@@ -180,7 +180,8 @@ export function registerPlayableLifecycle(on, tables) {
             1021,
         )
         let rewards = [],
-            dropIds = []
+            dropIds = [],
+            changed = false
         if (r.is_step) {
             const step = r.finish_step ?? 0
             ensure(Number.isInteger(step) && step >= run.finish_step && step <= stepLimit(row), 'Invalid playable step')
@@ -190,8 +191,10 @@ export function registerPlayableLifecycle(on, tables) {
                 ;({ rewards, dropIds } = selectPetChoice(c, row, run, step, drop))
             }
             if (row.id === 60001 && step === row.stepMax) ensure(run.selected_step, 'Playable pet choice is missing')
+            const status = step >= requiredStep(row) ? 2 : 1
+            changed = run.finish_step !== step || run.status !== status
             run.finish_step = step
-            run.status = step >= requiredStep(row) ? 2 : 1
+            run.status = status
         } else {
             const subs = r.sub_datas ?? []
             ensure(subs.length <= 256, 'Too many playable substeps')
@@ -200,13 +203,20 @@ export function registerPlayableLifecycle(on, tables) {
                 const existing = run.sub_datas.find((s) => s.sub_id === sub.sub_id)
                 const next = { sub_id: sub.sub_id, finish_step: sub.finish_step ?? 0, complete: !!sub.complete }
                 ensure(!existing || next.finish_step >= existing.finish_step, 'Playable substep moved backwards')
-                if (existing) Object.assign(existing, next)
-                else {
+                if (existing) {
+                    if (existing.finish_step !== next.finish_step || existing.complete !== next.complete) changed = true
+                    Object.assign(existing, next)
+                } else {
                     ensure(run.sub_datas.length < 256, 'Playable substep limit')
                     run.sub_datas.push(next)
+                    changed = true
                 }
             }
         }
+        // SCPlayableStep only calls SetStep on the client; it does not set
+        // stateComplete. Publish status2 through PlayableSync before Finish
+        // removes the run, otherwise OnPlayableSync force-resets its objects.
+        if (changed || run.status === 2) sync(c)
         const { map_id, selected_step, selected_pet_group, selected_pet_guid, ...play } = run
         return { play, pos: c.state.world.pos, rewards: { rewards }, drop_id: dropIds }
     })

@@ -6,9 +6,31 @@ import { Store } from '../src/store.js'
 import { Protocol } from '../src/protocol.js'
 import { Game } from '../src/game.js'
 import { TaskGraphs, makeNode } from '../src/tasks.js'
+import { prepareTaskScenes } from '../src/task-scenes.js'
 const cfg = configuration(),
     tables = new Tables(cfg.tables),
     protocol = new Protocol(cfg.base)
+
+test('legacy scene recovery does not rewind a node from its configured after-transfer scene', () => {
+    const state = {
+        world: tables.position(tables.find('world_borthpos', 25101)),
+        tasks: [{ task_id: 106018, nodes: [{ node_id: 22, client_before: true, client_cond_after: [true] }] }],
+        taskEpochs: { 106018: 1 },
+    }
+    state.world.pos.x += 143
+    const world = structuredClone(state.world)
+    assert.equal(prepareTaskScenes(tables, state, { login: true }), false)
+    assert.deepEqual(state.world, world, 'the node has already transferred from scene250 to scene251')
+    assert.equal(state.pendingTaskScene, undefined)
+    assert.equal(prepareTaskScenes(tables, state), false, 'later requests must not replay its before transfer')
+
+    // A genuinely wrong scene still needs the existing pre-action recovery.
+    state.world = tables.position(tables.find('world_borthpos', 10045))
+    state.taskSceneReceipts = {}
+    assert.equal(prepareTaskScenes(tables, state, { login: true }), true)
+    assert.equal(state.world.map_id, 250)
+    assert.equal(state.world.point_id, 25001)
+})
 
 test('cooking story follows configured performance dorm transfer and returns to home before node27', () => {
     const f = setup()

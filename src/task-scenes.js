@@ -53,6 +53,19 @@ export function prepareTaskScenes(tables, state, { login = false } = {}) {
             const graph = graphs.get(task.task_id),
                 config = graph.nodes.get(node.node_id),
                 actions = taskActions(config)
+            const afterTransfers = taskActions(config, 'after')
+                .map((a) => a.__type_TaskTransferBaseData?.transferPointId)
+                .filter(Boolean)
+            if (
+                node.client_before &&
+                afterTransfers.some((id) => tables.find('world_borthpos', id)?.cityId === state.world.map_id)
+            ) {
+                // The client can transfer during After before reporting the
+                // node complete. A missing legacy receipt must not rewind it
+                // to the earlier Before scene on login or the next request.
+                receipts[key] = true
+                continue
+            }
             const team = actions.find((a) => a.__type_TaskTeamChangeData?.changeScene > 0)?.__type_TaskTeamChangeData
             const transfers = actions.map((a) => a.__type_TaskTransferBaseData).filter((a) => a?.transferPointId > 0)
             // Multi-transfer story nodes must run their configured scene/story

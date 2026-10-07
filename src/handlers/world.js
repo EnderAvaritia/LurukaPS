@@ -245,7 +245,7 @@ export function registerWorld(on) {
             rememberMap(c, p.cityId)
             Object.assign(w, c.tables.position(p))
             if (mapChanged) delete c.state.combat
-            if (taskPoint && preserveCampaignTaskTransfer(c.state, r, taskPoint)) {
+            if (taskPoint && preserveCampaignTaskTransfer(c.tables, c.state, r, taskPoint)) {
                 ensureStoryCampaignScene(c.tables, c.state, c.now)
                 c.pushBefore('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
             }

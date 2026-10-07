@@ -40,7 +40,9 @@ test('actual playable11028 starts, saves stages, resumes on login and cancels wi
         const before = store.load(session.id)
         assert.throws(() => call(session, 'PlayableStep', { playId: 11028, is_step: true, finish_step: 4 }))
         assert.deepEqual(store.load(session.id), before)
-        const step = call(session, 'PlayableStep', { playId: 11028, is_step: true, finish_step: 10 })[0].data
+        const step = call(session, 'PlayableStep', { playId: 11028, is_step: true, finish_step: 10 }).find(
+            (packet) => packet.id === 9406,
+        ).data
         assert.equal(step.play.status, 2)
         assert.deepEqual(step.rewards.rewards, [])
         assert.deepEqual(store.load(session.id).state.player.sbag_infos, inventory)
