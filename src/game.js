@@ -132,6 +132,7 @@ const deferredMessages = new Set([
     'CSProtoFightBreak',
     'CSProtoKiboDuelBTTreeRunning',
     'CSProtoSkillEffectDone',
+    'CSProtoMonsterSceneChange',
     'CSProtoShieldInfo',
     'CSProtoShieldInfoDel',
     'CSProtoPerfectDefense',
@@ -157,6 +158,7 @@ const fastCombatTelemetry = new Set([
     'CSProtoFightBreak',
     'CSProtoKiboDuelBTTreeRunning',
     'CSProtoSkillEffectDone',
+    'CSProtoMonsterSceneChange',
     'CSProtoShieldInfo',
     'CSProtoShieldInfoDel',
     'CSProtoPerfectDefense',
@@ -238,6 +240,7 @@ function forkFastCombat(base, name, request) {
             const id = String(action.bullet_id ?? '0')
             if (battle.bullets[id]) battle.bullets[id] = { ...battle.bullets[id] }
         }
+    if (name === 'CSProtoMonsterSceneChange') battle.monsterScenes = { ...battle.monsterScenes }
     if (name === 'CSProtoFightBreak') battle.breakValues = { ...battle.breakValues }
     if (name === 'CSProtoPerfectDefense') battle.perfectDefenses = { ...battle.perfectDefenses }
     if (name === 'CSProtoSkillEffectDone') battle.skillEffects = { ...battle.skillEffects }
@@ -669,6 +672,11 @@ export class Game {
             )
             return []
         }
+        if (e.name === 'CSProtoMonsterSceneChange' && !(r.infos ?? []).length)
+            return this.store.read(session.id, (state) => {
+                handler({ state, tables: this.tables, now }, r)
+                return []
+            })
         if (fastCombatTelemetry.has(e.name) || fastCombatReplies.has(e.name) || e.name === 'CSProtoStateUpdate')
             return this.store.transact(
                 session.id,

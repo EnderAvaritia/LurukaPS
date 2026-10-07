@@ -199,7 +199,8 @@ export function registerWorldEvents(on, tables) {
     })
     on('MonsterSceneChange', (c, r) => {
         const infos = r.infos ?? []
-        ensure(infos.length > 0 && infos.length <= 256, 'Invalid monster scene batch')
+        ensure(Array.isArray(infos) && infos.length <= 256, 'Invalid monster scene batch')
+        if (!infos.length) return
         const battle = combatState(c.state, c.now)
         battle.monsterScenes ??= {}
         const objects = new Map(tables.get(`worldmap_${c.state.world.map_id}`).map((row) => [row.id, row]))
