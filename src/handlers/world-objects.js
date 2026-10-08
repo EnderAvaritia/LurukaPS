@@ -1,4 +1,5 @@
 import { ensure, syncPlayer } from './common.js'
+import { settleStoryCampaignScene } from './story-campaign.js'
 import { WorldObjectCatalog } from '../world-objects.js'
 import { grantRewards, parseRewards } from '../rewards.js'
 import { spend, spendCurrency } from '../inventory.js'
@@ -335,6 +336,7 @@ export function registerWorldObjects(on, tables) {
             }
         }
         if (awarded) syncPlayer({ ...c, push: c.pushBefore })
+        settleStoryCampaignScene(c)
         return { objs: output }
     })
 }

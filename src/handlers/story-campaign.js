@@ -1,4 +1,5 @@
 import { ensure } from './common.js'
+import { campaignStagePlan, campaignStageSatisfied } from '../campaign-stage-plan.js'
 import { syncBattle } from '../battle.js'
 import { finishEnemyGroupRelations, pruneInactiveCampaignRelations } from './world-combat.js'
 import { inactiveCampaignEnemyGroup } from '../inactive-campaign-enemies.js'
@@ -20,7 +21,11 @@ export function syncStoryCampaignEnemies(c) {
     const run = c.state.storyCampaign
     if (c.state.combat?.map_id !== run?.map_id) return
     const infos = Object.values(c.state.combat.entities ?? {})
-        .filter((enemy) => !inactiveCampaignEnemyGroup(c.tables, c.state, enemy.uuid))
+        .filter(
+            (enemy) =>
+                !inactiveCampaignEnemyGroup(c.tables, c.state, enemy.uuid) &&
+                !(run.stage_conditions && c.state.worldObjects?.[run.map_id + ':' + enemy.object_id]?.active === false),
+        )
         .map((enemy) => ({
             uuid: enemy.uuid,
             hp: enemy.hp,
@@ -49,6 +54,7 @@ export function enterStoryCampaignScene(c, r) {
             'Previous story dungeon scene is not complete',
         )
         run.map_id = requestedScene
+        run.stage_index = 0
         const config = storyCampaignConfig(c.tables, run.group_id, run.difficulty)
         Object.assign(
             c.state.world,
@@ -69,6 +75,38 @@ export function settleStoryCampaignScene(c) {
     if (run?.task_ids?.length) return false // This variant is completed by its dungeon_task chain, not wave deaths.
     if (!run || run.status !== 2 || run.completed_scenes.includes(run.map_id) || c.state.combat?.map_id !== run.map_id)
         return false
+    if (run.stage_conditions) {
+        const plan = campaignStagePlan(c.tables, run.map_id),
+            before = run.stage_index ?? 0
+        const objectCompleted = (plan[before] ?? []).some(
+            (row) =>
+                !c.state.worldObjects?.[run.map_id + ':' + row.id]?.complete &&
+                campaignStageSatisfied(c.tables, c.state, [row]),
+        )
+        while (
+            (run.stage_index ?? 0) < plan.length &&
+            campaignStageSatisfied(c.tables, c.state, plan[run.stage_index ?? 0])
+        )
+            run.stage_index = (run.stage_index ?? 0) + 1
+        if ((run.stage_index ?? 0) === before && !objectCompleted) return false
+        if (run.stage_index === plan.length && !run.completed_scenes.includes(run.map_id))
+            run.completed_scenes.push(run.map_id)
+        ensureStoryCampaignScene(c.tables, c.state, c.now)
+        c.push('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
+        c.push('CSProtoWorldMapSync', {
+            cmd: 47,
+            creator_id: c.id,
+            map_id: run.map_id,
+            map_info: {
+                creator_id: c.id,
+                map_id: run.map_id,
+                objs:
+                    storyCampaignSnapshot(c.state).scene_datas.find((scene) => scene.scene_id === run.map_id)?.objs ??
+                    run.scene_objects.map(({ claims, ...obj }) => obj),
+            },
+        })
+        return true
+    }
     const scene = c.tables.find('dungeon_scene', run.map_id)
     const [kind, spawner, , , count] = String(scene?.victoryCondition).split('#').map(Number)
     const waves = c.tables
@@ -219,9 +257,11 @@ export function endStoryCampaignScene(c, r) {
             run.task_ids?.length ? storySceneDefeated(c.tables, c.state) : run.completed_scenes.includes(run.map_id),
             'Story dungeon enemies are not defeated',
         )
-        run.status = 3
-        run.end_time = c.now
-        creditStoryCampaign(c, run.dungeon_id)
+        if (!run.stage_conditions || run.map_id === run.scenes.at(-1)) {
+            run.status = 3
+            run.end_time = c.now
+            creditStoryCampaign(c, run.dungeon_id)
+        }
     } else {
         run.status = r.result
         run.end_time = c.now
@@ -233,7 +273,12 @@ export function endStoryCampaignScene(c, r) {
 export function exitStoryCampaign(c) {
     const run = c.state.storyCampaign
     ensure(run, 'No active story dungeon', 10276)
-    if (run.status === 2 && run.completed_scenes.includes(run.map_id) && storySceneDefeated(c.tables, c.state)) {
+    if (
+        run.status === 2 &&
+        (!run.stage_conditions || run.map_id === run.scenes.at(-1)) &&
+        run.completed_scenes.includes(run.map_id) &&
+        storySceneDefeated(c.tables, c.state)
+    ) {
         run.status = 3
         run.end_time = c.now
         creditStoryCampaign(c, run.dungeon_id)
@@ -312,6 +357,7 @@ export function registerStoryCampaign(on, tables) {
             map_id: config.scenes[0].scene.id,
             completed_scenes: [],
             task_ids: config.taskIds,
+            stage_conditions: config.stageConditions,
             entry_tasks: config.taskIds.length
                 ? structuredClone(campaignEntryTasks(tables, c.state, config.dungeon.id))
                 : undefined,

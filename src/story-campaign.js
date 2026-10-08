@@ -1,4 +1,6 @@
 import { ensure } from './handlers/common.js'
+import fs from 'node:fs'
+import { campaignStagePlan, campaignStageSatisfied } from './campaign-stage-plan.js'
 import { combatState } from './combat-state.js'
 import { enemyDefinition } from './enemy-state.js'
 import { inactiveCampaignEnemyGroup } from './inactive-campaign-enemies.js'
@@ -147,10 +149,14 @@ export function resetCampaignTasks(tables, state, run) {
     }
 }
 
-// Legacy dungeon10010 has no dungeon_task mapping. Its task condition
-// names dungeon 10010; its victory condition matches scene 6200 exactly, and
-// scene 6200/6201 carry the consecutive story IDs 1011001..101105.
-const chapterScenes = [6200, 6201]
+// Older story dungeons lack dungeon_task foreign keys. Keep the locally
+// evidenced routes in data and validate their opening stories and final target.
+const legacyRoutes = new Map(
+    JSON.parse(fs.readFileSync(new URL('../configs/story-campaign-scenes.json', import.meta.url))).map((row) => [
+        row.dungeon_id,
+        row,
+    ]),
+)
 
 export function storyCampaignConfig(tables, groupId, difficulty) {
     const matches = tables
@@ -170,7 +176,8 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         'Campaign task scene mapping unavailable',
         1007,
     )
-    ensure(taskMapping || dungeon.id === 10010, 'Campaign group is not implemented', 1021)
+    const route = legacyRoutes.get(dungeon.id)
+    ensure(taskMapping || route, 'Campaign group is not implemented', 1021)
     const graphs = taskMapping ? new TaskGraphs(tables) : null
     const transferPoints = taskIds.flatMap((id) =>
         [...graphs.get(id).nodes.values()].flatMap((node) =>
@@ -182,7 +189,7 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
     )
     ensure(transferPoints.every(Boolean), 'Campaign task transfer point unavailable', 1007)
     const scenePoints = [...taskPoints, ...transferPoints]
-    const sceneIds = taskMapping ? [...new Set(scenePoints.map((point) => point.cityId))] : chapterScenes
+    const sceneIds = taskMapping ? [...new Set(scenePoints.map((point) => point.cityId))] : route.scene_ids
     const scenes = sceneIds.map((id) => {
         const city = tables.find('world_city', id),
             scene = tables.find('dungeon_scene', id)
@@ -192,15 +199,35 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         ensure(city?.type === 2 && scene?.mapId === id && point, 'Campaign scene unavailable', 1007)
         return { city, scene, point }
     })
-    if (!taskMapping)
+    if (!taskMapping) {
         ensure(
-            dungeon.victoryCondition === scenes[0].scene.victoryCondition &&
-                scenes[0].scene.intParam.includes('story_id_0#1011001') &&
-                scenes[1].scene.intParam.includes('story_id_0#101103'),
+            scenes.length === route.opening_stories.length &&
+                scenes.every(({ scene }, i) =>
+                    scene.intParam.split('|').includes('story_id_0#' + route.opening_stories[i]),
+                ),
             'Campaign story scene mapping changed',
             1007,
         )
-    return { dungeon, scenes, taskMapping, taskIds, taskPoints }
+        if (route.mode === 'stage_conditions') {
+            scenes.forEach(({ scene }) => campaignStagePlan(tables, scene.id))
+            const [kind, spawner, , target, count] = String(dungeon.victoryCondition).split('#').map(Number),
+                last = campaignStagePlan(tables, scenes.at(-1).scene.id).at(-1)
+            ensure(
+                kind === 2500 &&
+                    target > 0 &&
+                    count === last.length &&
+                    last.some((row) => row.id === target && row.spawnerId === spawner),
+                'Campaign final target mapping changed',
+                1007,
+            )
+        } else
+            ensure(
+                dungeon.victoryCondition === scenes[0].scene.victoryCondition,
+                'Campaign story condition changed',
+                1007,
+            )
+    }
+    return { dungeon, scenes, taskMapping, taskIds, taskPoints, stageConditions: route?.mode === 'stage_conditions' }
 }
 
 export function storyCampaignSnapshot(state) {
@@ -216,12 +243,16 @@ export function storyCampaignSnapshot(state) {
         real_start_time: run.start_time,
         end_time: run.end_time ?? 0,
         star: run.status === 3 ? 1 : 0,
-        scene_datas: [...new Set([...run.completed_scenes, run.map_id])].map((id) => ({
-            scene_id: id,
-            scene_status: run.completed_scenes.includes(id) ? 1 : 0,
-            cur_step: id === run.map_id ? (run.stage_index ?? 0) : 0,
-            objs: id === run.map_id ? (run.scene_objects ?? []).map(({ claims, ...object }) => object) : [],
-        })),
+        // CBT3 CheckIsLastPlaying/GetCurrentPlayingIndex read the complete ordered
+        // scene list. Sending only visited scenes falsely makes each first scene final.
+        scene_datas: [...new Set(run.stage_conditions ? run.scenes : [...run.completed_scenes, run.map_id])].map(
+            (id) => ({
+                scene_id: id,
+                scene_status: run.completed_scenes.includes(id) ? 1 : 0,
+                cur_step: id === run.map_id ? (run.stage_index ?? 0) : 0,
+                objs: id === run.map_id ? (run.scene_objects ?? []).map(({ claims, ...object }) => object) : [],
+            }),
+        ),
     }
 }
 
@@ -255,7 +286,7 @@ export function ensureStoryCampaignScene(tables, state, now) {
             ensure(pos.length === 3 && pos.every(Number.isFinite), 'Campaign object position missing', 1007)
             record = records[key] = {
                 obj_id: row.id,
-                active: run.task_ids?.length ? row.initStatus !== 1 : true,
+                active: run.task_ids?.length || run.stage_conditions ? row.initStatus !== 1 : true,
                 complete: false,
                 pos: { x: pos[0], y: pos[1], z: pos[2] },
                 state_data: { step: 0, complete: false },
@@ -310,6 +341,34 @@ export function ensureStoryCampaignScene(tables, state, now) {
             battle_group: { monsters, world_indexes: monsters.map((_, slot) => slot) },
         }
     }
+    if (run.stage_conditions) {
+        const plan = campaignStagePlan(tables, run.map_id),
+            all = new Set(plan.flat().map((row) => row.id)),
+            active = new Set((plan[run.stage_index ?? 0] ?? []).map((row) => row.id)),
+            finished = new Set(
+                plan
+                    .slice(0, run.stage_index ?? 0)
+                    .flat()
+                    .map((row) => row.id),
+            )
+        for (const row of rows)
+            if (all.has(row.id)) {
+                const record = records[run.map_id + ':' + row.id]
+                // The client graph advances commonTag waves on each object's complete
+                // event, even when one condition requires multiple groups.
+                const complete =
+                    finished.has(row.id) || (active.has(row.id) && campaignStageSatisfied(tables, state, [row]))
+                record.active = active.has(row.id) && !complete
+                if (complete) {
+                    record.complete = true
+                    record.state_data = { ...record.state_data, step: 1, complete: true }
+                }
+                if (record.expand_data?.battle_group)
+                    record.expand_data.battle_group.monsters = record.expand_data.battle_group.monsters.map(
+                        (monster) => ({ ...monster, hp: battle.entities[monster.uid]?.hp ?? monster.hp }),
+                    )
+            }
+    }
     run.scene_objects = rows.map((row) => records[`${run.map_id}:${row.id}`])
     return changed
 }
@@ -326,6 +385,8 @@ export function storySceneDefeated(tables, state) {
         )
     }
     if (!run || state.world.map_id !== run.map_id || state.combat?.map_id !== run.map_id) return false
+    if (run.stage_conditions)
+        return campaignStagePlan(tables, run.map_id).every((rows) => campaignStageSatisfied(tables, state, rows))
     const scene = tables.find('dungeon_scene', run.map_id)
     const [kind, spawner, , , count] = String(scene?.victoryCondition).split('#').map(Number)
     if (kind !== 2500 || count <= 0) return false
