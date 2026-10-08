@@ -6,7 +6,7 @@ import { Protocol } from '../src/protocol.js'
 import { Store } from '../src/store.js'
 import { Game } from '../src/game.js'
 import { storyCampaignConfig, storySceneDefeated, storyCampaignSnapshot } from '../src/story-campaign.js'
-import { campaignStagePlan } from '../src/campaign-stage-plan.js'
+import { campaignStagePlan, campaignFriendlyGroupAvailable } from '../src/campaign-stage-plan.js'
 const cfg = configuration(),
     tables = new Tables(cfg.tables),
     protocol = new Protocol(cfg.base)
@@ -16,7 +16,7 @@ test('campaign201 uses validated chapter route and table stage conditions includ
         session = {}
     let seq = 1
     const call = (name, r = {}) => {
-        const e = protocol.byName.get('CSProto' + name)
+        const e = protocol.byName.get(name) ?? protocol.byName.get('CSProto' + name)
         return game.dispatch(session, { id: e.id, seq: seq++, payload: protocol.encode(e.req, r) })
     }
     const state = () => store.load(session.id).state
@@ -146,6 +146,25 @@ test('campaign201 uses validated chapter route and table stage conditions includ
         )
         call('EnterDungeonScene', { scene_id: 6205 })
         assert.equal(state().storyCampaign.stage_index, 0)
+        const formation = structuredClone(state().player.group_mgrs)
+        for (const [pack, objectId] of [
+            [50000006, 1500018],
+            [50000008, 1500019],
+        ]) {
+            assert.equal(state().worldObjects['6205:' + objectId].active, true)
+            const uuid = ((3n << 56n) | BigInt(objectId)).toString()
+            const hp = state().combat.entities[uuid].hp
+            const packets = call('CSWorldObjAIHeroInfo', { enemy_pack_id: pack })
+            const reply = protocol.decode('SCWorldObjAIHeroInfoRsp', packets.find((p) => p.id === 9141).payload)
+            assert.equal(reply.uuid, uuid)
+            assert.equal(state().combat.entities[uuid].hp, hp)
+            const hpSync = protocol.byName.get('CSProtoObjBattleInfoSync')
+            assert.ok(packets.findIndex((p) => p.id === hpSync.id) < packets.findIndex((p) => p.id === 9141))
+        }
+        assert.deepEqual(state().player.group_mgrs, formation)
+        const row = tables.find('worldmap_6205', 1500018)
+        assert.equal(campaignFriendlyGroupAvailable(tables, state(), { ...row, commonTag: '99' }), false)
+        assert.equal(campaignFriendlyGroupAvailable(tables, state(), { ...row, cityId: 100 }), false)
         for (const id of [1500010, 1500024, 1500014, 1501115]) defeat(id)
         const before = state().player.basic_info.exp
         call('EndDungeonScene', { result: 3 })

@@ -70,3 +70,30 @@ export function campaignStageSatisfied(tables, state, rows) {
         return record?.complete === true || record?.state_data?.complete === true
     })
 }
+
+// The shared CBT3 dungeon graph creates friendly groups with the same
+// commonTag as an unlocked battle wave. initStatus is not a permanent ban.
+export function campaignFriendlyGroupAvailable(tables, state, row) {
+    const run = state.storyCampaign
+    if (!run?.stage_conditions || run.status !== 2 || run.map_id !== state.world.map_id || row.cityId !== run.map_id)
+        return false
+    if (tables.find('world_spawner', row.spawnerId)?.objectType !== 50) return false
+    const group = tables.find('world_enemy_group', row.expandId)
+    const packs = String(group?.enemyList ?? '')
+        .split('|')
+        .filter(Boolean)
+        .map((id) => tables.find('enemy_pack', Number(id)))
+    if (
+        !packs.length ||
+        group.campType !== 2 ||
+        !packs.every((pack) => pack?.ECampType === 2 && pack.specialCreateType === 1)
+    )
+        return false
+    const tags = new Set(
+        campaignStagePlan(tables, run.map_id)
+            .slice(0, (run.stage_index ?? 0) + 1)
+            .flat()
+            .map((r) => String(r.commonTag)),
+    )
+    return /^\d+$/.test(String(row.commonTag)) && tags.has(String(row.commonTag))
+}

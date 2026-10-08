@@ -1,6 +1,6 @@
 import { ensure } from './handlers/common.js'
 import fs from 'node:fs'
-import { campaignStagePlan, campaignStageSatisfied } from './campaign-stage-plan.js'
+import { campaignStagePlan, campaignStageSatisfied, campaignFriendlyGroupAvailable } from './campaign-stage-plan.js'
 import { combatState } from './combat-state.js'
 import { enemyDefinition } from './enemy-state.js'
 import { inactiveCampaignEnemyGroup } from './inactive-campaign-enemies.js'
@@ -351,7 +351,9 @@ export function ensureStoryCampaignScene(tables, state, now) {
                     .flat()
                     .map((row) => row.id),
             )
-        for (const row of rows)
+        for (const row of rows) {
+            if (campaignFriendlyGroupAvailable(tables, state, row) && !records[run.map_id + ':' + row.id].complete)
+                records[run.map_id + ':' + row.id].active = true
             if (all.has(row.id)) {
                 const record = records[run.map_id + ':' + row.id]
                 // The client graph advances commonTag waves on each object's complete
@@ -368,6 +370,7 @@ export function ensureStoryCampaignScene(tables, state, now) {
                         (monster) => ({ ...monster, hp: battle.entities[monster.uid]?.hp ?? monster.hp }),
                     )
             }
+        }
     }
     run.scene_objects = rows.map((row) => records[`${run.map_id}:${row.id}`])
     return changed
