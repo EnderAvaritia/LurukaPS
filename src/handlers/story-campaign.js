@@ -92,6 +92,17 @@ export function settleStoryCampaignScene(c) {
         if (run.stage_index === plan.length && !run.completed_scenes.includes(run.map_id))
             run.completed_scenes.push(run.map_id)
         ensureStoryCampaignScene(c.tables, c.state, c.now)
+        // CBT3 DungeonPlayingManager dispatches the victory graph on state 3.
+        // The final scene status alone cannot start its ending story.
+        if (
+            run.map_id === run.scenes.at(-1) &&
+            run.scenes.every((id) => run.completed_scenes.includes(id)) &&
+            storySceneDefeated(c.tables, c.state)
+        ) {
+            run.status = 3
+            run.end_time = c.now
+            creditStoryCampaign(c, run.dungeon_id)
+        }
         c.push('CSProtoCampaignInfoSync', storyCampaignSnapshot(c.state))
         c.push('CSProtoWorldMapSync', {
             cmd: 47,
@@ -250,7 +261,10 @@ export function recoverStoryCampaignClear(c) {
 
 export function endStoryCampaignScene(c, r) {
     const run = c.state.storyCampaign
-    ensure(run?.status === 2 && c.state.world.map_id === run.map_id, 'No active story dungeon')
+    ensure(
+        (run?.status === 2 || (run?.status === 3 && r.result === 3)) && c.state.world.map_id === run.map_id,
+        'No active story dungeon',
+    )
     ensure([1, 3, 4].includes(r.result), 'Invalid dungeon result')
     if (r.result === 3) {
         ensure(

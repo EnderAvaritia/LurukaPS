@@ -189,9 +189,23 @@ test('campaign201 uses validated chapter route and table stage conditions includ
         assert.equal(state().worldObjects['6205:1500014'].state_data.complete, false)
         assert.ok(state().worldObjects['6205:1500014'].expand_data.battle_group.monsters.every((m) => m.hp > 0))
         defeat(1500014)
-        defeat(1501115)
+        assert.equal(state().storyCampaign.status, 2)
+        assert.equal(state().storyCampaignClears?.[10020], undefined)
+        const finalPackets = defeat(1501115)
+        assert.equal(
+            state().storyCampaign.status,
+            3,
+            'lethal request must trigger client victory without a separate end request',
+        )
+        const victoryPacket = finalPackets.find((p) => p.id === syncType.id)
+        assert.equal(protocol.decode(syncType.rsp, victoryPacket.payload).status, 3)
+        assert.equal(state().storyCampaignClears[10020].count, 1)
+        assert.equal(state().tasks.find((t) => t.task_id === 106021).nodes[0].node_values[0], 1)
         const before = state().player.basic_info.exp
         call('EndDungeonScene', { result: 3 })
+        assert.equal(state().player.basic_info.exp, before)
+        call('EndDungeonScene', { result: 3 })
+        assert.equal(state().player.basic_info.exp, before)
         assert.equal(state().storyCampaignClears[10020].count, 1)
         assert.equal(state().tasks.find((t) => t.task_id === 106021).nodes[0].node_values[0], 1)
         const exp = state().player.basic_info.exp
