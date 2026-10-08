@@ -94,6 +94,8 @@ Configuration is read from process environment variables. `.env` files are not l
 
 Run the replaced `AzurPromilia.exe` from the game directory. Keep the original `UnityPlayer.dll`, `GameAssembly.dll`, and `AzurPromilia_Data/` in place. In the account window, enter a local `open_id`, such as `114514`, and click **启动游戏** (Start Game). Reuse the same ID to access the same saved account; **记住账号，下次预填** remembers it in the INI for the next launch. To restore the original client entry point, replace the shell EXE with your backup.
 
+In the choose server window, select **Release**, **LurukaPS** and numbers like `2451868.2451868.2451868.2451868.2302423`. Then click **进入游戏** (Enter Game) to connect to the server. The game will create a new character if none exists.
+
 The default `api_url=http://127.0.0.1:20001` is suitable when the server and game run on the same machine. For LAN use, edit `api_url` in the game's `cbt3-shell.ini` to match the server's reachable HTTP address, for example `http://192.168.1.100:20001`, and configure `LURUKAPS_PUBLIC_HOST` as shown above. Camera fading is disabled by default; set `disable_camera_fade=0` to restore it.
 
 ## Configuration
