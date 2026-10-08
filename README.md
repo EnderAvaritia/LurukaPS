@@ -86,11 +86,11 @@ Configuration is read from process environment variables. `.env` files are not l
 
 ### Using the Bundled CBT3 Client Shell
 
-`bin/AzurPromilia.exe` is a Windows x64 replacement for the matching CBT3 client's original executable. **Replace the game's original `AzurPromilia.exe` with this file**, keeping the same filename. `bin/cbt3-shell.ini` is its optional configuration.
+`tools/shell/build/AzurPromilia.exe` is a Windows x64 replacement for the matching CBT3 client's original executable. **Replace the game's original `AzurPromilia.exe` with this file**, keeping the same filename. `tools/shell/build/cbt3-shell.ini` is its optional configuration.
 
 1. Start LurukaPS with `npm start` and leave the server running.
 2. Close the game and back up its original `AzurPromilia.exe`.
-3. Overwrite the original game EXE with `bin/AzurPromilia.exe`, and place `cbt3-shell.ini` beside it.
+3. Overwrite the original game EXE with `tools/shell/build/AzurPromilia.exe`, and place `cbt3-shell.ini` beside it.
 
 Run the replaced `AzurPromilia.exe` from the game directory. Keep the original `UnityPlayer.dll`, `GameAssembly.dll`, and `AzurPromilia_Data/` in place. In the account window, enter a local `open_id`, such as `114514`, and click **启动游戏** (Start Game). Reuse the same ID to access the same saved account; **记住账号，下次预填** remembers it in the INI for the next launch. To restore the original client entry point, replace the shell EXE with your backup.
 
