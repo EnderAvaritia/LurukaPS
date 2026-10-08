@@ -5,7 +5,12 @@ import { Tables } from '../src/player.js'
 import { Protocol } from '../src/protocol.js'
 import { Store } from '../src/store.js'
 import { Game } from '../src/game.js'
-import { storyCampaignConfig, storySceneDefeated, storyCampaignSnapshot } from '../src/story-campaign.js'
+import {
+    storyCampaignConfig,
+    storySceneDefeated,
+    storyCampaignSnapshot,
+    ensureStoryCampaignScene,
+} from '../src/story-campaign.js'
 import { campaignStagePlan, campaignFriendlyGroupAvailable } from '../src/campaign-stage-plan.js'
 const cfg = configuration(),
     tables = new Tables(cfg.tables),
@@ -165,7 +170,26 @@ test('campaign201 uses validated chapter route and table stage conditions includ
         const row = tables.find('worldmap_6205', 1500018)
         assert.equal(campaignFriendlyGroupAvailable(tables, state(), { ...row, commonTag: '99' }), false)
         assert.equal(campaignFriendlyGroupAvailable(tables, state(), { ...row, cityId: 100 }), false)
-        for (const id of [1500010, 1500024, 1500014, 1501115]) defeat(id)
+        defeat(1500010)
+        assert.equal(state().storyCampaign.stage_index, 1)
+        assert.equal(state().worldObjects['6205:1500014'].complete, false)
+        assert.equal(state().worldObjects['6205:1500014'].active, false)
+        assert.equal(state().worldObjects['6205:1500024'].active, true)
+        defeat(1500024)
+        assert.equal(state().storyCampaign.stage_index, 2)
+        assert.equal(state().worldObjects['6205:1500014'].complete, false)
+        assert.equal(state().worldObjects['6205:1500014'].active, true)
+        assert.equal(state().worldObjects['6205:1501115'].complete, false)
+        store.transact(session.id, 0, (s) => {
+            s.worldObjects['6205:1500014'].complete = true
+            s.worldObjects['6205:1500014'].state_data.complete = true
+            ensureStoryCampaignScene(tables, s, 1)
+        })
+        assert.equal(state().worldObjects['6205:1500014'].complete, false)
+        assert.equal(state().worldObjects['6205:1500014'].state_data.complete, false)
+        assert.ok(state().worldObjects['6205:1500014'].expand_data.battle_group.monsters.every((m) => m.hp > 0))
+        defeat(1500014)
+        defeat(1501115)
         const before = state().player.basic_info.exp
         call('EndDungeonScene', { result: 3 })
         assert.equal(state().storyCampaignClears[10020].count, 1)

@@ -295,7 +295,7 @@ export function ensureStoryCampaignScene(tables, state, now) {
         }
         if (tables.find('world_spawner', row.spawnerId)?.objectType !== 50) continue
         const wave = waves.findIndex((entry) => entry.id === row.id)
-        if (wave >= 0) {
+        if (!run.stage_conditions && wave >= 0) {
             record.active = wave === (run.stage_index ?? 0)
             record.complete = wave < (run.stage_index ?? 0)
             record.state_data = { ...record.state_data, step: record.complete ? 1 : 0, complete: record.complete }
@@ -361,10 +361,10 @@ export function ensureStoryCampaignScene(tables, state, now) {
                 const complete =
                     finished.has(row.id) || (active.has(row.id) && campaignStageSatisfied(tables, state, [row]))
                 record.active = active.has(row.id) && !complete
-                if (complete) {
-                    record.complete = true
-                    record.state_data = { ...record.state_data, step: 1, complete: true }
-                }
+                // Overwrite legacy ID-order flags, including false: they may
+                // incorrectly mark a still-living current/future wave complete.
+                record.complete = complete
+                record.state_data = { ...record.state_data, step: complete ? 1 : 0, complete }
                 if (record.expand_data?.battle_group)
                     record.expand_data.battle_group.monsters = record.expand_data.battle_group.monsters.map(
                         (monster) => ({ ...monster, hp: battle.entities[monster.uid]?.hp ?? monster.hp }),
