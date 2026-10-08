@@ -1,0 +1,177 @@
+{
+  "source": "https://travel-version-all-p3-cn-v3.manjuu.com/version/client/patchV1",
+  "fetchedAt": "2026-10-08T16:56:12.531Z",
+  "zoneId": 22,
+  "buildPipe": 1,
+  "jobName": "CBT3-Client-PC-Release-V0.3.0",
+  "version": "0.3.0.6",
+  "hotRevision": "2451868.2451868.2451868.2451868.2302423",
+  "isForceHot": true,
+  "pkgUrl": "http://www.manjuu.com",
+  "cdn": "https://l2-prod-patch-all-p3-cn.manjuu.com/project-3/",
+  "cdnBak": [
+    "https://l1-prod-patch-all-p3-cn.manjuu.com/project-3/"
+  ],
+  "releaseHotHis": [
+    {
+      "hotVersion": "1938420.1938420.1938420.1938420.1938420",
+      "setTime": 1787110343,
+      "force": false
+    },
+    {
+      "hotVersion": "1947211.1947211.1947211.1947211.1947211",
+      "setTime": 1787111850,
+      "force": false
+    },
+    {
+      "hotVersion": "1954568.1954568.1954568.1954568.1954568",
+      "setTime": 1787194502,
+      "force": false
+    },
+    {
+      "hotVersion": "1959082.1959082.1959082.1959082.1959082",
+      "setTime": 1787221116,
+      "force": false
+    },
+    {
+      "hotVersion": "1964045.1964045.1964045.1964045.1964045",
+      "setTime": 1787280258,
+      "force": false
+    },
+    {
+      "hotVersion": "1969544.1969544.1969544.1969544.1967564",
+      "setTime": 1787311273,
+      "force": false
+    },
+    {
+      "hotVersion": "1984208.1984208.1984208.1984208.1984208",
+      "setTime": 1787625961,
+      "force": false
+    },
+    {
+      "hotVersion": "1988277.1988277.1988277.1988277.1988277",
+      "setTime": 1787628115,
+      "force": false
+    },
+    {
+      "hotVersion": "1994590.1994590.1994590.1994590.1994590",
+      "setTime": 1787658203,
+      "force": false
+    },
+    {
+      "hotVersion": "2002508.2002508.2002508.2002508.2002508",
+      "setTime": 1787733287,
+      "force": false
+    },
+    {
+      "hotVersion": "2008304.2008304.2008304.2008304.2008304",
+      "setTime": 1787799449,
+      "force": false
+    },
+    {
+      "hotVersion": "2012513.2012513.2012513.2012513.2012513",
+      "setTime": 1787832767,
+      "force": false
+    },
+    {
+      "hotVersion": "2022111.2022111.2022111.2022111.2022111",
+      "setTime": 1787920129,
+      "force": false
+    },
+    {
+      "hotVersion": "2034972.2034972.2034972.2034972.2034972",
+      "setTime": 1788166964,
+      "force": false
+    },
+    {
+      "hotVersion": "2045543.2045543.2045543.2045543.2045543",
+      "setTime": 1788317611,
+      "force": false
+    },
+    {
+      "hotVersion": "2058582.2058582.2058582.2058582.2058582",
+      "setTime": 1788423036,
+      "force": false
+    },
+    {
+      "hotVersion": "2067703.2067703.2067703.2067703.2067703",
+      "setTime": 1788491257,
+      "force": false
+    },
+    {
+      "hotVersion": "2085617.2085617.2085617.2085617.2085617",
+      "setTime": 1788748664,
+      "force": false
+    },
+    {
+      "hotVersion": "2094438.2094438.2094438.2094438.2094438",
+      "setTime": 1788849038,
+      "force": false
+    },
+    {
+      "hotVersion": "2115874.2115874.2115874.2115874.2115874",
+      "setTime": 1789021322,
+      "force": false
+    },
+    {
+      "hotVersion": "2135191.2135191.2135191.2135191.2135191",
+      "setTime": 1789126314,
+      "force": false
+    },
+    {
+      "hotVersion": "2143356.2143356.2143356.2143356.2143356",
+      "setTime": 1789206968,
+      "force": false
+    },
+    {
+      "hotVersion": "2150148.2150148.2150148.2150148.2150148",
+      "setTime": 1789288776,
+      "force": false
+    },
+    {
+      "hotVersion": "2160028.2160028.2160028.2160028.2160028",
+      "setTime": 1789455426,
+      "force": false
+    },
+    {
+      "hotVersion": "2185577.2185577.2185577.2185577.2185577",
+      "setTime": 1789579306,
+      "force": false
+    },
+    {
+      "hotVersion": "2199958.2199958.2199958.2199958.2199958",
+      "setTime": 1789664435,
+      "force": false
+    },
+    {
+      "hotVersion": "2206817.2206817.2206817.2206817.2206817",
+      "setTime": 1789747521,
+      "force": false
+    },
+    {
+      "hotVersion": "2230156.2230156.2230156.2230156.2230156",
+      "setTime": 1789913430,
+      "force": false
+    },
+    {
+      "hotVersion": "2243147.2243147.2243147.2243147.2230156",
+      "setTime": 1789995219,
+      "force": false
+    },
+    {
+      "hotVersion": "2302423.2302423.2302423.2302423.2302423",
+      "setTime": 1790268658,
+      "force": false
+    },
+    {
+      "hotVersion": "2385938.2385938.2385938.2385938.2302423",
+      "setTime": 1791246997,
+      "force": true
+    },
+    {
+      "hotVersion": "2451868.2451868.2451868.2451868.2302423",
+      "setTime": 1791265868,
+      "force": false
+    }
+  ]
+}

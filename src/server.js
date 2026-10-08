@@ -324,8 +324,8 @@ export async function startServer(config, logger = console) {
                 const zoneId = requestInt(requestBody.zoneId, 22),
                     buildPipe = requestInt(requestBody.buildPipe, 1)
                 const jobName = requestString(requestBody.jobName, config.jobName),
-                    version = requestString(requestBody.version, config.version),
-                    hotVersion = requestString(requestBody.hotVersion, config.hotRevision)
+                    version = requestString(config.version, requestString(requestBody.version, '')),
+                    hotVersion = requestString(config.hotRevision, requestString(requestBody.hotVersion, ''))
                 const gamePort = Number(tcp.address().port)
                 const slot = {
                     serverInfo: [
@@ -350,7 +350,7 @@ export async function startServer(config, logger = console) {
                 }
                 data = {
                     status: 4,
-                    pkgUrl: `http://${config.publicHost}:${web.address().port}/`,
+                    pkgUrl: config.packageUrl || `http://${config.publicHost}:${web.address().port}/`,
                     zoneId,
                     buildPipe,
                     jobName,
@@ -360,14 +360,17 @@ export async function startServer(config, logger = console) {
                     hotSlots: { releaseHot: hotVersion },
                     returnAll: 0,
                     isWhite: 0,
-                    isForceHot: false,
-                    releaseHotHis: [],
+                    isForceHot: config.isForceHot ?? false,
+                    releaseHotHis: config.releaseHotHistory ?? [],
                 }
                 break
             }
             case '/version/client/getCdnV1':
                 api = 'GetCdnV1'
-                data = { cdn: `http://${config.publicHost}:${web.address().port}/` }
+                data = {
+                    cdn: config.cdnUrl || `http://${config.publicHost}:${web.address().port}/`,
+                    cdnBak: config.cdnBackupUrls ?? [],
+                }
                 break
             case '/version/client/cdntoken':
                 api = 'CdnToken'

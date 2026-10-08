@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 export const base = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -14,6 +15,7 @@ function integer(name, fallback) {
     return v
 }
 export function configuration() {
+    const discovery = JSON.parse(fs.readFileSync(path.join(base, 'configs/discovery-cbt3.json'), 'utf8'))
     return {
         base,
         diagnosticsFile: environment('AZUR_DIAGNOSTICS_FILE') ?? path.join(base, 'data/protocol-errors.jsonl'),
@@ -28,9 +30,15 @@ export function configuration() {
         publicHost: environment('AZUR_PUBLIC_HOST') || '127.0.0.1',
         database: environment('AZUR_DB') || path.join(base, 'data/azur.sqlite'),
         tables: environment('AZUR_TABLES') || path.resolve(base, '../DataTable/MasterData/Tables'),
-        version: environment('AZUR_VERSION') || '',
-        hotRevision: environment('AZUR_HOT_REVISION') || '',
-        jobName: environment('AZUR_JOB_NAME') || 'CBT3',
+        version: environment('AZUR_VERSION') || discovery.version,
+        hotRevision: environment('AZUR_HOT_REVISION') || discovery.hotRevision,
+        isForceHot:
+            environment('AZUR_FORCE_HOT') === undefined ? discovery.isForceHot : environment('AZUR_FORCE_HOT') === '1',
+        packageUrl: environment('AZUR_PACKAGE_URL') || discovery.pkgUrl,
+        cdnUrl: environment('AZUR_CDN_URL') || discovery.cdn,
+        cdnBackupUrls: discovery.cdnBak,
+        releaseHotHistory: discovery.releaseHotHis,
+        jobName: environment('AZUR_JOB_NAME') || discovery.jobName,
         serverName: environment('AZUR_SERVER_NAME') || 'LurukaPS',
         serverTag: environment('AZUR_SERVER_TAG') || '2001',
         serverId: integer('AZUR_SERVER_ID', 320229),
