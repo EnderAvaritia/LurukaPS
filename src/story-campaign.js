@@ -210,16 +210,32 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         )
         if (route.mode === 'stage_conditions') {
             scenes.forEach(({ scene }) => campaignStagePlan(tables, scene.id))
-            const [kind, spawner, , target, count] = String(dungeon.victoryCondition).split('#').map(Number),
-                last = campaignStagePlan(tables, scenes.at(-1).scene.id).at(-1)
-            ensure(
-                kind === 2500 &&
-                    target > 0 &&
-                    count === last.length &&
-                    last.some((row) => row.id === target && row.spawnerId === spawner),
-                'Campaign final target mapping changed',
-                1007,
-            )
+            const parts = String(dungeon.victoryCondition).split('#').map(Number),
+                [kind, spawner, , target, count] = parts,
+                plan = scenes.flatMap(({ scene }) => campaignStagePlan(tables, scene.id)),
+                last = plan.at(-1)
+            if (route.victory_group_condition) {
+                // Explicit compatibility adapter for a legacy group-count condition.
+                // Require exact config plus all table stages; do not accept a client win alone.
+                ensure(
+                    JSON.stringify(parts) === JSON.stringify(route.victory_group_condition) &&
+                        kind === 2905 &&
+                        parts.length === 3 &&
+                        parts[2] > 0 &&
+                        plan.flat().filter((row) => row.expandId === parts[1]).length === parts[2] &&
+                        last.every((row) => row.expandId === parts[1]),
+                    'Campaign victory group mapping changed',
+                    1007,
+                )
+            } else
+                ensure(
+                    kind === 2500 &&
+                        target > 0 &&
+                        count === last.length &&
+                        last.some((row) => row.id === target && row.spawnerId === spawner),
+                    'Campaign final target mapping changed',
+                    1007,
+                )
         } else
             ensure(
                 dungeon.victoryCondition === scenes[0].scene.victoryCondition,
@@ -313,6 +329,12 @@ export function ensureStoryCampaignScene(tables, state, now) {
             .split('|')
             .filter(Boolean)
         ensure(packs.length > 0 && packs.length <= 24, 'Campaign enemy group unavailable', 1007)
+        // CBT3 adds 10 to next_time before testing it against time. With
+        // both fields omitted, inactive waves enter its already-expired refresh
+        // queue and lose server data. A run timestamp makes next_time=0 stay
+        // outside that queue; a new run still resets objects normally.
+        record.time = run.start_time
+        record.next_time = 0
         const monsters = packs.map((_, slot) => {
             const uid = ((3n << 56n) | (BigInt(slot) << 32n) | BigInt(row.id)).toString()
             const definition = enemyDefinition(tables, state, uid)
