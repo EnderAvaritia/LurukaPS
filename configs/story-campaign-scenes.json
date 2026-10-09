@@ -178,5 +178,60 @@
       500018
     ],
     "source": "tables"
+  },
+  {
+    "dungeon_id": 31710,
+    "scene_ids": [
+      6500
+    ],
+    "mode": "table_waves",
+    "victory_stage_count": 2,
+    "source": "table_inference",
+    "basis": "Unique common dungeon scene matching exact victory and complete enemyId/count roster",
+    "todo": "Verify scene selection against official CBT3 route; table matching is a local compatibility inference"
+  },
+  {
+    "dungeon_id": 31720,
+    "scene_ids": [
+      6501
+    ],
+    "mode": "table_waves",
+    "victory_stage_count": 2,
+    "source": "table_inference",
+    "basis": "Unique common dungeon scene matching exact victory and complete enemyId/count roster",
+    "todo": "Verify scene selection against official CBT3 route; table matching is a local compatibility inference"
+  },
+  {
+    "dungeon_id": 31730,
+    "scene_ids": [
+      6502
+    ],
+    "mode": "table_waves",
+    "victory_stage_count": 2,
+    "source": "table_inference",
+    "basis": "Unique common dungeon scene matching exact victory and complete enemyId/count roster",
+    "todo": "Verify scene selection against official CBT3 route; table matching is a local compatibility inference"
+  },
+  {
+    "dungeon_id": 31740,
+    "scene_ids": [
+      6503
+    ],
+    "mode": "table_waves",
+    "victory_stage_count": 2,
+    "source": "table_inference",
+    "basis": "Unique common dungeon scene matching exact victory and complete enemyId/count roster",
+    "todo": "Verify scene selection against official CBT3 route; table matching is a local compatibility inference"
+  },
+  {
+    "dungeon_id": 31750,
+    "scene_ids": [
+      6504
+    ],
+    "mode": "table_waves",
+    "victory_stage_count": 2,
+    "source": "table_inference",
+    "basis": "Unique common dungeon scene matching exact victory and complete enemyId/count roster",
+    "todo": "Verify scene selection against official CBT3 route; table matching is a local compatibility inference"
   }
 ]

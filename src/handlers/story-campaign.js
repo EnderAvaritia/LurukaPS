@@ -1,5 +1,6 @@
+import { storyCampaignStagePlan } from '../table-wave-campaign.js'
 import { ensure } from './common.js'
-import { campaignStagePlan, campaignStageSatisfied } from '../campaign-stage-plan.js'
+import { campaignStageSatisfied } from '../campaign-stage-plan.js'
 import { syncBattle } from '../battle.js'
 import { finishEnemyGroupRelations, pruneInactiveCampaignRelations } from './world-combat.js'
 import { inactiveCampaignEnemyGroup } from '../inactive-campaign-enemies.js'
@@ -76,7 +77,7 @@ export function settleStoryCampaignScene(c) {
     if (!run || run.status !== 2 || run.completed_scenes.includes(run.map_id) || c.state.combat?.map_id !== run.map_id)
         return false
     if (run.stage_conditions) {
-        const plan = campaignStagePlan(c.tables, run.map_id),
+        const plan = storyCampaignStagePlan(c.tables, run),
             before = run.stage_index ?? 0
         const objectCompleted = (plan[before] ?? []).some(
             (row) =>
@@ -372,6 +373,7 @@ export function registerStoryCampaign(on, tables) {
             completed_scenes: [],
             task_ids: config.taskIds,
             stage_conditions: config.stageConditions,
+            victory_stage_count: config.victoryStageCount,
             entry_tasks: config.taskIds.length
                 ? structuredClone(campaignEntryTasks(tables, c.state, config.dungeon.id))
                 : undefined,

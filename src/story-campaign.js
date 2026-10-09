@@ -1,3 +1,4 @@
+import { tableWaveCampaignRoute, storyCampaignStagePlan } from './table-wave-campaign.js'
 import { ensure } from './handlers/common.js'
 import fs from 'node:fs'
 import { campaignStagePlan, campaignStageSatisfied, campaignFriendlyGroupAvailable } from './campaign-stage-plan.js'
@@ -176,7 +177,9 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         'Campaign task scene mapping unavailable',
         1007,
     )
-    const route = legacyRoutes.get(dungeon.id)
+    const savedRoute = legacyRoutes.get(dungeon.id)
+    const route = savedRoute?.mode === 'table_waves' || !savedRoute
+        ? tableWaveCampaignRoute(tables, dungeon) : savedRoute
     ensure(taskMapping || route, 'Campaign group is not implemented', 1021)
     const graphs = taskMapping ? new TaskGraphs(tables) : null
     const transferPoints = taskIds.flatMap((id) =>
@@ -199,7 +202,7 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
         ensure(city?.type === 2 && scene?.mapId === id && point, 'Campaign scene unavailable', 1007)
         return { city, scene, point }
     })
-    if (!taskMapping) {
+    if (!taskMapping && route.mode !== 'table_waves') {
         ensure(
             scenes.length === route.opening_stories.length &&
                 scenes.every(({ scene }, i) =>
@@ -243,7 +246,15 @@ export function storyCampaignConfig(tables, groupId, difficulty) {
                 1007,
             )
     }
-    return { dungeon, scenes, taskMapping, taskIds, taskPoints, stageConditions: route?.mode === 'stage_conditions' }
+    return {
+        dungeon,
+        scenes,
+        taskMapping,
+        taskIds,
+        taskPoints,
+        stageConditions: ['stage_conditions', 'table_waves'].includes(route?.mode),
+        victoryStageCount: route?.victory_stage_count,
+    }
 }
 
 export function storyCampaignSnapshot(state) {
@@ -372,7 +383,7 @@ export function ensureStoryCampaignScene(tables, state, now) {
         }
     }
     if (run.stage_conditions) {
-        const plan = campaignStagePlan(tables, run.map_id),
+        const plan = storyCampaignStagePlan(tables, run),
             all = new Set(plan.flat().map((row) => row.id)),
             active = new Set((plan[run.stage_index ?? 0] ?? []).map((row) => row.id)),
             finished = new Set(
@@ -381,6 +392,9 @@ export function ensureStoryCampaignScene(tables, state, now) {
                     .flat()
                     .map((row) => row.id),
             )
+        if (run.victory_stage_count && (run.stage_index ?? 0) >= plan.length)
+            for (const row of campaignStagePlan(tables, run.map_id).slice(plan.length).flat())
+                records[run.map_id + ':' + row.id].active = true
         for (const row of rows) {
             if (campaignFriendlyGroupAvailable(tables, state, row) && !records[run.map_id + ':' + row.id].complete)
                 records[run.map_id + ':' + row.id].active = true
@@ -390,7 +404,11 @@ export function ensureStoryCampaignScene(tables, state, now) {
                 // event, even when one condition requires multiple groups.
                 const complete =
                     finished.has(row.id) || (active.has(row.id) && campaignStageSatisfied(tables, state, [row]))
-                record.active = active.has(row.id) && !complete
+                const pending = (plan[run.stage_index ?? 0] ?? []).filter(
+                    (r) => !campaignStageSatisfied(tables, state, [r]),
+                )
+                record.active =
+                    active.has(row.id) && !complete && (!run.victory_stage_count || row.id === pending[0]?.id)
                 // Overwrite legacy ID-order flags, including false: they may
                 // incorrectly mark a still-living current/future wave complete.
                 record.complete = complete
@@ -419,7 +437,7 @@ export function storySceneDefeated(tables, state) {
     }
     if (!run || state.world.map_id !== run.map_id || state.combat?.map_id !== run.map_id) return false
     if (run.stage_conditions)
-        return campaignStagePlan(tables, run.map_id).every((rows) => campaignStageSatisfied(tables, state, rows))
+        return storyCampaignStagePlan(tables, run).every((rows) => campaignStageSatisfied(tables, state, rows))
     const scene = tables.find('dungeon_scene', run.map_id)
     const [kind, spawner, , , count] = String(scene?.victoryCondition).split('#').map(Number)
     if (kind !== 2500 || count <= 0) return false
