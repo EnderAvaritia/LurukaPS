@@ -1,0 +1,48 @@
+[
+  {
+    "dungeon_id": 10010,
+    "scene_ids": [
+      6200,
+      6201
+    ],
+    "opening_stories": [
+      1011001,
+      101103
+    ],
+    "mode": "legacy",
+    "basis": "Validated chapter106014 client/table route"
+  },
+  {
+    "dungeon_id": 10020,
+    "scene_ids": [
+      6203,
+      6204,
+      6205
+    ],
+    "opening_stories": [
+      5101069,
+      101477,
+      5101075
+    ],
+    "mode": "stage_conditions",
+    "basis": "Local route adapter: dungeon final target1501115 in6205, consecutive chapter11 scene/story configuration6203-6205; no direct dungeon_scene foreign key",
+    "todo": "Verify exact scene order with CBT3 client; retain condition and opening-story validation"
+  },
+  {
+    "dungeon_id": 10070,
+    "scene_ids": [
+      6230
+    ],
+    "opening_stories": [
+      5101079
+    ],
+    "mode": "stage_conditions",
+    "victory_group_condition": [
+      2905,
+      40041,
+      3
+    ],
+    "basis": "Local adapter: task106021/10 requires10070;6230 tower defense five stage conditions, last three groups expandId40041 match dungeon victory2905#40041#3",
+    "todo": "Verify2905 native/client condition semantics and route with CBT3; require all five stage proofs rather than trusting client win"
+  }
+]

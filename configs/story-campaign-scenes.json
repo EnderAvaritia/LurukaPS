@@ -1,5 +1,31 @@
 [
   {
+    "dungeon_id": 300,
+    "scene_ids": [
+      300
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      100000,
+      100001,
+      100002
+    ],
+    "source": "tables"
+  },
+  {
+    "dungeon_id": 905,
+    "scene_ids": [
+      101002
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      404001
+    ],
+    "source": "tables"
+  },
+  {
     "dungeon_id": 10010,
     "scene_ids": [
       6200,
@@ -10,7 +36,8 @@
       101103
     ],
     "mode": "legacy",
-    "basis": "Validated chapter106014 client/table route"
+    "basis": "Validated chapter106014 client/table route",
+    "source": "compatibility_override"
   },
   {
     "dungeon_id": 10020,
@@ -26,7 +53,101 @@
     ],
     "mode": "stage_conditions",
     "basis": "Local route adapter: dungeon final target1501115 in6205, consecutive chapter11 scene/story configuration6203-6205; no direct dungeon_scene foreign key",
-    "todo": "Verify exact scene order with CBT3 client; retain condition and opening-story validation"
+    "todo": "Verify exact scene order with CBT3 client; retain condition and opening-story validation",
+    "source": "compatibility_override"
+  },
+  {
+    "dungeon_id": 10031,
+    "scene_ids": [
+      6224,
+      6228,
+      6234
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      104001,
+      104002,
+      104003,
+      104004,
+      104005,
+      104006,
+      104007,
+      104008,
+      104009,
+      104010
+    ],
+    "source": "tables"
+  },
+  {
+    "dungeon_id": 10061,
+    "scene_ids": [
+      6206,
+      6210,
+      6211,
+      6212
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      323002
+    ],
+    "source": "tables"
+  },
+  {
+    "dungeon_id": 10063,
+    "scene_ids": [
+      6219
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      500002
+    ],
+    "source": "tables"
+  },
+  {
+    "dungeon_id": 10065,
+    "scene_ids": [
+      6225
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      213009
+    ],
+    "source": "tables"
+  },
+  {
+    "dungeon_id": 10067,
+    "scene_ids": [
+      6227
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      500017
+    ],
+    "source": "tables"
+  },
+  {
+    "dungeon_id": 10068,
+    "scene_ids": [
+      6231,
+      6232,
+      6233
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      500011,
+      500012,
+      500013,
+      500014,
+      500015,
+      500016
+    ],
+    "source": "tables"
   },
   {
     "dungeon_id": 10070,
@@ -43,6 +164,19 @@
       3
     ],
     "basis": "Local adapter: task106021/10 requires10070;6230 tower defense five stage conditions, last three groups expandId40041 match dungeon victory2905#40041#3",
-    "todo": "Verify2905 native/client condition semantics and route with CBT3; require all five stage proofs rather than trusting client win"
+    "todo": "Verify2905 native/client condition semantics and route with CBT3; require all five stage proofs rather than trusting client win",
+    "source": "compatibility_override"
+  },
+  {
+    "dungeon_id": 10071,
+    "scene_ids": [
+      6207
+    ],
+    "mode": "task_chain",
+    "basis": "Explicit dungeon_task.taskTeleportIds + task Before/After transferPointId",
+    "task_ids": [
+      500018
+    ],
+    "source": "tables"
   }
 ]
