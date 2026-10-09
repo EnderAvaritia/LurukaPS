@@ -116,6 +116,7 @@ export function seedPlayer(tables, id, openId) {
             guide_infos: { infos: [] },
             settings: { entries: [] },
             home_settings: { entries: [] },
+            custom_options: { entries: [] },
         },
         pets,
         petBoxes: Array.from({ length: Math.ceil(pets.length / 30) }, (_, i) => ({

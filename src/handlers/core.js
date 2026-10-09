@@ -122,6 +122,19 @@ export function registerCore(on) {
         on(name, (c, r) => {
             c.state.player[field] = r
         })
+    on('SetClientCustomOptions', (c, r) => {
+        // CBT3 sends individual option updates, not a complete settings snapshot.
+        // Keep unrelated keys and return the saved options in PlayerData on login.
+        const entries = r.entries ?? []
+        for (const entry of entries)
+            ensure(
+                typeof entry.key === 'string' && entry.key.length > 0 && typeof entry.val === 'string',
+                'Invalid client custom option',
+            )
+        const options = new Map((c.state.player.custom_options?.entries ?? []).map((entry) => [entry.key, entry.val]))
+        for (const entry of entries) options.set(entry.key, entry.val)
+        c.state.player.custom_options = { entries: [...options].map(([key, val]) => ({ key, val })) }
+    })
     on('GuideUpdate', (c, r) => {
         ensure(r.id > 0, 'Missing guide id')
         const a = c.state.player.guide_infos.infos
