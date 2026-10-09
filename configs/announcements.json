@@ -1,0 +1,15 @@
+[
+    {
+        "id": 900000001,
+        "revision": 1,
+        "tabId": 1,
+        "type": 1,
+        "showPosition": 2,
+        "orderId": 1,
+        "hide": false,
+        "publishTime": 0,
+        "endTime": 4102444800,
+        "meta": [{ "language": "chs", "title": "LurukaPS 测试公告" }],
+        "body": "<p>欢迎使用 LurukaPS！</p><p>这是一条测试公告，用于验证公告列表、标题和正文显示。</p><p>公告内容由本地服务器提供。</p>"
+    }
+]

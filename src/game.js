@@ -1,3 +1,4 @@
+import { announcementSnapshot } from './announcements.js'
 import { registerPetCatch } from './handlers/pet-catch.js'
 import { refundPendingCatchCards } from './handlers/pet-catch.js'
 import { repairCharacterCreationMarker } from './character-creation.js'
@@ -261,6 +262,7 @@ export class Game {
             taskEventDiagnosticsFile = null,
         } = {},
     ) {
+        this.announcementBaseUrl = 'http://127.0.0.1:20001/'
         this.clock = clock
         this.rng = rng
         this.crcDelay = crcDelay
@@ -284,6 +286,7 @@ export class Game {
         registerPlayableLifecycle(on, tables)
         const runGM = registerGM(on, { enabled: gmEnabled })
         registerCore(on)
+        on('AnnounceRequest', (c) => announcementSnapshot(this.announcementBaseUrl, c.now))
         registerAIHeroes(on, tables)
         registerMonthly(on, tables)
         registerLocalPayments(on, tables, store, { enabled: offlinePayments })
@@ -1079,6 +1082,7 @@ export class Game {
             this.packet('CSProtoPlayableSync', playableSnapshot(state)),
             this.packet('CSProtoAllRouletteInfoSync', roulettePayload(state)),
             this.packet('CSProtoWorldMapMarkListSync', worldMarkPayload(state)),
+            this.packet('CSProtoAnnouncementNotify', announcementSnapshot(this.announcementBaseUrl, now)),
             this.packet('CSProtoChatRoomSync', { chat_type: 2, sysId: String(state.chatWorldRoom ?? 1) }),
             this.packet('CSProtoChatListSync', chatSnapshots(this.store, state, session.id).list),
             this.packet('CSProtoChatMsgCntSync', chatSnapshots(this.store, state, session.id).counts),

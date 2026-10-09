@@ -1,3 +1,4 @@
+import { announcementHttpData, announcementBody } from './announcements.js'
 import { ProtocolDiagnostics } from './diagnostics.js'
 import { sourceRevision } from './build-info.js'
 import { DelayedCrc } from './wire-crc.js'
@@ -289,6 +290,23 @@ export async function startServer(config, logger = console) {
         const url = new URL(req.url, 'http://localhost')
         const timestamp = Math.floor(Date.now() / 1000)
         let data, api
+        if (url.pathname.startsWith('/announcements/')) {
+            const match = /^\/announcements\/(\d+)\.html$/.exec(url.pathname)
+            const body = match && announcementBody(match[1], timestamp)
+            if (!['GET', 'HEAD'].includes(req.method)) {
+                res.writeHead(405)
+                res.end()
+                return
+            }
+            if (body === undefined || body === null) {
+                res.writeHead(404)
+                res.end()
+                return
+            }
+            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+            res.end(req.method === 'HEAD' ? undefined : body)
+            return
+        }
         if (url.pathname === '/health') {
             res.writeHead(200, { 'content-type': 'application/json' })
             res.end(
@@ -390,23 +408,7 @@ export async function startServer(config, logger = console) {
                 break
             case '/version/client/announceV1':
                 api = 'AnnounceV1'
-                data = {
-                    infos: {},
-                    scrolling: {},
-                    gateway: {
-                        meta: {},
-                        name: 'LurukaPS',
-                        orderId: 0,
-                        tabId: 0,
-                        endTime: 2000000000,
-                        id: 0,
-                        type: 0,
-                        jumpId: '',
-                        hide: true,
-                        showPosition: 0,
-                        publishTime: 0,
-                    },
-                }
+                data = announcementHttpData(game.announcementBaseUrl, timestamp)
                 break
             default:
                 res.writeHead(404, { 'content-type': 'application/json' })
@@ -423,6 +425,7 @@ export async function startServer(config, logger = console) {
         await once(tcp, 'listening')
         web.listen(config.httpPort, config.host)
         await once(web, 'listening')
+        game.announcementBaseUrl = `http://${config.publicHost}:${web.address().port}/`
     } catch (err) {
         if (tcp.listening) tcp.close()
         if (web.listening) web.close()
