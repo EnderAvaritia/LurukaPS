@@ -134,6 +134,11 @@ test('campaign201 uses validated chapter route and table stage conditions includ
         assert.equal(current.cur_step, 0)
         assert.equal(current.scene_status, 0)
         assert.equal(current.objs.find((x) => x.obj_id === 1500124).complete, true)
+        assert.deepEqual(current.objs.find((x) => x.obj_id === 1500124).expand_data.battle_group.world_indexes, [])
+        assert.deepEqual(
+            current.objs.find((x) => x.obj_id === 1500126).expand_data.battle_group.world_indexes,
+            [0, 1, 2, 3, 4, 5],
+        )
         assert.equal(current.objs.find((x) => x.obj_id === 1500126).complete, false)
         assert.equal(state().storyCampaign.stage_index, 0)
         assert.equal(state().worldObjects['6204:1500124'].complete, true)

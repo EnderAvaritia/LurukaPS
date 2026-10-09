@@ -338,7 +338,15 @@ export function ensureStoryCampaignScene(tables, state, now) {
         })
         record.expand_data = {
             ...(record.expand_data ?? {}),
-            battle_group: { monsters, world_indexes: monsters.map((_, slot) => slot) },
+            battle_group: {
+                monsters,
+                // CBT3 EnemyGroupSync parses these as VisibleEnemies, not the
+                // full configured roster. Never advertise dead/captured slots again.
+                world_indexes: monsters.flatMap((monster, slot) => {
+                    const entity = battle.entities[monster.uid]
+                    return entity.hp > 0 && entity.alive_state !== 1 && !entity.captured ? [slot] : []
+                }),
+            },
         }
     }
     if (run.stage_conditions) {
