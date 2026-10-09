@@ -7,6 +7,8 @@ import { rememberMap, worldSync } from './world.js'
 import { deliveryKey } from '../task-delivery.js'
 import {
     TaskGraphs,
+    acceptAvailableSideTasks,
+    clearDevelopmentTasks,
     conditionSatisfied,
     conditionTargetValue,
     conditionValue,
@@ -14,7 +16,7 @@ import {
     taskSnapshot,
 } from '../tasks.js'
 const help =
-    'help | giveall | item <id> <count> | give <type> <id> <count> | gold <count> | diamond <count> | level <level> | monthcard <count> | heal | tp <birth-point-id> | taskgoal | unlockmaps'
+    'help | acceptall [dev] | cleardevtasks | giveall | item <id> <count> | give <type> <id> <count> | gold <count> | diamond <count> | level <level> | monthcard <count> | heal | tp <birth-point-id> | taskgoal | unlockmaps'
 const decoder = new TextDecoder('utf-8', { fatal: true })
 function string(value) {
     const bytes = Buffer.from(value ?? '', 'base64')
@@ -56,6 +58,38 @@ export function registerGM(on, { enabled = true } = {}) {
         if (name === 'help') {
             count(0)
             result = help
+        } else if (name === 'acceptall') {
+            ensure(args.length <= 1 && (!args.length || args[0].toLowerCase() === 'dev'), 'Usage: acceptall [dev]')
+            graphs ??= new TaskGraphs(c.tables)
+            const { added, unavailable } = acceptAvailableSideTasks(c.tables, c.state, c.now, graphs, {
+                includeDev: args.length === 1,
+            })
+            if (added.length) {
+                const barrier = c.state.pendingTaskStorySync
+                if (barrier) {
+                    barrier.extra ??= {}
+                    barrier.extra.new_task_ids = [...new Set([...(barrier.extra.new_task_ids ?? []), ...added])]
+                } else c.pushBefore('CSProtoTaskSync', { ...taskSnapshot(c.tables, c.state), new_task_ids: added })
+            }
+            result = 'Accepted ' + added.length + ' available unfinished non-main tasks'
+            if (unavailable.length) result += '; unavailable task configuration: ' + unavailable.join(',')
+        } else if (name === 'cleardevtasks') {
+            count(0)
+            const ids = clearDevelopmentTasks(c.tables, c.state)
+            if (ids.length) {
+                const barrier = c.state.pendingTaskStorySync
+                if (barrier) {
+                    barrier.extra ??= {}
+                    for (const field of ['del_tasks', 'del_trace_list'])
+                        barrier.extra[field] = [...new Set([...(barrier.extra[field] ?? []), ...ids])]
+                } else
+                    c.pushBefore('CSProtoTaskSync', {
+                        ...taskSnapshot(c.tables, c.state),
+                        del_tasks: ids,
+                        del_trace_list: ids,
+                    })
+            }
+            result = 'Removed ' + ids.length + ' active development/test tasks'
         } else if (name === 'giveall') {
             count(0)
             const rewards = giveAllRewards(c.tables, c.state)

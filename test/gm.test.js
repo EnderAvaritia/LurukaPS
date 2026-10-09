@@ -149,3 +149,83 @@ test('GM can be disabled without modifying player data', () => {
         f.store.close()
     }
 })
+
+test('GM acceptall and world-chat slash command use real task tables and publish new task IDs', () => {
+    const f = fixture()
+    try {
+        f.store.transact(f.session.id, 0, (s) => {
+            s.player.basic_info.lv = 50
+            s.world.map_id = 100
+        })
+        const before = f.state(),
+            mainIds = before.tasks.filter((t) => tables.find('task', t.task_id)?.type === 1).map((t) => t.task_id)
+        const packets = f.call('AddChat', { target: { chat_type: 2, tid: '0' }, msg: text('/acceptall'), type: 0 })
+        const sync = packets.find((p) => p.id === 9853 && p.data.new_task_ids?.length)
+        assert.ok(sync)
+        for (const id of sync.data.new_task_ids) {
+            assert.notEqual(tables.find('task', id).type, 1)
+            assert.doesNotMatch(tables.find('task', id).name, /\[(dev|test)\]/i)
+            assert.ok(!before.tasks.some((t) => t.task_id === id))
+            assert.ok(!(before.taskRecords ?? []).some((t) => t.task_id === id && t.count > 0))
+            assert.ok(f.state().tasks.some((t) => t.task_id === id))
+        }
+        assert.deepEqual(
+            f
+                .state()
+                .tasks.filter((t) => tables.find('task', t.task_id)?.type === 1)
+                .map((t) => t.task_id),
+            mainIds,
+        )
+        const again = f.call('GMCommand', command('acceptall'))
+        const result = again.find((p) => p.id === 19903)
+        assert.match(Buffer.from(result.data.result, 'base64').toString(), /Accepted 0/)
+        assert.throws(() => f.call('GMCommand', command('acceptall 1')), /Usage/)
+        assert.throws(() => f.call('GMCommand', command('acceptall dev extra')), /Usage/)
+        const withDev = f.call('GMCommand', command('acceptall', ['dev']))
+        const devSync = withDev.find((p) => p.id === 9853 && p.data.new_task_ids?.length)
+        assert.ok(devSync.data.new_task_ids.includes(100020))
+        for (const id of devSync.data.new_task_ids) {
+            assert.notEqual(tables.find('task', id).type, 1)
+            assert.ok(!sync.data.new_task_ids.includes(id))
+        }
+        const devAgain = f.call('GMCommand', command('acceptall dev')).find((p) => p.id === 19903)
+        assert.match(Buffer.from(devAgain.data.result, 'base64').toString(), /Accepted 0/)
+    } finally {
+        f.store.close()
+    }
+})
+
+test('cleardevtasks removes only active dev tasks, syncs deletion and preserves completion/reward receipts', () => {
+    const f = fixture()
+    try {
+        f.store.transact(f.session.id, 0, (s) => {
+            s.tasks.push({ task_id: 100020, nodes: [], finish_nodes: [], reward_nodes: [], client_trace: true })
+            s.pendingTaskStorySync = { task_id: 100020, stories: [], extra: {} }
+            s.pendingTaskScene = { task_id: 100020, map_id: 101 }
+            s.pendingCharacterTask = { task_id: 100020, node_id: 1, epoch: 1 }
+            s.taskRecords = [{ task_id: 100021, count: 1, time: 1 }]
+            s.taskFinishReceipts = { '100021:1': [] }
+        })
+        const before = f.state()
+        const packets = f.call('AddChat', { target: { chat_type: 2, tid: '0' }, msg: text('/cleardevtasks'), type: 0 })
+        const sync = packets.find((p) => p.id === 9853 && p.data.del_tasks?.includes(100020))
+        assert.ok(sync)
+        assert.deepEqual(sync.data.del_tasks, [100020])
+        assert.deepEqual(sync.data.del_trace_list, [100020])
+        const state = f.state()
+        assert.deepEqual(
+            state.tasks.map((t) => t.task_id),
+            before.tasks.filter((t) => t.task_id !== 100020).map((t) => t.task_id),
+        )
+        assert.equal(state.pendingTaskStorySync, undefined)
+        assert.equal(state.pendingTaskScene, undefined)
+        assert.equal(state.pendingCharacterTask, undefined)
+        assert.deepEqual(state.taskRecords, before.taskRecords)
+        assert.deepEqual(state.taskFinishReceipts, before.taskFinishReceipts)
+        const result = f.call('GMCommand', command('cleardevtasks')).find((p) => p.id === 19903)
+        assert.match(Buffer.from(result.data.result, 'base64').toString(), /Removed 0/)
+        assert.throws(() => f.call('GMCommand', command('cleardevtasks all')), /Usage/)
+    } finally {
+        f.store.close()
+    }
+})

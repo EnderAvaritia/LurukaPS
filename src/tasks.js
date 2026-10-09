@@ -280,6 +280,53 @@ export function acceptTask(graph, state, now) {
     state.tasks.push(task)
     return task
 }
+export function isDevelopmentTask(config) {
+    return /\[(?:dev|test)\]/i.test(String(config?.name ?? ''))
+}
+export function clearDevelopmentTasks(tables, state) {
+    const ids = (state.tasks ?? [])
+        .filter((t) => isDevelopmentTask(tables.find('task', t.task_id)))
+        .map((t) => t.task_id)
+    const deleted = new Set(ids)
+    state.tasks = (state.tasks ?? []).filter((t) => !deleted.has(t.task_id))
+    for (const field of ['pendingTaskStorySync', 'pendingTaskScene', 'pendingCharacterTask'])
+        if (deleted.has(state[field]?.task_id)) delete state[field]
+    const barrier = state.pendingTaskStorySync
+    if (barrier?.extra?.new_task_ids)
+        barrier.extra.new_task_ids = barrier.extra.new_task_ids.filter((id) => !deleted.has(id))
+    // Preserve completion and reward receipts: removing a task is abandonment,
+    // not a reward reset. A future acceptance creates its own new epoch.
+    return [...deleted]
+}
+// GM batch acceptance uses the same prerequisites and initialization as TaskAccept.
+// Completed repeatable tasks are excluded too: this command only accepts unfinished tasks.
+export function acceptAvailableSideTasks(
+    tables,
+    state,
+    now,
+    graphs = new TaskGraphs(tables),
+    { includeDev = false } = {},
+) {
+    const active = new Set((state.tasks ?? []).map((t) => t.task_id))
+    const completed = new Set((state.taskRecords ?? []).filter((t) => t.count > 0).map((t) => t.task_id))
+    const candidates = [],
+        unavailable = []
+    for (const config of tables.get('task')) {
+        if (config.type === 1 || active.has(config.id) || completed.has(config.id)) continue
+        if (!includeDev && isDevelopmentTask(config)) continue
+        try {
+            const graph = graphs.get(config.id)
+            if (taskUnlocked(graph, state, { tables, accepting: true })) candidates.push(graph)
+        } catch (error) {
+            if (error.code !== 1007 && error.code !== 'ENOENT') throw error
+            unavailable.push(config.id)
+        }
+    }
+    // Evaluate eligibility before any acceptance; accepting a prerequisite is not completing it.
+    state.tasks ??= []
+    for (const graph of candidates) acceptTask(graph, state, now)
+    return { added: candidates.map((g) => g.config.id), unavailable }
+}
 // CBT3 TaskStartNode0601ff4c only sets canNextNode locally; no 9861/9862
 // request is emitted. The server must expose its executable successors.
 export function advanceStartNodes(graph, task, state) {
